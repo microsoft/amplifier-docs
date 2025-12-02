@@ -15,6 +15,9 @@ Amplifier supports multiple LLM providers. This guide covers setting up each one
 | **OpenAI** | GPT-4, GPT-4o | Broad capabilities, function calling |
 | **Azure OpenAI** | GPT-4, GPT-4o | Enterprise, compliance requirements |
 | **Ollama** | Llama, Mistral, etc. | Local/offline, privacy, experimentation |
+| **vLLM** | Any vLLM-compatible | Self-hosted inference, high throughput |
+
+For detailed configuration options and advanced features, see [Provider Modules](../modules/providers/index.md).
 
 ## Anthropic (Recommended)
 
@@ -153,6 +156,35 @@ ollama list
 amplifier run --model llama3.1 "Hello!"
 ```
 
+## vLLM (Self-Hosted)
+
+For high-throughput self-hosted inference with your own GPU servers.
+
+### Prerequisites
+
+- Running vLLM server (v0.10.1+)
+- Model loaded in vLLM
+
+### Configure
+
+```bash
+# Set your vLLM server URL
+export VLLM_BASE_URL="http://your-server:8000/v1"
+
+amplifier provider use vllm
+```
+
+### Configuration File
+
+```yaml
+providers:
+  vllm:
+    base_url: http://192.168.128.5:8000/v1
+    default_model: openai/gpt-oss-20b
+```
+
+For vLLM server setup and advanced options, see [vLLM Provider](../modules/providers/vllm.md).
+
 ## Switching Providers
 
 ### Temporary Switch
@@ -183,6 +215,7 @@ amplifier provider current
 | OpenAI | `OPENAI_API_KEY` |
 | Azure | `AZURE_OPENAI_API_KEY`, `AZURE_OPENAI_ENDPOINT`, `AZURE_OPENAI_DEPLOYMENT` |
 | Ollama | None required (local) |
+| vLLM | `VLLM_BASE_URL` |
 
 ### Via Settings File
 
@@ -203,6 +236,10 @@ providers:
   ollama:
     base_url: http://localhost:11434
     default_model: llama3.1
+
+  vllm:
+    base_url: http://your-server:8000/v1
+    default_model: openai/gpt-oss-20b
 ```
 
 ## Multiple Providers
@@ -252,6 +289,6 @@ If you hit rate limits:
 
 ## Next Steps
 
-- [Quickstart](quickstart.md) - Run your first session
+- [Getting Started](index.md) - Run your first session
 - [CLI Reference](../user_guide/cli.md) - All commands
 - [Profiles](../user_guide/profiles.md) - Configure capabilities

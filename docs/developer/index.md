@@ -5,7 +5,7 @@ description: Building modules and contributing to Amplifier
 
 # Developer Guide
 
-This guide covers developing modules, contributing to Amplifier, and setting up a local development environment.
+This guide covers developing custom modules for Amplifier.
 
 ## Topics
 
@@ -14,11 +14,6 @@ This guide covers developing modules, contributing to Amplifier, and setting up 
 <div class="card">
 <h3><a href="module_development/">Module Development</a></h3>
 <p>Create custom providers, tools, hooks, orchestrators, and context managers.</p>
-</div>
-
-<div class="card">
-<h3><a href="local_development/">Local Development</a></h3>
-<p>Set up a development environment for working on Amplifier.</p>
 </div>
 
 <div class="card">

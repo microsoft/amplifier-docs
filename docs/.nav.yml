@@ -2,8 +2,7 @@ nav:
   - Home: index.md
   - Getting Started:
       - getting_started/index.md
-      - Installation: getting_started/installation.md
-      - Quickstart: getting_started/quickstart.md
+      - Installation Options: getting_started/installation.md
       - Provider Setup: getting_started/providers.md
   - User Guide:
       - user_guide/index.md
@@ -15,7 +14,6 @@ nav:
   - Developer Guide:
       - developer/index.md
       - Module Development: developer/module_development.md
-      - Local Development: developer/local_development.md
       - Contracts:
           - developer/contracts/index.md
           - Provider Contract: developer/contracts/provider.md

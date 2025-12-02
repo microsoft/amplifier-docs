@@ -122,5 +122,4 @@ When you submit a pull request, a CLA bot will automatically determine whether y
 
 ## See Also
 
-- [Local Development](../developer/local_development.md) - Development setup
 - [Module Development](../developer/module_development.md) - Creating modules

@@ -1,8 +1,8 @@
 # Amplifier Documentation
 
-**📚 [View Documentation →](https://microsoft.github.io/amplifier-docs)**
-
 Documentation site for Amplifier, built with MkDocs and Material theme.
+
+> **View the docs**: https://microsoft.github.io/amplifier-docs
 
 ## Quick Start
 

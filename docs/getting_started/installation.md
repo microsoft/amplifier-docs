@@ -1,49 +1,34 @@
 ---
-title: Installation
-description: Install Amplifier on your system
+title: Installation Options
+description: Alternative installation methods and troubleshooting
 ---
 
-# Installation
+# Installation Options
 
-Amplifier can be installed as a standalone CLI tool or as a Python package for development.
+Most users should follow the [Getting Started](index.md) guide. This page covers alternative installation methods and troubleshooting.
 
-## Quick Install (Recommended)
-
-### Using uv
-
-[uv](https://docs.astral.sh/uv/) is the recommended way to install Amplifier:
-
-```bash
-uv tool install git+https://github.com/microsoft/amplifier@next
-```
+## Alternative Install Methods
 
 ### Using pipx
 
-Alternatively, use [pipx](https://pipx.pypa.io/):
+If you prefer [pipx](https://pipx.pypa.io/) over uv:
 
 ```bash
 pipx install git+https://github.com/microsoft/amplifier@next
 ```
 
-### Verify Installation
+### Development Installation
+
+For contributors or those who want to modify Amplifier:
 
 ```bash
-amplifier --version
+# Clone the repository (next branch)
+git clone -b next https://github.com/microsoft/amplifier.git
+cd amplifier
+
+# Install in development mode
+uv pip install -e .
 ```
-
-## First-Time Setup
-
-Run the setup wizard to configure your provider and preferences:
-
-```bash
-amplifier init
-```
-
-This will:
-
-1. Prompt you to select an LLM provider (Anthropic, OpenAI, Azure, Ollama)
-2. Configure your API key securely
-3. Set up shell completion (optional)
 
 ## Manual Configuration
 
@@ -113,21 +98,6 @@ Or reinstall:
 uv tool install --force git+https://github.com/microsoft/amplifier@next
 ```
 
-## Development Installation
-
-For contributors or those who want to modify Amplifier:
-
-```bash
-# Clone the repository (next branch)
-git clone -b next https://github.com/microsoft/amplifier.git
-cd amplifier
-
-# Install in development mode
-uv pip install -e .
-```
-
-See [Local Development](../developer/local_development.md) for more details.
-
 ## Troubleshooting
 
 ### "Command not found: amplifier"
@@ -165,5 +135,5 @@ uv tool install git+https://github.com/microsoft/amplifier@next
 
 ## Next Steps
 
-- [Quickstart →](quickstart.md) - Run your first AI session
+- [Getting Started →](index.md) - Run your first AI session
 - [Provider Setup →](providers.md) - Configure your LLM provider

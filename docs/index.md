@@ -39,41 +39,21 @@ A modular AI agent framework with Linux kernel-inspired architecture
 
 ## Quick Start
 
-=== "Install"
+```bash
+# Install
+uv tool install git+https://github.com/microsoft/amplifier@next
 
-    ```bash
-    # Install with uv (recommended)
-    uv tool install git+https://github.com/microsoft/amplifier@next
+# Configure
+amplifier init
 
-    # Or with pipx
-    pipx install git+https://github.com/microsoft/amplifier@next
-    ```
+# Run
+amplifier
+```
 
-=== "Configure"
+!!! tip "Stay Updated"
+    Amplifier is in active development. Run `amplifier update` daily to get the latest features and fixes.
 
-    ```bash
-    # First-time setup wizard
-    amplifier init
-
-    # Or set provider directly
-    export ANTHROPIC_API_KEY="your-key"
-    amplifier provider use anthropic
-    ```
-
-=== "Run"
-
-    ```bash
-    # Single command
-    amplifier run "Explain this codebase"
-
-    # Interactive chat
-    amplifier
-
-    # Resume previous session
-    amplifier continue
-    ```
-
-[Get Started →](getting_started/installation.md){ .md-button .md-button--primary }
+[Get Started →](getting_started/index.md){ .md-button .md-button--primary }
 [View on GitHub →](https://github.com/microsoft/amplifier/tree/next){ .md-button }
 
 ## Architecture Overview
@@ -141,7 +121,7 @@ Amplifier provides a rich ecosystem of swappable modules and libraries.
 ## Next Steps
 
 - **[Installation](getting_started/installation.md)** - Get Amplifier running
-- **[Quickstart](getting_started/quickstart.md)** - Your first AI session
+- **[Getting Started](getting_started/index.md)** - Your first AI session
 - **[CLI Reference](user_guide/cli.md)** - All available commands
 - **[Architecture](architecture/overview.md)** - How it all fits together
 - **[Module Development](developer/module_development.md)** - Build your own modules
