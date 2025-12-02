@@ -1,11 +1,11 @@
 ---
 title: Community
-description: Contributing to Amplifier and getting support
+description: Contributing to Amplifier
 ---
 
 # Community
 
-Welcome to the Amplifier community! This section covers how to contribute, get support, and stay updated.
+Welcome to the Amplifier community! This section covers how to contribute and stay updated.
 
 ## Get Involved
 
@@ -19,11 +19,6 @@ Welcome to the Amplifier community! This section covers how to contribute, get s
 <div class="card">
 <h3><a href="roadmap/">Roadmap</a></h3>
 <p>Current priorities and future plans.</p>
-</div>
-
-<div class="card">
-<h3><a href="support/">Support</a></h3>
-<p>Getting help and reporting issues.</p>
 </div>
 
 </div>
