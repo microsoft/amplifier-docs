@@ -42,31 +42,31 @@ Producing regular demos of emergent value and use-cases, providing visibility to
 
 ## Exploration Directions
 
-A partial list of observed challenges and ways we're thinking about pushing forward in the short term:
+A partial list of areas where we see opportunities for further exploration and development:
 
-### Amplifier Agentic Loop
+### Orchestration Strategies
 
-Today, Amplifier depends on Claude Code for an agentic loop. That enforces directory structures and hooks that complicate how our own patterns and systems fit in. Exploring what it would take to provide our own agentic loop for increased flexibility.
+Amplifier provides several orchestrators (basic, events, streaming) that control execution flow. You could imagine more specialized orchestration strategies tailored to specific workflows, optimization goals, or interaction patterns.
 
-### Multi-Amplifier and "Modes"
+### Collections and Workflows
 
-Allowing multiple configurations tailored to specific tasks (e.g., creating Amplifier-powered user tools, self-improvement development, general software development). These "modes" could be declared through manifests that specify which sub-agents, commands, hooks, and philosophy documents to load, including external to the repo.
+Collections package agents, context, and philosophy documents for specific use cases. Current collections focus on toolkit building, design intelligence, and recipes. You could imagine collections for other domains, workflows, or ways of organizing reusable knowledge and patterns.
 
 ### Metacognitive Recipes
 
-Evolving beyond being only a developer tool. Building support for metacognitive recipes — structured workflows described in natural language that mix specific tasks and procedures with higher-level philosophy, decision-making rationale, and problem-solving techniques. Enabling non-developers to leverage it effectively (e.g., transforming raw idea dumps into blog posts with review loops).
+Expanding on structured workflows that mix specific tasks with higher-level philosophy, decision-making rationale, and problem-solving techniques. Making these patterns more accessible and enabling non-developers to leverage them effectively.
 
 ### Standard Artifacts and Templates
 
-Adopting standardized templates for documentation, clear conventions for where context files and philosophy docs live, and definitions of acceptable sub-agents. Making it easy for contributors to provide artifacts that others can plug into their own Amplifier instances.
+Evolving conventions for documentation, context files, philosophy documents, and sub-agent definitions. Making it easier for contributors to create artifacts that others can plug into their own Amplifier instances with clear expectations.
 
-### Leveraging Sessions for Learning
+### Context and Memory
 
-Including tools to parse session data, reconstruct conversation logs, and analyze patterns. Unlocking capabilities where shared usage data enables queries like "how would [other user] approach [challenge]". Allowing Amplifier to learn from prior work and improve its capabilities.
+While Amplifier provides simple and persistent context modules, you could imagine richer approaches to memory, knowledge synthesis, session learning, and team context sharing. Different storage backends, query patterns, or ways of organizing and accessing accumulated knowledge.
 
-### Context Sharing
+### Learning from Sessions
 
-Enabling team members to share context without exposing private data publicly. Options include private Git repositories or shared folders mounted as context for Amplifier. A mount-based approach treats everything as files and avoids custom API connectors, allowing individual user-choice of remote storage or synchronization platforms.
+Tools to parse session data, reconstruct conversation logs, and analyze patterns. Unlocking capabilities where shared usage data enables learning from how others approach challenges, and allowing the system to improve from accumulated experience.
 
 ---
 
