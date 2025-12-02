@@ -1,85 +1,75 @@
 ---
 title: Roadmap
-description: Amplifier roadmap and priorities
+description: Amplifier direction and current thinking
 ---
 
 # Roadmap
 
-This page outlines current priorities and future plans for Amplifier.
+!!! warning "Guidelines, Not Commitments"
+    **This roadmap is more "guidelines" than commitments.** This is subject to change based on new information, priorities, and the occasional perfect storm.
 
-## Current Focus
+## Project Status
 
-### Stability
+Amplifier is an **experimental platform** focused on discovering what's possible when AI partnership amplifies human capability. We're building a system that makes AI assistants dramatically more effective by providing:
 
-- Hardening core contracts
-- Improving error messages
-- Documentation completeness
+- Domain knowledge and context from your work
+- Understanding of your patterns and preferences
+- Ability to work on multiple things simultaneously
+- Integration with your development workflow
 
-### Module Ecosystem
+**What this means for the roadmap:**
 
-- Reference implementations for all module types
-- Module development guides
-- Community module support
+- All work is treated as candidate to be thrown away and replaced within weeks
+- Prioritization is on moving and learning over extensive up-front planning
+- The system is evolving rapidly as we discover what amplifies most
+- We need to move fast and break things
 
-### Developer Experience
+This approach enables compounding progress — each capability we add makes the system more capable of building the next.
 
-- Better debugging tools
-- Improved CLI feedback
-- Session management improvements
+## Focus Areas
 
-## Near-Term
+### Building Amplifier with Amplifier
 
-### Enhanced Agents
+Using Amplifier to improve and extend Amplifier. Building new capabilities, improving existing features, and climbing the ladder of metacognitive recipes. Progressively driving more of the buildout vs. building one-off solutions. Shifting from current acceleration to more compounding progress.
 
-- Multi-agent coordination
-- Agent-to-agent communication
-- Specialized agent templates
+Think of Amplifier like a Linux-kernel project — a small, protected core (which you shouldn't need to touch) paired with a diverse and experimental userland. Work focuses on fast iteration, plumbing, and modularity in the layers above the core.
 
-### Observability
+### Discovering and Sharing Emergent Value
 
-- Enhanced logging and tracing
-- Performance profiling
-- Token usage analytics
+Recognizing and amplifying use-cases that emerge from the system. Surfacing and evangelizing emergent uses, especially those extending beyond the code development space. Making onboarding more accessible to others, including improving for non-developers over time.
 
-### Integration
+Producing regular demos of emergent value and use-cases, providing visibility to where the project is at and going. Focus is on leveraging emergent capabilities over seeking to provide desired capabilities that don't yet exist.
 
-- IDE integrations
-- CI/CD integration patterns
-- API server mode
+## Exploration Directions
 
-## Long-Term Vision
+A partial list of observed challenges and ways we're thinking about pushing forward in the short term:
 
-### Multi-Amplifier Modes
+### Amplifier Agentic Loop
 
-- Collaborative agent sessions
-- Distributed execution
-- Agent marketplaces
+Today, Amplifier depends on Claude Code for an agentic loop. That enforces directory structures and hooks that complicate how our own patterns and systems fit in. Exploring what it would take to provide our own agentic loop for increased flexibility.
 
-### Advanced Orchestration
+### Multi-Amplifier and "Modes"
 
-- Custom orchestration patterns
-- Adaptive strategies
-- Learning from feedback
+Allowing multiple configurations tailored to specific tasks (e.g., creating Amplifier-powered user tools, self-improvement development, general software development). These "modes" could be declared through manifests that specify which sub-agents, commands, hooks, and philosophy documents to load, including external to the repo.
 
-## How Priorities Are Set
+### Metacognitive Recipes
 
-Roadmap priorities are based on:
+Evolving beyond being only a developer tool. Building support for metacognitive recipes — structured workflows described in natural language that mix specific tasks and procedures with higher-level philosophy, decision-making rationale, and problem-solving techniques. Enabling non-developers to leverage it effectively (e.g., transforming raw idea dumps into blog posts with review loops).
 
-1. **User feedback**: What problems are people facing?
-2. **Ecosystem health**: What enables more contributions?
-3. **Technical debt**: What blocks future progress?
-4. **Strategic alignment**: What advances the mission?
+### Standard Artifacts and Templates
 
-## Get Involved
+Adopting standardized templates for documentation, clear conventions for where context files and philosophy docs live, and definitions of acceptable sub-agents. Making it easy for contributors to provide artifacts that others can plug into their own Amplifier instances.
 
-Want to influence the roadmap?
+### Leveraging Sessions for Learning
 
-- **Vote on issues**: React to proposals you care about
-- **Start discussions**: Share your use cases
-- **Contribute**: Help implement roadmap items
+Including tools to parse session data, reconstruct conversation logs, and analyze patterns. Unlocking capabilities where shared usage data enables queries like "how would [other user] approach [challenge]". Allowing Amplifier to learn from prior work and improve its capabilities.
 
-## Detailed Roadmap
+### Context Sharing
 
-For the complete roadmap with details:
+Enabling team members to share context without exposing private data publicly. Options include private Git repositories or shared folders mounted as context for Amplifier. A mount-based approach treats everything as files and avoids custom API connectors, allowing individual user-choice of remote storage or synchronization platforms.
 
-**→ [ROADMAP.md](https://github.com/microsoft/amplifier/blob/next/ROADMAP.md)**
+---
+
+**Want to contribute?** See [Contributing](contributing.md) for concrete guidance on where and how to plug in.
+
+For detailed technical architecture and design principles, see the [Architecture](../architecture/index.md) section.
