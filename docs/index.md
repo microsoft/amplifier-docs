@@ -1,17 +1,76 @@
 ---
 title: Amplifier - Modular AI Agent Framework
-description: A modular AI agent framework with Linux kernel-inspired architecture
+description: Amplify human capability through AI partnership
 ---
 
 # Amplifier
 
 <div class="hero">
 <p style="font-size: 1.4rem; opacity: 0.9;">
-A modular AI agent framework with Linux kernel-inspired architecture
+Amplify human capability through AI partnership
 </p>
 </div>
 
-**Amplifier** brings AI capabilities to your command line through a clean, modular architecture. Build AI-powered development workflows with swappable providers, tools, and orchestration strategies.
+**Amplifier** is an experimental platform that multiplies what you can explore and build by making AI assistants dramatically more effective through domain knowledge, context, and modular capabilities.
+
+## Quick Start
+
+```bash
+# Install
+uv tool install git+https://github.com/microsoft/amplifier@next
+
+# Configure
+amplifier init
+
+# Run
+amplifier
+```
+
+!!! tip "Stay Updated"
+    Amplifier is in active development. Run `amplifier update` daily to get the latest features and fixes.
+
+[Get Started →](getting_started/index.md){ .md-button .md-button--primary }
+[View on GitHub →](https://github.com/microsoft/amplifier/tree/next){ .md-button }
+
+---
+
+## The Challenge
+
+**"I have more ideas than time to try them out."**
+
+Modern AI tools are powerful, but they start from zero every time. They lack your domain knowledge, patterns, context from previous work, and ability to explore multiple approaches simultaneously.
+
+## How Amplifier Helps
+
+Amplifier creates a supercharged environment where AI assistants become dramatically more effective:
+
+<div class="grid">
+
+<div class="card">
+<h3>Knowledge & Context</h3>
+<p>Provides AI with your domain knowledge, patterns, and previous work. Every interaction builds on what came before.</p>
+</div>
+
+<div class="card">
+<h3>Parallel Exploration</h3>
+<p>Test multiple approaches simultaneously. Where you might explore 1-2 solutions, Amplifier enables exploring 20 in parallel.</p>
+</div>
+
+<div class="card">
+<h3>Modular Capabilities</h3>
+<p>Swap providers, tools, and execution strategies. Build custom workflows that fit your needs.</p>
+</div>
+
+<div class="card">
+<h3>Compounding Progress</h3>
+<p>Each capability you add makes the system more capable of building the next. Fast iteration, learning, and evolution.</p>
+</div>
+
+</div>
+
+## The Platform
+
+Modular architecture inspired by the Linux kernel model:
 
 <div class="grid">
 
@@ -36,25 +95,6 @@ A modular AI agent framework with Linux kernel-inspired architecture
 </div>
 
 </div>
-
-## Quick Start
-
-```bash
-# Install
-uv tool install git+https://github.com/microsoft/amplifier@next
-
-# Configure
-amplifier init
-
-# Run
-amplifier
-```
-
-!!! tip "Stay Updated"
-    Amplifier is in active development. Run `amplifier update` daily to get the latest features and fixes.
-
-[Get Started →](getting_started/index.md){ .md-button .md-button--primary }
-[View on GitHub →](https://github.com/microsoft/amplifier/tree/next){ .md-button }
 
 ## Architecture Overview
 
@@ -97,9 +137,30 @@ Amplifier provides a rich ecosystem of swappable modules and libraries.
 
 [Browse Ecosystem →](ecosystem/index.md){ .md-button } [Community Showcase →](showcase/index.md){ .md-button }
 
+## Target Outcomes
+
+We're discovering what's possible when AI partnership amplifies human capability:
+
+- **Ideas that take weeks → hours** - Rapid exploration of possibilities
+- **Test 10x more approaches** - Parallel experimentation at scale
+- **Knowledge compounds** - Every project accelerates the next
+- **Time from idea to prototype → near zero** - Fast iteration and learning
+
+This is an experimental journey. We're building Amplifier with Amplifier, progressively discovering what amplification makes possible.
+
 ## Who Is This For?
 
 <div class="grid">
+
+<div class="card">
+<h3>Explorers</h3>
+<p>Fork and build your own amplification systems. Share discoveries and push boundaries of what's possible.</p>
+</div>
+
+<div class="card">
+<h3>Teams</h3>
+<p>Share profiles and collections across your organization. Consistent AI workflows for everyone.</p>
+</div>
 
 <div class="card">
 <h3>Developers</h3>
@@ -109,11 +170,6 @@ Amplifier provides a rich ecosystem of swappable modules and libraries.
 <div class="card">
 <h3>Module Authors</h3>
 <p>Create custom providers, tools, or hooks. Stable contracts make modules independently developable.</p>
-</div>
-
-<div class="card">
-<h3>Teams</h3>
-<p>Share profiles and collections across your organization. Consistent AI workflows for everyone.</p>
 </div>
 
 </div>
