@@ -1,0 +1,71 @@
+Documentation Page,Source Files,Notes
+docs/index.md,N/A,Landing page - manually maintained
+docs/getting_started/index.md,amplifier-app-cli/README.md,Quick start guide for CLI application
+docs/getting_started/installation.md,amplifier-app-cli/README.md|amplifier-app-cli/pyproject.toml,Installation methods and requirements
+docs/getting_started/providers.md,amplifier-app-cli/amplifier_app_cli/provider_manager.py|amplifier-module-provider-*/README.md,Provider setup and configuration
+docs/user_guide/index.md,amplifier-app-cli/README.md,CLI user guide overview
+docs/user_guide/cli.md,amplifier-app-cli/amplifier_app_cli/cli.py|amplifier-app-cli/amplifier_app_cli/commands/*.py,Complete CLI command reference
+docs/user_guide/profiles.md,amplifier-profiles/src/amplifier_profiles/*.py|amplifier-profiles/README.md,Profile system documentation
+docs/user_guide/agents.md,amplifier-collection-toolkit/agents/*|amplifier-app-cli/docs/AGENT_DELEGATION_IMPLEMENTATION.md,Agent delegation and usage
+docs/user_guide/sessions.md,amplifier-core/amplifier_core/session.py|amplifier-app-cli/amplifier_app_cli/session_spawner.py,Session management and persistence
+docs/user_guide/collections.md,amplifier-collections/src/amplifier_collections/*.py|amplifier-collections/README.md,Collections system documentation
+docs/developer_guides/foundation/index.md,amplifier-core/README.md|amplifier-core/docs/DESIGN_PHILOSOPHY.md,Foundation developer guide overview
+docs/developer_guides/applications/index.md,amplifier-core/amplifier_core/session.py|amplifier-app-cli/amplifier_app_cli/__init__.py,Building applications on amplifier-core
+docs/developer_guides/applications/cli_case_study.md,amplifier-app-cli/amplifier_app_cli/*.py|amplifier-app-cli/docs/*.md,CLI application architecture case study
+docs/developer/index.md,amplifier-core/docs/contracts/README.md,Module developer guide overview
+docs/developer/module_development.md,amplifier-core/docs/contracts/*.md|amplifier-module-*/README.md,Creating custom modules
+docs/developer/contracts/index.md,amplifier-core/docs/contracts/README.md,Module contracts overview
+docs/developer/contracts/provider.md,amplifier-core/docs/contracts/PROVIDER_CONTRACT.md|amplifier-core/amplifier_core/interfaces.py,Provider contract specification
+docs/developer/contracts/tool.md,amplifier-core/docs/contracts/TOOL_CONTRACT.md|amplifier-core/amplifier_core/interfaces.py,Tool contract specification
+docs/developer/contracts/hook.md,amplifier-core/docs/contracts/HOOK_CONTRACT.md|amplifier-core/amplifier_core/hooks.py,Hook contract specification
+docs/developer/contracts/orchestrator.md,amplifier-core/docs/contracts/ORCHESTRATOR_CONTRACT.md|amplifier-core/amplifier_core/interfaces.py,Orchestrator contract specification
+docs/developer/contracts/context.md,amplifier-core/docs/contracts/CONTEXT_CONTRACT.md|amplifier-core/amplifier_core/interfaces.py,Context contract specification
+docs/architecture/index.md,amplifier-core/docs/DESIGN_PHILOSOPHY.md,Architecture documentation overview
+docs/architecture/overview.md,amplifier-core/docs/DESIGN_PHILOSOPHY.md|amplifier-core/README.md,High-level architecture overview
+docs/architecture/kernel.md,amplifier-core/docs/DESIGN_PHILOSOPHY.md|amplifier-core/amplifier_core/*.py,Kernel philosophy and design
+docs/architecture/modules.md,amplifier-core/docs/contracts/README.md|amplifier-core/amplifier_core/loader.py,Module system architecture
+docs/architecture/mount_plans.md,amplifier-core/docs/specs/MOUNT_PLAN_SPECIFICATION.md|amplifier-core/amplifier_core/models.py,Mount plan specification
+docs/architecture/events.md,amplifier-core/docs/specs/CONTRIBUTION_CHANNELS.md|amplifier-core/amplifier_core/events.py,Event system architecture
+docs/api/index.md,N/A,API reference overview
+docs/api/core/index.md,amplifier-core/amplifier_core/__init__.py,Core API overview
+docs/api/core/session.md,amplifier-core/amplifier_core/session.py,Session API reference
+docs/api/core/coordinator.md,amplifier-core/amplifier_core/coordinator.py,Coordinator API reference
+docs/api/core/hooks.md,amplifier-core/amplifier_core/hooks.py|amplifier-core/docs/HOOKS_API.md,Hooks API reference
+docs/api/core/models.md,amplifier-core/amplifier_core/models.py|amplifier-core/amplifier_core/message_models.py,Data models reference
+docs/api/core/events.md,amplifier-core/amplifier_core/events.py,Events API reference
+docs/api/cli/index.md,amplifier-app-cli/amplifier_app_cli/cli.py,CLI API reference
+docs/libraries/index.md,amplifier-profiles/README.md|amplifier-collections/README.md|amplifier-config/README.md|amplifier-module-resolution/README.md,Libraries overview
+docs/libraries/profiles.md,amplifier-profiles/src/amplifier_profiles/*.py|amplifier-profiles/README.md,Profiles library documentation
+docs/libraries/collections.md,amplifier-collections/src/amplifier_collections/*.py|amplifier-collections/README.md,Collections library documentation
+docs/libraries/config.md,amplifier-config/src/amplifier_config/*.py|amplifier-config/README.md,Config library documentation
+docs/libraries/module_resolution.md,amplifier-module-resolution/src/amplifier_module_resolution/*.py|amplifier-module-resolution/README.md,Module resolution library documentation
+docs/modules/index.md,amplifier-core/docs/contracts/README.md,Modules catalog overview
+docs/modules/providers/index.md,amplifier-module-provider-*/README.md,Providers catalog
+docs/modules/providers/anthropic.md,amplifier-module-provider-anthropic/amplifier_module_provider_anthropic/__init__.py|amplifier-module-provider-anthropic/README.md,Anthropic provider documentation
+docs/modules/providers/openai.md,amplifier-module-provider-openai/amplifier_module_provider_openai/__init__.py|amplifier-module-provider-openai/README.md,OpenAI provider documentation
+docs/modules/providers/azure.md,amplifier-module-provider-azure-openai/amplifier_module_provider_azure_openai/__init__.py|amplifier-module-provider-azure-openai/README.md,Azure OpenAI provider documentation
+docs/modules/providers/ollama.md,amplifier-module-provider-ollama/amplifier_module_provider_ollama/__init__.py|amplifier-module-provider-ollama/README.md,Ollama provider documentation
+docs/modules/providers/vllm.md,amplifier-module-provider-vllm/amplifier_module_provider_vllm/__init__.py|amplifier-module-provider-vllm/README.md,vLLM provider documentation
+docs/modules/tools/index.md,amplifier-module-tool-*/README.md,Tools catalog
+docs/modules/tools/filesystem.md,amplifier-module-tool-filesystem/amplifier_module_tool_filesystem/*.py|amplifier-module-tool-filesystem/README.md,Filesystem tool documentation
+docs/modules/tools/bash.md,amplifier-module-tool-bash/amplifier_module_tool_bash/__init__.py|amplifier-module-tool-bash/README.md,Bash tool documentation
+docs/modules/tools/web.md,amplifier-module-tool-web/amplifier_module_tool_web/__init__.py|amplifier-module-tool-web/README.md,Web tool documentation
+docs/modules/tools/search.md,amplifier-module-tool-search/amplifier_module_tool_search/__init__.py|amplifier-module-tool-search/README.md,Search tool documentation
+docs/modules/tools/task.md,amplifier-module-tool-task/amplifier_module_tool_task/__init__.py|amplifier-module-tool-task/README.md,Task tool documentation
+docs/modules/tools/todo.md,amplifier-module-tool-todo/amplifier_module_tool_todo/__init__.py|amplifier-module-tool-todo/README.md,Todo tool documentation
+docs/modules/orchestrators/index.md,amplifier-module-loop-*/README.md,Orchestrators catalog
+docs/modules/orchestrators/loop_basic.md,amplifier-module-loop-basic/amplifier_module_loop_basic/__init__.py|amplifier-module-loop-basic/README.md,Basic orchestrator documentation
+docs/modules/orchestrators/loop_streaming.md,amplifier-module-loop-streaming/amplifier_module_loop_streaming/__init__.py|amplifier-module-loop-streaming/README.md,Streaming orchestrator documentation
+docs/modules/orchestrators/loop_events.md,amplifier-module-loop-events/amplifier_module_loop_events/__init__.py|amplifier-module-loop-events/README.md,Events orchestrator documentation
+docs/modules/contexts/index.md,amplifier-module-context-*/README.md,Contexts catalog
+docs/modules/contexts/simple.md,amplifier-module-context-simple/amplifier_module_context_simple/__init__.py|amplifier-module-context-simple/README.md,Simple context documentation
+docs/modules/contexts/persistent.md,amplifier-module-context-persistent/amplifier_module_context_persistent/__init__.py|amplifier-module-context-persistent/README.md,Persistent context documentation
+docs/modules/hooks/index.md,amplifier-module-hooks-*/README.md,Hooks catalog
+docs/modules/hooks/logging.md,amplifier-module-hooks-logging/amplifier_module_hooks_logging/__init__.py|amplifier-module-hooks-logging/README.md,Logging hook documentation
+docs/modules/hooks/approval.md,amplifier-module-hooks-approval/amplifier_module_hooks_approval/__init__.py|amplifier-module-hooks-approval/README.md,Approval hook documentation
+docs/modules/hooks/redaction.md,amplifier-module-hooks-redaction/amplifier_module_hooks_redaction/__init__.py|amplifier-module-hooks-redaction/README.md,Redaction hook documentation
+docs/ecosystem/index.md,amplifier-core/docs/contracts/README.md|amplifier-profiles/README.md,Ecosystem overview
+docs/showcase/index.md,N/A,Showcase page - manually curated
+docs/community/index.md,N/A,Community page - manually maintained
+docs/community/contributing.md,amplifier-core/README.md|CONTRIBUTING.md,Contributing guidelines
+docs/community/roadmap.md,ROADMAP.md,Project roadmap
