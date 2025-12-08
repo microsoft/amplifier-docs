@@ -84,7 +84,7 @@ Built something with Amplifier? Share it with the community!
 1. **Build your project** - See the [Developer Guide](../developer/index.md)
 2. **Publish to GitHub** - Make your code publicly reviewable
 3. **Test thoroughly** - Ensure compatibility with current Amplifier versions
-4. **Submit a PR** - Add your project to the [MODULES.md](https://github.com/microsoft/amplifier/blob/next/docs/MODULES.md) catalog
+4. **Submit a PR** - Add your project to the [MODULES.md](https://github.com/microsoft/amplifier/blob/main/docs/MODULES.md) catalog
 
 **Requirements:**
 

@@ -11,7 +11,7 @@ Get your first AI session running in under 5 minutes.
 
 ```bash
 # Install with uv (recommended)
-uv tool install git+https://github.com/microsoft/amplifier@next
+uv tool install git+https://github.com/microsoft/amplifier
 
 # Run setup wizard
 amplifier init

@@ -25,7 +25,7 @@ Welcome to the Amplifier community! This section covers how to contribute and st
 
 ## Links
 
-- **GitHub**: [github.com/microsoft/amplifier](https://github.com/microsoft/amplifier/tree/next)
+- **GitHub**: [github.com/microsoft/amplifier](https://github.com/microsoft/amplifier)
 
 ## Code of Conduct
 

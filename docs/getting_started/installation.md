@@ -14,7 +14,7 @@ Most users should follow the [Getting Started](index.md) guide. This page covers
 If you prefer [pipx](https://pipx.pypa.io/) over uv:
 
 ```bash
-pipx install git+https://github.com/microsoft/amplifier@next
+pipx install git+https://github.com/microsoft/amplifier
 ```
 
 ### Development Installation
@@ -22,8 +22,8 @@ pipx install git+https://github.com/microsoft/amplifier@next
 For contributors or those who want to modify Amplifier:
 
 ```bash
-# Clone the repository (next branch)
-git clone -b next https://github.com/microsoft/amplifier.git
+# Clone the repository
+git clone https://github.com/microsoft/amplifier.git
 cd amplifier
 
 # Install in development mode
@@ -95,7 +95,7 @@ amplifier update
 Or reinstall:
 
 ```bash
-uv tool install --force git+https://github.com/microsoft/amplifier@next
+uv tool install --force git+https://github.com/microsoft/amplifier
 ```
 
 ## Troubleshooting
@@ -130,7 +130,7 @@ Try reinstalling with a clean state:
 
 ```bash
 uv tool uninstall amplifier
-uv tool install git+https://github.com/microsoft/amplifier@next
+uv tool install git+https://github.com/microsoft/amplifier
 ```
 
 ## Next Steps

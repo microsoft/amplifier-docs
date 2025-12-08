@@ -17,7 +17,7 @@ Amplify human capability through AI partnership
 
 ```bash
 # Install
-uv tool install git+https://github.com/microsoft/amplifier@next
+uv tool install git+https://github.com/microsoft/amplifier
 
 # Configure
 amplifier init
@@ -30,7 +30,7 @@ amplifier
     Amplifier is in active development. Run `amplifier update` daily to get the latest features and fixes.
 
 [Get Started →](getting_started/index.md){ .md-button .md-button--primary }
-[View on GitHub →](https://github.com/microsoft/amplifier/tree/next){ .md-button }
+[View on GitHub →](https://github.com/microsoft/amplifier){ .md-button }
 
 ---
 
@@ -184,7 +184,7 @@ This is an experimental journey. We're building Amplifier with Amplifier, progre
 
 ## Community
 
-- [GitHub Repository](https://github.com/microsoft/amplifier/tree/next)
+- [GitHub Repository](https://github.com/microsoft/amplifier)
 - [Issue Tracker](https://github.com/microsoft/amplifier/issues)
 - [Contributing Guide](community/contributing.md)
 
