@@ -2,11 +2,11 @@ Documentation Page,Source Files,Relationship Type,Notes
 docs/index.md,N/A,DERIVED,Landing page - manually maintained
 docs/getting_started/index.md,amplifier-app-cli/README.md,DERIVED,Quick start guide for CLI application
 docs/getting_started/installation.md,amplifier-app-cli/README.md|amplifier-app-cli/pyproject.toml,DERIVED,Installation methods and requirements
-docs/getting_started/providers.md,amplifier-app-cli/amplifier_app_cli/provider_manager.py|amplifier-module-provider-*/README.md,DERIVED,Provider setup and configuration
+docs/getting_started/providers.md,amplifier-module-provider-*/README.md,REFERENCE,Provider setup and configuration
 docs/user_guide/index.md,amplifier-app-cli/README.md,DERIVED,CLI user guide overview
-docs/user_guide/cli.md,amplifier-app-cli/amplifier_app_cli/cli.py|amplifier-app-cli/amplifier_app_cli/commands/*.py,DERIVED,Complete CLI command reference
+docs/user_guide/cli.md,amplifier-app-cli/amplifier_app_cli/main.py|amplifier-app-cli/amplifier_app_cli/commands/*.py,DERIVED,Complete CLI command reference
 docs/user_guide/profiles.md,amplifier-profiles/src/amplifier_profiles/*.py|amplifier-profiles/README.md,DERIVED,Profile system documentation
-docs/user_guide/agents.md,amplifier-collection-toolkit/agents/*|amplifier-app-cli/docs/AGENT_DELEGATION_IMPLEMENTATION.md,DERIVED,Agent delegation and usage
+docs/user_guide/agents.md,amplifier-app-cli/amplifier_app_cli/data/collections/developer-expertise/agents/*|amplifier-app-cli/docs/AGENT_DELEGATION_IMPLEMENTATION.md,DERIVED,Agent delegation and usage - built-in agents in amplifier-app-cli
 docs/user_guide/sessions.md,amplifier-core/amplifier_core/session.py|amplifier-app-cli/amplifier_app_cli/session_spawner.py,DERIVED,Session management and persistence
 docs/user_guide/collections.md,amplifier-collections/src/amplifier_collections/*.py|amplifier-collections/README.md,DERIVED,Collections system documentation
 docs/developer_guides/foundation/index.md,amplifier-core/README.md|amplifier-core/docs/DESIGN_PHILOSOPHY.md,DERIVED,Foundation developer guide overview
@@ -33,7 +33,7 @@ docs/api/core/coordinator.md,amplifier-core/amplifier_core/coordinator.py,DERIVE
 docs/api/core/hooks.md,amplifier-core/amplifier_core/hooks.py|amplifier-core/docs/HOOKS_API.md,DERIVED,Hooks API reference
 docs/api/core/models.md,amplifier-core/amplifier_core/models.py|amplifier-core/amplifier_core/message_models.py,DERIVED,Data models reference
 docs/api/core/events.md,amplifier-core/amplifier_core/events.py,DERIVED,Events API reference
-docs/api/cli/index.md,amplifier-app-cli/amplifier_app_cli/cli.py,DERIVED,CLI API reference
+docs/api/cli/index.md,amplifier-app-cli/amplifier_app_cli/main.py,REFERENCE,CLI API reference
 docs/libraries/index.md,amplifier-profiles/README.md|amplifier-collections/README.md|amplifier-config/README.md|amplifier-module-resolution/README.md,DERIVED,Libraries overview
 docs/libraries/profiles.md,amplifier-profiles/src/amplifier_profiles/*.py|amplifier-profiles/README.md,DERIVED,Profiles library documentation
 docs/libraries/collections.md,amplifier-collections/src/amplifier_collections/*.py|amplifier-collections/README.md,DERIVED,Collections library documentation
@@ -64,8 +64,8 @@ docs/modules/hooks/index.md,amplifier-module-hooks-*/README.md,DERIVED,Hooks cat
 docs/modules/hooks/logging.md,amplifier-module-hooks-logging/amplifier_module_hooks_logging/__init__.py|amplifier-module-hooks-logging/README.md,DERIVED,Logging hook documentation
 docs/modules/hooks/approval.md,amplifier-module-hooks-approval/amplifier_module_hooks_approval/__init__.py|amplifier-module-hooks-approval/README.md,DERIVED,Approval hook documentation
 docs/modules/hooks/redaction.md,amplifier-module-hooks-redaction/amplifier_module_hooks_redaction/__init__.py|amplifier-module-hooks-redaction/README.md,DERIVED,Redaction hook documentation
-docs/ecosystem/index.md,amplifier-core/docs/contracts/README.md|amplifier-profiles/README.md,DERIVED,Ecosystem overview
+docs/ecosystem/index.md,amplifier/docs/MODULES.md|amplifier-core/docs/contracts/README.md|amplifier-profiles/README.md,DERIVED,Ecosystem overview - MODULES.md is primary catalog
 docs/showcase/index.md,N/A,DERIVED,Showcase page - manually curated
 docs/community/index.md,N/A,DERIVED,Community page - manually maintained
-docs/community/contributing.md,amplifier-core/README.md|CONTRIBUTING.md,DERIVED,Contributing guidelines
-docs/community/roadmap.md,ROADMAP.md,DERIVED,Project roadmap
+docs/community/contributing.md,amplifier-core/README.md,REFERENCE,Contributing guidelines - no standalone CONTRIBUTING.md exists
+docs/community/roadmap.md,amplifier/ROADMAP.md,DIRECT,Project roadmap
