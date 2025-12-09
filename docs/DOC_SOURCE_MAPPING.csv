@@ -9,7 +9,7 @@ docs/user_guide/profiles.md,amplifier-profiles/src/amplifier_profiles/*.py|ampli
 docs/user_guide/agents.md,amplifier-app-cli/amplifier_app_cli/data/collections/developer-expertise/agents/*|amplifier-app-cli/docs/AGENT_DELEGATION_IMPLEMENTATION.md,DERIVED,Agent delegation and usage - built-in agents in amplifier-app-cli
 docs/user_guide/sessions.md,amplifier-core/amplifier_core/session.py|amplifier-app-cli/amplifier_app_cli/session_spawner.py,DERIVED,Session management and persistence
 docs/user_guide/collections.md,amplifier-collections/src/amplifier_collections/*.py|amplifier-collections/README.md,DERIVED,Collections system documentation
-docs/developer_guides/foundation/index.md,amplifier-core/README.md|amplifier-core/docs/DESIGN_PHILOSOPHY.md,DERIVED,Foundation developer guide overview
+docs/developer_guides/foundation/index.md,amplifier-core/README.md|amplifier-core/docs/DESIGN_PHILOSOPHY.md|amplifier-profiles/README.md|amplifier-collections/README.md|amplifier-config/README.md|amplifier-module-resolution/README.md,DERIVED,Foundation developer guide overview - covers kernel and all foundation libraries    
 docs/developer_guides/applications/index.md,amplifier-core/amplifier_core/session.py|amplifier-app-cli/amplifier_app_cli/__init__.py,DERIVED,Building applications on amplifier-core
 docs/developer_guides/applications/cli_case_study.md,amplifier-app-cli/amplifier_app_cli/*.py|amplifier-app-cli/docs/*.md,DERIVED,CLI application architecture case study
 docs/developer/index.md,amplifier-core/docs/contracts/README.md,DERIVED,Module developer guide overview
