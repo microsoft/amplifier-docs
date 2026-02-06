@@ -38,6 +38,7 @@ Amplifier uses an event-driven architecture for observability. The kernel emits 
 |-------|------|------|
 | `provider:request` | Before LLM call | messages, model |
 | `provider:response` | After LLM response | response, usage |
+| `provider:stream` | During streaming | chunk |
 | `provider:error` | LLM call failed | error, model |
 
 ### Tool Events
@@ -68,7 +69,7 @@ Amplifier uses an event-driven architecture for observability. The kernel emits 
 
 | Event | When | Data |
 |-------|------|------|
-| `orchestrator:complete` | Main loop finished | iterations, tokens |
+| `orchestrator:complete` | Main loop finished | orchestrator, turn_count, status |
 
 ## Event Schema
 
@@ -159,7 +160,7 @@ async def safety_hook(event: str, data: dict) -> HookResult:
 
 ```python
 async def linter_hook(event: str, data: dict) -> HookResult:
-    if event == "tool:post" and data["tool_name"] == "write":
+    if event == "tool:post" and data["tool_name"] == "write_file":
         # Run linter on written file
         errors = run_linter(data["file_path"])
         if errors:
@@ -168,6 +169,24 @@ async def linter_hook(event: str, data: dict) -> HookResult:
                 context_injection=f"Linter errors:\n{errors}",
                 user_message="Found linting issues"
             )
+    return HookResult(action="continue")
+```
+
+## Streaming via Events
+
+Streaming output is implemented via events, not callbacks:
+
+```python
+# Orchestrator emits stream events
+async for chunk in provider.stream_complete(request):
+    await hooks.emit("provider:stream", {"chunk": chunk})
+
+# Hook handles streaming UI
+async def streaming_ui_hook(event: str, data: dict) -> HookResult:
+    if event == "provider:stream":
+        chunk = data.get("chunk", {})
+        if text := chunk.get("text"):
+            print(text, end="", flush=True)
     return HookResult(action="continue")
 ```
 
@@ -188,7 +207,7 @@ hooks:
 ### Log Levels
 
 | Level | Events Logged |
-|-------|--------------|
+|-------|---------------|
 | `error` | Errors only |
 | `warn` | Errors + warnings |
 | `info` | Standard events |
@@ -232,6 +251,50 @@ async def mount(coordinator, config):
 ```
 
 Custom events follow the `namespace:action` convention.
+
+## Validation via Events
+
+Hooks can validate operations before they execute:
+
+```python
+async def validation_hook(event: str, data: dict) -> HookResult:
+    if event == "tool:pre" and data["tool_name"] == "write_file":
+        path = data["input"].get("file_path", "")
+        
+        # Validate path is allowed
+        if not is_allowed_path(path):
+            return HookResult(
+                action="deny",
+                reason=f"Write to {path} not allowed"
+            )
+        
+        # Validate content
+        content = data["input"].get("content", "")
+        if errors := validate_content(content, path):
+            return HookResult(
+                action="deny",
+                reason=f"Validation failed: {errors}"
+            )
+    
+    return HookResult(action="continue")
+```
+
+## Graceful Event Handling
+
+Hooks should handle errors gracefully:
+
+```python
+async def my_hook(event: str, data: dict) -> HookResult:
+    try:
+        # Processing that might fail
+        result = process_event(data)
+    except Exception as e:
+        # Log but don't block
+        log_error(f"Hook error: {e}")
+    
+    # Always return continue unless intentionally blocking
+    return HookResult(action="continue")
+```
 
 ## Tracing
 

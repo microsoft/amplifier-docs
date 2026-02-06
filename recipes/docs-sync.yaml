@@ -1,0 +1,105 @@
+# Amplifier Documentation Synchronization Recipe
+name: "docs-sync"
+description: "Synchronize amplifier-docs with source repositories and generate freshness report"
+version: "1.0.0"
+tags: ["documentation", "sync", "freshness"]
+
+context:
+  mode: "check"
+  repos_dir: "~/repo/amplifier-sources"
+  outline_path: "./outlines/amplifier-docs-outline.json"
+  output_dir: "./sync-output"
+
+steps:
+  - id: "setup"
+    type: "bash"
+    command: "mkdir -p {{output_dir}}/reports {{output_dir}}/cache && echo 'Setup complete'"
+    output: "setup_result"
+    timeout: 30
+
+  - id: "extract-repos"
+    type: "bash"
+    command: "python3 -c \"import json; d=json.load(open('{{outline_path}}')); repos=set(); [repos.update(v) for v in d.get('_meta',{}).get('allowed_repos',{}).values()]; print(json.dumps(sorted(list(repos))))\""
+    output: "repo_list"
+    parse_json: true
+    timeout: 30
+
+  - id: "sync-repos"
+    agent: "foundation:git-ops"
+    prompt: |
+      Clone or update the following repositories to the directory: {{repos_dir}}
+      
+      Repositories to sync (from microsoft GitHub org):
+      {{repo_list}}
+      
+      For each repository:
+      1. If it exists in {{repos_dir}}, do a git pull to update
+      2. If it doesn't exist, clone it with: git clone --depth 1 https://github.com/microsoft/{repo_name}
+      
+      Work through all repositories. Report how many succeeded, failed, or were skipped.
+      This may take several minutes as there are ~34 repositories.
+    output: "sync_result"
+    timeout: 1200
+
+  - id: "compute-hashes"
+    agent: "foundation:file-ops"
+    prompt: |
+      Compute SHA256 hashes of source files referenced in the documentation outline.
+      
+      1. Read the outline from: {{outline_path}}
+      2. For each section in content_sections, check if its source files exist in {{repos_dir}}
+      3. For files that exist, compute their SHA256 hash (first 16 chars is enough)
+      4. Track which sources are found vs missing
+      
+      Save the results as JSON to: {{output_dir}}/cache/source-hashes.json
+      
+      The JSON should have this structure:
+      {
+        "summary": {"total_sources": N, "found": N, "missing": N},
+        "sections": {
+          "section-id": {
+            "doc_path": "docs/...",
+            "sources": [{"repo": "...", "path": "...", "exists": true/false, "hash": "..."}]
+          }
+        }
+      }
+      
+      Print a summary of found vs missing sources.
+    output: "hash_result"
+    timeout: 300
+
+  - id: "analyze-freshness"
+    agent: "foundation:zen-architect"
+    mode: "ANALYZE"
+    prompt: |
+      Generate a documentation freshness report based on the source hash computation.
+      
+      Read the hash results from: {{output_dir}}/cache/source-hashes.json
+      
+      Create a comprehensive markdown report with:
+      
+      1. **Executive Summary**
+         - Total documentation pages analyzed
+         - Source files found vs missing  
+         - Health status (HEALTHY >90%, WARNING 70-90%, CRITICAL <70%)
+      
+      2. **Missing Sources** (Critical)
+         - List sections with missing sources, grouped by repository
+         - Include doc_path and missing source paths
+      
+      3. **Sources by Repository**
+         - Count of source files per repository
+      
+      4. **Recommendations**
+         - Priority actions based on findings
+      
+      Save to: {{output_dir}}/reports/freshness-report.md
+      Print summary to stdout.
+    output: "freshness_analysis"
+    timeout: 300
+
+  - id: "final-summary"
+    type: "bash"
+    command: "echo '=== DOCS SYNC COMPLETE ===' && echo 'Reports: {{output_dir}}/reports/' && ls -la {{output_dir}}/reports/ 2>/dev/null || echo 'No reports yet'"
+    output: "final_result"
+    timeout: 30

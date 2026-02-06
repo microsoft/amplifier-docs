@@ -10,3 +10,12 @@ site/
 # Python cache
 __pycache__/
 *.py[cod]
+
+# Amplifier local configuration
+.amplifier/
+
+# Generated sync output (analysis cache, reports)
+sync-output/
+
+# Generated outline (derived from CSV, includes timestamp)
+outlines/

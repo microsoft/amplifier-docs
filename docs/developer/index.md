@@ -1,106 +1,189 @@
 ---
-title: Module Developer Guide
-description: Creating custom modules to extend Amplifier
+title: Developer Guide
+description: Building modules and extending Amplifier
 ---
 
-# Module Developer Guide
+# Developer Guide
 
-This guide covers creating **custom modules** that extend Amplifier's capabilities: providers, tools, hooks, orchestrators, and context managers.
+**Start here for building Amplifier modules.**
 
-!!! info "Looking for something else?"
-    - **Building applications on amplifier-core?** → See [Application Developer Guide](../developer_guides/applications/)
-    - **Contributing to the foundation?** → See [Foundation Developer Guide](../developer_guides/foundation/)
-    - **Using the CLI?** → See [User Guide](../user_guide/)
+This guide covers creating custom modules that extend Amplifier's capabilities: providers, tools, hooks, orchestrators, and context managers.
 
-This guide is for **extending Amplifier with new capabilities**, not building applications or contributing to the core.
+## Module Types
 
-## Topics
+| Module Type | Contract | Purpose |
+|-------------|----------|---------|
+| **Provider** | [Provider Contract](contracts/provider.md) | LLM backend integration |
+| **Tool** | [Tool Contract](contracts/tool.md) | Agent capabilities |
+| **Hook** | [Hook Contract](contracts/hook.md) | Lifecycle observation and control |
+| **Orchestrator** | [Orchestrator Contract](contracts/orchestrator.md) | Agent loop execution strategy |
+| **Context** | [Context Contract](contracts/context.md) | Conversation memory management |
+
+## Quick Start Pattern
+
+All modules follow this pattern:
+
+```python
+# 1. Implement the Protocol from interfaces.py
+class MyModule:
+    # ... implement required methods
+    pass
+
+# 2. Provide mount() function
+async def mount(coordinator, config):
+    """Initialize and register module."""
+    instance = MyModule(config)
+    await coordinator.mount("category", instance, name="my-module")
+    return instance  # or cleanup function
+
+# 3. Register entry point in pyproject.toml
+# [project.entry-points."amplifier.modules"]
+# my-module = "my_package:mount"
+```
+
+## Source of Truth
+
+**Protocols are in code**, not docs:
+
+| Source | Description |
+|--------|-------------|
+| `amplifier_core/interfaces.py` | Protocol definitions |
+| `amplifier_core/models.py` | Data models |
+| `amplifier_core/message_models.py` | Pydantic models for request/response |
+| `amplifier_core/content_models.py` | Dataclass types for events and streaming |
+
+These contract documents provide **guidance** that code cannot express. Always read the code docstrings first.
+
+## Configuration
+
+Modules receive configuration from Mount Plans:
+
+```yaml
+tools:
+  - module: my-tool
+    source: git+https://github.com/org/my-tool@main
+    config:
+      option1: value1
+      debug: true
+```
+
+Configuration options should be documented in your module's README.
+
+## Validation
+
+Verify your module before release:
+
+```bash
+# Structural validation
+amplifier module validate ./my-module
+```
+
+See individual contract documents for type-specific validation requirements.
+
+## Streaming Support
+
+Modules can participate in streaming:
+
+```python
+# Provider streaming
+async for chunk in provider.stream_complete(request):
+    await hooks.emit("provider:stream", {"chunk": chunk})
+
+# Hook handles streaming display
+async def streaming_hook(event, data):
+    if event == "provider:stream":
+        print(data["chunk"].get("text", ""), end="", flush=True)
+    return HookResult(action="continue")
+```
+
+## Module Development Guide
+
+For detailed guidance on building each module type:
 
 <div class="grid">
 
 <div class="card">
 <h3><a href="module_development/">Module Development</a></h3>
-<p>Create custom providers, tools, hooks, orchestrators, and context managers.</p>
+<p>Complete guide to creating Amplifier modules.</p>
 </div>
 
 <div class="card">
-<h3><a href="contracts/">Module Contracts</a></h3>
-<p>Reference documentation for module interfaces.</p>
+<h3><a href="contracts/provider/">Provider Contract</a></h3>
+<p>Integrate LLM backends.</p>
+</div>
+
+<div class="card">
+<h3><a href="contracts/tool/">Tool Contract</a></h3>
+<p>Add agent capabilities.</p>
+</div>
+
+<div class="card">
+<h3><a href="contracts/hook/">Hook Contract</a></h3>
+<p>Observe and control operations.</p>
 </div>
 
 </div>
 
-## Quick Start
+## Related Documentation
 
-### Creating a Module
+- **[Mount Plan Specification](../architecture/mount_plans.md)** - Configuration contract
+- **[Event System](../architecture/events.md)** - Observability patterns
+- **[Design Philosophy](../architecture/overview.md)** - Kernel design principles
 
-```bash
-# Create module directory
-mkdir amplifier-module-tool-myname
-cd amplifier-module-tool-myname
+## Best Practices
 
-# Initialize project
-cat > pyproject.toml << 'EOF'
-[project]
-name = "amplifier-module-tool-myname"
-version = "1.0.0"
-dependencies = []
+### Graceful Degradation
 
-[project.entry-points."amplifier.modules"]
-tool-myname = "amplifier_module_tool_myname:mount"
+Modules should handle missing dependencies gracefully:
 
-[build-system]
-requires = ["hatchling"]
-build-backend = "hatchling.build"
-EOF
-
-# Create module code
-mkdir amplifier_module_tool_myname
-cat > amplifier_module_tool_myname/__init__.py << 'EOF'
+```python
 async def mount(coordinator, config=None):
-    tool = MyTool(config or {})
-    await coordinator.mount("tools", tool, name="myname")
-    return None
-
-class MyTool:
-    name = "myname"
-    description = "My custom tool"
-    input_schema = {"type": "object", "properties": {}}
-
-    def __init__(self, config):
-        self.config = config
-
-    async def execute(self, input):
-        return {"success": True, "output": "Hello!"}
-EOF
+    config = config or {}
+    api_key = config.get("api_key") or os.environ.get("MY_API_KEY")
+    
+    if not api_key:
+        # Return None - don't block other modules
+        return None
+    
+    module = MyModule(config)
+    await coordinator.mount("providers", module, name="my-provider")
+    return module.cleanup
 ```
 
-### Testing Locally
+### Error Handling
 
-```bash
-# Install in development mode
-uv pip install -e .
+Return structured errors instead of raising exceptions:
 
-# Test with Amplifier
-amplifier source add tool-myname file://$(pwd)
-amplifier run --profile dev "Test my new tool"
+```python
+async def execute(self, input: dict) -> ToolResult:
+    try:
+        result = await self._do_work(input)
+        return ToolResult(success=True, output=result)
+    except ValueError as e:
+        return ToolResult(
+            success=False,
+            error={"message": str(e), "type": "ValueError"}
+        )
 ```
 
-## Philosophy
+### Testing
 
-Amplifier's development philosophy emphasizes:
+Include comprehensive tests:
 
-1. **Modules are independent**: No peer dependencies
-2. **Contracts are stable**: Backward compatibility is sacred
-3. **Test in isolation**: Mock the coordinator
-4. **Regenerate, don't edit**: Rebuild modules from spec
+```python
+import pytest
 
-## Module Types
+@pytest.mark.asyncio
+async def test_mount():
+    coordinator = MockCoordinator()
+    cleanup = await mount(coordinator, {"api_key": "test"})
+    
+    assert "my-module" in coordinator.modules
+    assert cleanup is not None
+```
 
-| Type | Purpose | Contract |
-|------|---------|----------|
-| Provider | LLM backends | [Provider Contract](contracts/provider.md) |
-| Tool | Agent capabilities | [Tool Contract](contracts/tool.md) |
-| Hook | Observability | [Hook Contract](contracts/hook.md) |
-| Orchestrator | Execution loops | [Orchestrator Contract](contracts/orchestrator.md) |
-| Context | Memory management | [Context Contract](contracts/context.md) |
+## Authoritative Reference
+
+**→ [Module Contracts](https://github.com/microsoft/amplifier-core/blob/main/docs/contracts/README.md)** - Complete contract documentation
+
+**→ [amplifier-core](https://github.com/microsoft/amplifier-core)** - Kernel source code

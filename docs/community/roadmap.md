@@ -1,75 +1,161 @@
 ---
 title: Roadmap
-description: Amplifier direction and current thinking
+description: Amplifier project direction and opportunities
 ---
 
-# Roadmap
+# Amplifier Roadmap
 
-!!! warning "Guidelines, Not Commitments"
-    **This roadmap is more "guidelines" than commitments.** This is subject to change based on new information, priorities, and the occasional perfect storm.
+!!! note "Living Document"
+    This roadmap is more like guidelines than firm commitments. Subject to change based on new information, priorities, and emerging opportunities.
 
-## Project Status
+## Vision
 
-Amplifier is an **experimental platform** focused on discovering what's possible when AI partnership amplifies human capability. We're building a system that makes AI assistants dramatically more effective by providing:
+Think of Amplifier like a **Linux kernel project**: a small, protected core paired with a diverse and experimental userland. The kernel provides interfaces for core features central to all Amplifier experiences—capabilities, logging, audit/replay, storage, and memory. The userland (modules) is where experimentation and rapid iteration happen.
 
-- Domain knowledge and context from your work
-- Understanding of your patterns and preferences
-- Ability to work on multiple things simultaneously
-- Integration with your development workflow
+## Workstreams
 
-**What this means for the roadmap:**
+### Amplifier Core
 
-- All work is treated as candidate to be thrown away and replaced within weeks
-- Prioritization is on moving and learning over extensive up-front planning
-- The system is evolving rapidly as we discover what amplifies most
-- We need to move fast and break things
+**Goal**: Use Amplifier to improve and build Amplifier.
 
-This approach enables compounding progress — each capability we add makes the system more capable of building the next.
+This involves building scaffolding and climbing the ladder of metacognitive recipes, progressively driving more of the buildout through the system itself. We're shifting from current acceleration to compounding progress.
 
-## Focus Areas
+The critical path leads to Amplifier being able to:
+- Take lists of ideas and explore them unattended
+- Engage human drivers for review and feedback
+- Operate at higher levels of automation and capability
 
-### Building Amplifier with Amplifier
+Near-term focus: fast iteration, plumbing, and modularity rather than prematurely freezing kernel design.
 
-Using Amplifier to improve and extend Amplifier. Building new capabilities, improving existing features, and climbing the ladder of metacognitive recipes. Progressively driving more of the buildout vs. building one-off solutions. Shifting from current acceleration to more compounding progress.
+### Amplifier Usage
 
-Think of Amplifier like a Linux-kernel project — a small, protected core (which you shouldn't need to touch) paired with a diverse and experimental userland. Work focuses on fast iteration, plumbing, and modularity in the layers above the core.
+**Goal**: Leverage emergent value beyond development.
 
-### Discovering and Sharing Emergent Value
+Surface and evangelize uses that extend outside code development. Make onboarding accessible to non-developers over time.
 
-Recognizing and amplifying use-cases that emerge from the system. Surfacing and evangelizing emergent uses, especially those extending beyond the code development space. Making onboarding more accessible to others, including improving for non-developers over time.
+This workstream produces:
+- Regular demos of emergent value and use-cases
+- Content providing visibility into project progress
+- Vision for adapting capabilities to adjacent scenarios
 
-Producing regular demos of emergent value and use-cases, providing visibility to where the project is at and going. Focus is on leveraging emergent capabilities over seeking to provide desired capabilities that don't yet exist.
+Focus is on leveraging emergent capabilities over building desired features that don't yet exist.
 
-## Exploration Directions
+## Current Opportunities
 
-A partial list of areas where we see opportunities for further exploration and development:
+### Agentic Loop Independence
 
-### Orchestration Strategies
+Today, Amplifier depends on external tools for the agentic loop, which enforces structures and hooks that complicate context and modularity. We're exploring providing our own agentic loop for increased flexibility.
 
-Amplifier provides several orchestrators (basic, events, streaming) that control execution flow. You could imagine more specialized orchestration strategies tailored to specific workflows, optimization goals, or interaction patterns.
+### Multi-Amplifier and Modes
 
-### Collections and Workflows
+Amplifier should allow multiple configurations tailored to specific tasks:
+- Creating Amplifier-powered user tools
+- Self-improvement development
+- General software development
 
-Collections package agents, context, and philosophy documents for specific use cases. Current collections focus on toolkit building, design intelligence, and recipes. You could imagine collections for other domains, workflows, or ways of organizing reusable knowledge and patterns.
+**Modes** would be declared through manifests specifying:
+- Sub-agents to load
+- Commands and hooks
+- Philosophy documents
+- External sources
+
+Having structured ways to switch between modes makes it easier to share experimental tools, reduce conflicts, and quickly reconfigure for different work.
 
 ### Metacognitive Recipes
 
-Expanding on structured workflows that mix specific tasks with higher-level philosophy, decision-making rationale, and problem-solving techniques. Making these patterns more accessible and enabling non-developers to leverage them effectively.
+Amplifier should evolve beyond being only a developer tool. Metacognitive recipes are structured workflows in natural language combining:
+- Specific tasks and procedures
+- Higher-level philosophy and decision-making rationale
+- Problem-solving techniques within the recipe's domain
+- Code-first approach leveraging AI where appropriate
+
+Examples:
+- Transforming raw idea dumps into blog posts with review loops
+- Improving Amplifier's debug and recovery techniques
+- General, context-managed workflows for non-developers
 
 ### Standard Artifacts and Templates
 
-Evolving conventions for documentation, context files, philosophy documents, and sub-agent definitions. Making it easier for contributors to create artifacts that others can plug into their own Amplifier instances with clear expectations.
+To encourage collaboration, Amplifier should adopt:
+- Standardized templates for documentation
+- Clear conventions for context files and philosophy docs
+- Definitions of acceptable sub-agents
+- Shared formats for team projects, ideas, priorities, and learnings
 
-### Context and Memory
+Contributors provide artifacts others can plug into their own Amplifier instances.
 
-While Amplifier provides simple and persistent context modules, you could imagine richer approaches to memory, knowledge synthesis, session learning, and team context sharing. Different storage backends, query patterns, or ways of organizing and accessing accumulated knowledge.
+### Session Learning
 
-### Learning from Sessions
+Amplifier should include tools to:
+- Parse session data and reconstruct conversation logs
+- Analyze patterns across sessions
+- Query "how would \<user\> approach \<challenge\>"
+- Learn from prior work
 
-Tools to parse session data, reconstruct conversation logs, and analyze patterns. Unlocking capabilities where shared usage data enables learning from how others approach challenges, and allowing the system to improve from accumulated experience.
+This enables metacognitive recipe improvements based on actual usage rather than hoping for compliance with context notes.
 
----
+### Context Sharing
 
-**Want to contribute?** See [Contributing](contributing.md) for concrete guidance on where and how to plug in.
+Team members should share context without exposing private data publicly. Options:
+- Private Git repositories
+- Shared file folders mounted as context
+- Version history and ease of use are key requirements
 
-For detailed technical architecture and design principles, see the [Architecture](../architecture/index.md) section.
+A mount-based approach treats everything as files and avoids custom API connectors, allowing individual choice of storage platforms.
+
+## Feature Areas
+
+### In Development
+
+| Feature | Status | Description |
+|---------|--------|-------------|
+| **Streaming** | Active | Real-time token streaming via hooks |
+| **Vision** | Active | Image input support across providers |
+| **Debug mode** | Active | Enhanced logging and observability |
+
+### Planned
+
+| Feature | Priority | Description |
+|---------|----------|-------------|
+| **Recipe system** | High | Declarative multi-step workflows |
+| **Approval gates** | High | Human-in-loop checkpoints |
+| **Session analysis** | Medium | Pattern extraction from sessions |
+| **Context mounts** | Medium | External context sources |
+
+### Exploring
+
+| Feature | Notes |
+|---------|-------|
+| **Custom orchestrators** | Beyond basic loop patterns |
+| **Memory systems** | Long-term knowledge retention |
+| **Team collaboration** | Shared context and artifacts |
+| **Non-developer UX** | Simplified interfaces |
+
+## Philosophy
+
+### Fast Iteration
+
+All work is treated as a candidate to be thrown away and replaced within weeks by something better, more informed by learnings, and being rebuilt faster through Amplifier itself.
+
+### Learning Over Planning
+
+Prioritization is on moving and learning over extensive up-front analysis. This mode is periodically revisited and re-evaluated.
+
+### Compounding Progress
+
+Each improvement should enable faster, more capable subsequent improvements—a virtuous cycle of self-improvement.
+
+## Contributing
+
+See the [Contributing Guide](../contributing/) for how to get involved. Areas where contributions are particularly welcome:
+
+- **Module development**: New tools, providers, hooks
+- **Documentation**: Guides, examples, patterns
+- **Testing**: Coverage, edge cases, integration tests
+- **Use cases**: Share your Amplifier workflows
+
+## References
+
+- **→ [ROADMAP.md](https://github.com/microsoft/amplifier/blob/main/ROADMAP.md)** - Source roadmap document
+- **→ [Contributing](../contributing/)** - How to contribute
+- **→ [Architecture](../architecture/)** - Technical foundation

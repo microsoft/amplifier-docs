@@ -29,7 +29,7 @@ Amplifier mirrors Linux kernel concepts:
 The application layer (e.g., `amplifier-app-cli`) handles:
 
 - User interaction (CLI, REPL)
-- Configuration resolution (profiles, settings)
+- Configuration resolution (bundles, profiles, settings)
 - Mount Plan creation
 - Approval and display systems
 
@@ -67,11 +67,11 @@ await coordinator.hooks.emit("session:start", data)
 
 Modules implement specific functionality:
 
-- **Providers**: LLM API integrations
-- **Tools**: Agent capabilities
-- **Orchestrators**: Execution strategies
-- **Contexts**: Memory management
-- **Hooks**: Observability and control
+- **Providers**: LLM API integrations (Anthropic, OpenAI, Azure, Ollama)
+- **Tools**: Agent capabilities (filesystem, bash, web, search)
+- **Orchestrators**: Execution strategies (basic, streaming, events)
+- **Contexts**: Memory management (simple, persistent)
+- **Hooks**: Observability and control (logging, approval, redaction, streaming)
 
 ```python
 # Module implements contract
@@ -87,7 +87,7 @@ class AnthropicProvider:
 ┌─────────────────────────────────────────────────────────────────┐
 │                        Application                               │
 │  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐             │
-│  │   Profiles  │  │   Config    │  │  Collections│             │
+│  │   Bundles   │  │   Config    │  │  Collections│             │
 │  └──────┬──────┘  └──────┬──────┘  └──────┬──────┘             │
 │         │                │                │                      │
 │         └────────────────┼────────────────┘                      │
@@ -120,7 +120,7 @@ class AnthropicProvider:
 ┌──────────────────────────┼──────────────────────────────────────┐
 │                       Modules                                    │
 │  ┌───────────┐ ┌───────────┐ ┌───────────┐ ┌───────────┐       │
-│  │ Providers │ │   Tools   │ │Orchestratr│ │  Context  │       │
+│  │ Providers │ │   Tools   │ │Orchestrator│ │  Context  │       │
 │  └───────────┘ └───────────┘ └───────────┘ └───────────┘       │
 │                                                                  │
 │  ┌───────────────────────────────────────────────────────┐      │
@@ -138,49 +138,64 @@ class AnthropicProvider:
 User Prompt
      │
      ▼
-┌─────────────────────────────────────────────────────────────┐
-│ 1. Session receives prompt                                   │
-│    emit("prompt:submit", {prompt})                          │
-└──────┬──────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────┐
+│ 1. Session receives prompt                                       │
+│    emit("prompt:submit", {prompt})                              │
+└──────┬──────────────────────────────────────────────────────────┘
        │
        ▼
-┌─────────────────────────────────────────────────────────────┐
-│ 2. Orchestrator takes control                                │
-│    orchestrator.execute(prompt, context, providers, tools)  │
-└──────┬──────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────┐
+│ 2. Orchestrator takes control                                    │
+│    orchestrator.execute(prompt, context, providers, tools)      │
+└──────┬──────────────────────────────────────────────────────────┘
        │
        ▼
-┌─────────────────────────────────────────────────────────────┐
-│ 3. Add prompt to context                                     │
-│    context.add_message({role: "user", content: prompt})     │
-└──────┬──────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────┐
+│ 3. Add prompt to context                                         │
+│    context.add_message({role: "user", content: prompt})         │
+└──────┬──────────────────────────────────────────────────────────┘
        │
        ▼
-┌─────────────────────────────────────────────────────────────┐
-│ 4. Call provider                                             │
-│    emit("provider:request", {...})                          │
-│    response = provider.complete(messages)                    │
-│    emit("provider:response", {...})                         │
-└──────┬──────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────┐
+│ 4. Call provider                                                 │
+│    emit("provider:request", {...})                              │
+│    response = provider.complete(messages)                        │
+│    emit("provider:response", {...})                             │
+└──────┬──────────────────────────────────────────────────────────┘
        │
        ▼
-┌─────────────────────────────────────────────────────────────┐
-│ 5. Process tool calls (if any)                               │
-│    for tool_call in response.tool_calls:                    │
-│        emit("tool:pre", {...})                              │
-│        result = tool.execute(input)                         │
-│        emit("tool:post", {...})                             │
-│        context.add_message({role: "tool", ...})             │
-│    → Loop back to step 4 if more tool calls                 │
-└──────┬──────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────┐
+│ 5. Process tool calls (if any)                                   │
+│    for tool_call in response.tool_calls:                        │
+│        emit("tool:pre", {...})                                  │
+│        result = tool.execute(input)                             │
+│        emit("tool:post", {...})                                 │
+│        context.add_message({role: "tool", ...})                 │
+│    → Loop back to step 4 if more tool calls                     │
+└──────┬──────────────────────────────────────────────────────────┘
        │
        ▼
-┌─────────────────────────────────────────────────────────────┐
-│ 6. Return final response                                     │
-│    emit("prompt:complete", {...})                           │
-│    return response.text                                      │
-└─────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────┐
+│ 6. Return final response                                         │
+│    emit("orchestrator:complete", {...})                         │
+│    emit("prompt:complete", {...})                               │
+│    return response.text                                          │
+└─────────────────────────────────────────────────────────────────┘
 ```
+
+## Core Concepts
+
+| Concept | Description |
+|---------|-------------|
+| **Kernel** | Ultra-thin core providing mechanisms only (~2,600 lines) |
+| **Module** | Swappable component implementing a contract (Protocol) |
+| **Mount Plan** | Configuration specifying which modules to load |
+| **Event** | Observable occurrence in the system |
+| **Hook** | Module that observes/controls events |
+| **Session** | Single conversation lifecycle |
+| **Coordinator** | Infrastructure context for modules |
+| **Context Manager** | Memory management with compaction |
+| **Agent** | Configuration overlay for specialized sub-sessions |
 
 ## Key Design Decisions
 
@@ -205,15 +220,21 @@ User Prompt
 3. **Debugging**: Complete audit trail
 4. **Extensions**: Add behavior via hooks, not code changes
 
+### Why Directness Over Abstraction?
+
+1. **Simplicity**: Fewer layers to understand
+2. **Maintenance**: Clear code paths
+3. **Debugging**: Easy to trace execution
+4. **Performance**: No unnecessary indirection
+
 ## Libraries
 
 Supporting libraries provide higher-level functionality:
 
 | Library | Purpose |
 |---------|---------|
-| `amplifier-profiles` | Profile loading and inheritance |
-| `amplifier-collections` | Collection discovery and management |
-| `amplifier-config` | Three-scope configuration |
+| `amplifier-foundation` | Bundle loading, composition, and session management |
+| `amplifier-config` | Three-scope configuration (local/project/global) |
 | `amplifier-module-resolution` | Module source resolution |
 
 These libraries are **not part of the kernel**—they're application-layer concerns.

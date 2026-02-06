@@ -1,0 +1,174 @@
+# Documentation Regeneration Recipe
+name: "docs-regenerate"
+description: "Regenerate stale documentation from source files"
+version: "1.0.0"
+tags: ["documentation", "regeneration", "content"]
+
+context:
+  # Mode: "single" for one doc, "batch" for multiple, "priority" for high-priority only
+  mode: "single"
+  # For single mode: specific doc path to regenerate
+  doc_path: ""
+  # For batch mode: limit number of docs to regenerate
+  batch_limit: 5
+  # Priority filter: "all", "high", "medium", "low"
+  priority_filter: "high"
+  # Source directories
+  repos_dir: "~/repo/amplifier-sources"
+  outline_path: "./outlines/amplifier-docs-outline.json"
+  analysis_path: "./sync-output/cache/content-analysis.json"
+  # Output
+  output_dir: "./sync-output/regenerated"
+
+steps:
+  - id: "setup"
+    type: "bash"
+    command: "mkdir -p {{output_dir}} && echo 'Setup complete. Mode: {{mode}}'"
+    output: "setup_result"
+    timeout: 30
+
+  - id: "select-docs"
+    type: "bash"
+    command: |
+      python3 << 'EOF'
+      import json
+      
+      mode = "{{mode}}"
+      doc_path = "{{doc_path}}"
+      priority_filter = "{{priority_filter}}"
+      batch_limit = int("{{batch_limit}}")
+      
+      # Load analysis
+      with open("{{analysis_path}}") as f:
+          analysis = json.load(f)
+      
+      # Load outline for source mappings
+      with open("{{outline_path}}") as f:
+          outline = json.load(f)
+      
+      # Build section lookup
+      section_lookup = {s["doc_path"]: s for s in outline.get("content_sections", [])}
+      
+      selected = []
+      
+      if mode == "single" and doc_path:
+          # Find specific doc
+          for doc in analysis["stale_docs"]:
+              if doc["doc_path"] == doc_path:
+                  section = section_lookup.get(doc_path, {})
+                  selected.append({
+                      "doc_path": doc_path,
+                      "sources": section.get("sources", []),
+                      "relationship": doc.get("relationship", "DERIVED"),
+                      "priority": doc.get("priority", "medium"),
+                      "staleness_reasons": doc.get("staleness_reasons", [])
+                  })
+                  break
+      else:
+          # Batch mode - select by priority
+          for doc in analysis["stale_docs"]:
+              if priority_filter != "all" and doc["priority"] != priority_filter:
+                  continue
+              
+              section = section_lookup.get(doc["doc_path"], {})
+              if not section.get("sources"):
+                  continue
+              
+              selected.append({
+                  "doc_path": doc["doc_path"],
+                  "sources": section.get("sources", []),
+                  "relationship": doc.get("relationship", "DERIVED"),
+                  "priority": doc.get("priority", "medium"),
+                  "staleness_reasons": doc.get("staleness_reasons", [])
+              })
+              
+              if len(selected) >= batch_limit:
+                  break
+      
+      # Output
+      result = {"count": len(selected), "docs": selected}
+      print(json.dumps(result))
+      EOF
+    output: "selected_docs"
+    parse_json: true
+    timeout: 60
+
+  - id: "regenerate-docs"
+    agent: "foundation:zen-architect"
+    mode: "ARCHITECT"
+    prompt: |
+      Regenerate documentation for stale docs. For each doc, read the source files and create updated documentation content.
+      
+      ## Selected Docs to Regenerate
+      {{selected_docs}}
+      
+      ## Source Repository Location
+      All source repos are in: {{repos_dir}}
+      
+      ## Instructions
+      
+      For EACH doc in the selected list:
+      
+      1. **Read all source files** listed in the doc's "sources" array
+         - Path format: {{repos_dir}}/{repo}/{path}
+         - Read each source file completely
+      
+      2. **Analyze what's missing** based on staleness_reasons
+         - Missing features need to be documented
+         - Outdated models need version updates
+         - Missing config options need to be added
+      
+      3. **Generate updated documentation** that:
+         - Keeps the existing structure and frontmatter
+         - Adds missing configuration options with descriptions
+         - Updates model lists to match source
+         - Documents missing features with examples
+         - Uses the same tone and style as existing docs
+      
+      4. **Save the regenerated doc** to: {{output_dir}}/{doc_filename}
+         - Where doc_filename is the basename of doc_path
+      
+      5. **Create a change summary** for each doc listing what was added/changed
+      
+      Work through ALL selected docs. Be thorough - read sources completely before writing.
+      
+      After completing all docs, provide a summary of what was regenerated.
+    output: "regeneration_result"
+    timeout: 900
+
+  - id: "validate-output"
+    agent: "foundation:file-ops"
+    prompt: |
+      Validate the regenerated documentation files.
+      
+      1. List all files in: {{output_dir}}
+      2. For each file, check:
+         - File exists and is not empty
+         - Has valid markdown frontmatter (starts with ---)
+         - Has proper heading structure
+      
+      3. Report:
+         - Number of files generated
+         - Any validation issues found
+         - Total bytes written
+      
+      Print a validation summary.
+    output: "validation_result"
+    timeout: 120
+
+  - id: "generate-diff-report"
+    type: "bash"
+    command: |
+      echo "=== REGENERATION COMPLETE ==="
+      echo "Output directory: {{output_dir}}"
+      echo ""
+      echo "Files generated:"
+      ls -la {{output_dir}}/*.md 2>/dev/null || echo "No markdown files found"
+      echo ""
+      echo "To review changes:"
+      echo "  diff -u docs/path/to/file.md {{output_dir}}/file.md"
+      echo ""
+      echo "To apply changes:"
+      echo "  cp {{output_dir}}/file.md docs/path/to/file.md"
+    output: "final_report"
+    timeout: 30

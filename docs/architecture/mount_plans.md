@@ -84,6 +84,14 @@ Mount Plans are the **only way** applications communicate configuration to the k
                 "default_model": "claude-sonnet-4-5",
                 "max_tokens": 4096
             }
+        },
+        {
+            "module": "provider-openai",
+            "source": "git+https://github.com/microsoft/amplifier-module-provider-openai@main",
+            "config": {
+                "default_model": "gpt-4o",
+                "max_tokens": 4096
+            }
         }
     ],
     "tools": [
@@ -207,15 +215,64 @@ Agents are **configuration overlays** for sub-session delegation:
 
 Agents are **not** loaded at session start. They're used when the task tool spawns a sub-session.
 
-## Mount Plan Creation
+## Model Support
 
-### From Profiles (Typical)
+Mount Plans can specify various models across providers:
+
+### Anthropic Models
+- `claude-sonnet-4-5` - Latest Claude Sonnet
+- `claude-haiku-20250110` - Fast, efficient model
+
+### OpenAI Models
+- `gpt-4o` - Latest GPT model
+- `gpt-4o` - Multimodal model
+
+### Azure OpenAI
+- Deployment names configured in Azure portal
+
+### Ollama (Local)
+- Any model available via `ollama list`
+
+## Vision Support
+
+For models with vision capabilities, images can be included in messages:
 
 ```python
-from amplifier_profiles import compile_profile_to_mount_plan
+{
+    "role": "user",
+    "content": [
+        {"type": "text", "text": "What's in this image?"},
+        {"type": "image", "source": {"type": "base64", "data": "...", "media_type": "image/png"}}
+    ]
+}
+```
 
-profile = load_profile("dev")
-mount_plan = compile_profile_to_mount_plan(profile)
+## Context Window Management
+
+Mount Plans work with context managers to handle token limits:
+
+```python
+"context": {
+    "config": {
+        "max_tokens": 100000,           # Base limit
+        "compaction_strategy": "truncate"
+    }
+}
+```
+
+Context managers dynamically adjust based on provider info:
+- Query `provider.get_info().defaults.context_window`
+- Calculate: `context_window - max_output_tokens - safety_margin`
+
+## Mount Plan Creation
+
+### From Bundles (Typical)
+
+```python
+from amplifier_foundation import load_bundle
+
+bundle = await load_bundle("./bundle.md")
+mount_plan = bundle.to_mount_plan()
 ```
 
 ### Programmatic

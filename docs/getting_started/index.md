@@ -1,156 +1,203 @@
 ---
 title: Getting Started
-description: Get up and running with Amplifier in under 5 minutes
+description: Quick introduction to Amplifier
 ---
 
 # Getting Started
 
-Get your first AI session running in under 5 minutes.
+Welcome to Amplifier! This guide will get you up and running quickly.
 
-## Install & Configure
+## What is Amplifier?
 
-```bash
-# Install with uv (recommended)
-uv tool install git+https://github.com/microsoft/amplifier
+Amplifier is a modular AI assistant platform that makes AI dramatically more effective by providing:
 
-# Run setup wizard
-amplifier init
-```
+- **Domain knowledge and context** from your work
+- **Understanding of your patterns** and preferences
+- **Ability to work on multiple things** simultaneously
+- **Integration with your development workflow**
 
-That's it! The setup wizard will configure your LLM provider (Anthropic, OpenAI, etc.).
+Think of Amplifier like a Linux kernel for AI assistants: a small, stable core with a rich ecosystem of modules.
 
-!!! tip "Stay Updated"
-    Amplifier is in active development. Run `amplifier update` daily to get the latest features and fixes.
+## Quick Start
 
-??? info "Alternative installation options"
-    See [Installation Options](installation.md) for pipx, development installs, and troubleshooting.
-
-## Start Amplifier
+### 1. Install
 
 ```bash
-amplifier
+# Using pipx (recommended)
+pipx install amplifier-app-cli
+
+# Or using pip
+pip install amplifier-app-cli
 ```
 
-This opens an interactive session where you can chat with the AI:
+### 2. Configure
 
-```
-amplifier> What is the capital of France?
-[AI responds...]
-
-amplifier> Can you write a Python function to sort a list?
-[AI responds with code...]
-
-amplifier> /help
-[Shows available commands...]
-
-amplifier> /quit
-```
-
-### Commands
-
-| Command | Description |
-|---------|-------------|
-| `/help` | Show available commands |
-| `/tools` | List available tools |
-| `/agents` | List available agents |
-| `/status` | Show session information |
-| `/clear` | Clear conversation history |
-| `/quit` or `/exit` | Exit |
-
-## Working with Code
-
-Amplifier excels at code-related tasks. Start it in a project directory:
+Set up your API credentials:
 
 ```bash
-cd your-project
-amplifier
+# Anthropic (recommended)
+export ANTHROPIC_API_KEY=your-key-here
+
+# Or OpenAI
+export OPENAI_API_KEY=your-key-here
+
+# Or Azure OpenAI
+export AZURE_OPENAI_API_KEY=your-key
+export AZURE_OPENAI_ENDPOINT=your-endpoint
+
+# Or Ollama (local, no API key needed)
+# Just ensure Ollama is running: ollama serve
 ```
 
-```
-amplifier> Explain the structure of this project
-[AI analyzes your codebase...]
-
-amplifier> Review main.py for potential issues
-[AI reviews the file...]
-
-amplifier> Write a unit test for the User class
-[AI generates tests...]
-```
-
-## Using Tools
-
-With the `dev` profile, Amplifier has access to powerful tools:
+### 3. Run
 
 ```bash
-amplifier --profile dev
+# Start a session
+amplifier run "What files are in this directory?"
+
+# Or start interactive REPL
+amplifier repl
 ```
 
-```
-amplifier> List all Python files in this directory
-[AI uses filesystem tool to list files...]
+## Provider Support
 
-amplifier> Search for TODO comments in the codebase
-[AI uses search tool...]
-```
+Amplifier supports multiple LLM providers:
 
-The AI can now read/write files, execute shell commands, search the codebase, and browse the web.
+| Provider | Models | Setup |
+|----------|--------|-------|
+| **Anthropic** | claude-sonnet-4-5, claude-haiku-20250110 | `ANTHROPIC_API_KEY` |
+| **OpenAI** | gpt-4o, gpt-4o, gpt-4o-mini | `OPENAI_API_KEY` |
+| **Azure OpenAI** | Deployment-based | `AZURE_OPENAI_API_KEY` + `AZURE_OPENAI_ENDPOINT` |
+| **Ollama** | Local models | Install Ollama, run `ollama serve` |
 
-## Session Management
+!!! note "Provider Priority"
+    If multiple providers are configured, Amplifier uses the first available one. You can specify provider preferences in your bundle configuration.
 
-Continue your most recent conversation:
+## Core Concepts
+
+### Sessions
+
+A **session** is a single conversation with the AI. Sessions maintain context (conversation history) and can be resumed later.
 
 ```bash
-amplifier continue
+# New session
+amplifier run "Hello!"
+
+# Resume previous session
+amplifier run --resume
 ```
 
-```
-amplifier> Now add error handling to that function
-[AI continues where you left off...]
+### Bundles
+
+**Bundles** are configuration files that define what modules to load. They're markdown files with YAML frontmatter:
+
+```markdown
+---
+bundle:
+  name: my-app
+  version: 1.0.0
+
+providers:
+  - module: provider-anthropic
+    config:
+      default_model: claude-sonnet-4-5
+---
+
+You are a helpful assistant.
 ```
 
-## Using Profiles
+### Tools
 
-Profiles are pre-configured capability sets:
+**Tools** are capabilities that agents can use: reading files, executing commands, searching the web, etc.
 
 ```bash
-# List available profiles
-amplifier profile list
-
-# Set default profile
-amplifier profile use dev
-
-# Or use a profile for one session
-amplifier --profile dev
+# Tools are automatically available
+amplifier run "Read the README.md file"
+amplifier run "Run the tests"
 ```
 
-| Profile | Description |
-|---------|-------------|
-| `foundation` | Minimal - just LLM access |
-| `base` | Basic tools (filesystem, bash) |
-| `dev` | Full development (tools + agents + search) |
+### Agents
 
-## Using Agents
+**Agents** are specialized assistants configured for specific tasks. Agents can delegate to other agents.
 
-Agents are specialized assistants for specific tasks:
-
-```
-amplifier> @explorer What is the architecture of this project?
-[Explorer agent analyzes codebase...]
-
-amplifier> @bug-hunter Find issues in auth.py
-[Bug hunter agent reviews code...]
+```bash
+# Use a specific agent
+amplifier run --agent explorer "Map the codebase structure"
 ```
 
-| Agent | Purpose |
-|-------|---------|
-| `explorer` | Breadth-first codebase exploration |
-| `bug-hunter` | Systematic debugging |
-| `zen-architect` | System design with simplicity focus |
+## Context Window and Token Management
 
-## Next Steps
+Amplifier automatically manages context windows:
 
-- [CLI Reference](../user_guide/cli.md) - All available commands
-- [Profiles](../user_guide/profiles.md) - Configure capability sets
-- [Agents](../user_guide/agents.md) - Specialized sub-agents
-- [Sessions](../user_guide/sessions.md) - Session management
-- [Architecture](../architecture/overview.md) - How it all works
+- **Dynamic budgeting**: Context managers query provider info to calculate available tokens
+- **Automatic compaction**: When approaching limits, older messages are compacted
+- **Token awareness**: Tools can report estimated token usage
+
+The formula: `available = context_window - max_output_tokens - safety_margin`
+
+## Validation
+
+Amplifier validates configuration at multiple levels:
+
+- **Bundle validation**: Ensures configuration is well-formed
+- **Mount plan validation**: Verifies required modules exist
+- **Runtime validation**: Hooks can validate operations before execution
+
+```bash
+# Validate a bundle
+amplifier validate ./my-bundle.md
+```
+
+## What's Next?
+
+<div class="grid">
+
+<div class="card">
+<h3><a href="installation/">Installation</a></h3>
+<p>Detailed installation instructions and requirements.</p>
+</div>
+
+<div class="card">
+<h3><a href="configuration/">Configuration</a></h3>
+<p>Learn about configuration files and options.</p>
+</div>
+
+<div class="card">
+<h3><a href="first_session/">First Session</a></h3>
+<p>Walk through your first Amplifier session.</p>
+</div>
+
+<div class="card">
+<h3><a href="../user_guide/">User Guide</a></h3>
+<p>Complete guide to using Amplifier CLI.</p>
+</div>
+
+</div>
+
+## Architecture Overview
+
+```
+┌─────────────────────────────────────────┐
+│  amplifier-app-cli (Application)        │
+│  • Configuration, Bundles, Profiles     │
+│  • User interaction (CLI/REPL)          │
+└────────────────┬────────────────────────┘
+                 │
+                 ▼
+┌─────────────────────────────────────────┐
+│  amplifier-core (Kernel)                │
+│  • Session lifecycle                    │
+│  • Module loading                       │
+│  • Event emission                       │
+└────────────────┬────────────────────────┘
+                 │
+                 ▼
+┌─────────────────────────────────────────┐
+│  Modules (Userspace)                    │
+│  • Providers (Anthropic, OpenAI, etc.)  │
+│  • Tools (filesystem, bash, web, etc.)  │
+│  • Hooks (logging, approval, etc.)      │
+└─────────────────────────────────────────┘
+```
+
+For detailed architecture documentation, see the [Architecture](../architecture/) section.

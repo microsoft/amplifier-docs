@@ -20,8 +20,9 @@ The kernel exposes **capabilities** and **stable contracts**. Decisions about be
 | Validate contracts | Format output |
 | Provide hooks | Select providers |
 | Manage sessions | Schedule execution |
+| Context plumbing | Compaction strategy |
 
-**Litmus test**: If two teams could want different behavior, it's policy → keep it out of kernel.
+**Litmus test**: If two teams could want different behavior, it's policy → keep it out of the kernel.
 
 ### 2. Small, Stable, and Boring
 
@@ -41,7 +42,7 @@ Backward compatibility in kernel interfaces is sacred.
 
 ### 4. Extensibility Through Composition
 
-New behavior comes from plugging in different modules, not from toggleing flags.
+New behavior comes from plugging in different modules, not from toggling flags.
 
 ```python
 # Not this (configuration explosion)
@@ -68,6 +69,7 @@ mount_plan = {
 - **Event emission**: Canonical events for observability
 - **Capability enforcement**: Permission checks, approvals
 - **Minimal context**: Session IDs, basic state
+- **Hook system**: Registration and dispatch
 
 ### Kernel Non-Goals (Policies)
 
@@ -77,6 +79,8 @@ mount_plan = {
 - Output formatting
 - Logging destinations
 - Business defaults
+- Context compaction strategies
+- Agent selection
 
 ## Invariants
 
@@ -214,6 +218,23 @@ except Exception as e:
     return ToolResult(success=False, error=str(e))
 ```
 
+## Context Window Awareness
+
+The kernel provides mechanisms for context management without dictating policy:
+
+- **Token budgets**: Context managers receive provider info to calculate budgets
+- **Dynamic limits**: `context_window - max_output_tokens - safety_margin`
+- **Graceful compaction**: Non-destructive compaction preserves full history
+
+```python
+# Context manager calculates budget from provider
+async def get_messages_for_request(self, provider=None):
+    if provider:
+        info = provider.get_info()
+        budget = info.defaults.get("context_window") - info.defaults.get("max_output_tokens") - 1000
+    return self._compact_to_budget(budget)
+```
+
 ## Red Flags
 
 Watch for these anti-patterns:
@@ -225,6 +246,8 @@ Watch for these anti-patterns:
 | "Break API now, adoption is small" | Sets bad precedent |
 | "Add to kernel now, figure out policy later" | Policy will leak in |
 | "It's only one more dependency" | Dependencies compound |
+| "We need this for debugging" | Use hooks, not kernel changes |
+| "This is simpler than using hooks" | Directness in modules, not kernel |
 
 ## North Star
 
@@ -234,5 +257,4 @@ Watch for these anti-patterns:
 
 ## References
 
-- **→ [KERNEL_PHILOSOPHY.md](https://github.com/microsoft/amplifier-core/blob/main/ai_context/KERNEL_PHILOSOPHY.md)** - Complete philosophy document
-- **→ [DESIGN_PHILOSOPHY.md](https://github.com/microsoft/amplifier-core/blob/main/docs/DESIGN_PHILOSOPHY.md)** - Design principles
+- **→ [DESIGN_PHILOSOPHY.md](https://github.com/microsoft/amplifier-core/blob/main/docs/DESIGN_PHILOSOPHY.md)** - Complete design philosophy document
