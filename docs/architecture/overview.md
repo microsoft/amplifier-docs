@@ -34,13 +34,16 @@ The application layer (e.g., `amplifier-app-cli`) handles:
 - Approval and display systems
 
 ```python
-# Application creates Mount Plan
-mount_plan = compile_profile_to_mount_plan(profile)
+# Application defines configuration (mount plan)
+config = {
+    "session": {"orchestrator": "loop-basic", "context": "context-simple"},
+    "providers": [{"module": "provider-anthropic"}],
+    "tools": [{"module": "tool-filesystem"}, {"module": "tool-bash"}],
+}
 
-# Application creates session
-session = AmplifierSession(mount_plan)
-await session.initialize()
-response = await session.execute(prompt)
+# Application creates and runs session
+async with AmplifierSession(config) as session:
+    response = await session.execute(prompt)
 ```
 
 ### Layer 2: Kernel
@@ -54,12 +57,12 @@ The kernel (`amplifier-core`, ~2,600 lines) provides:
 - Coordinator infrastructure
 
 ```python
-# Kernel validates and loads
-session.validate_mount_plan(mount_plan)
-await session.load_modules()
+# Kernel validates config and loads modules
+session = AmplifierSession(config)  # Validates required fields
+await session.initialize()  # Discovers and loads all modules
 
-# Kernel coordinates
-coordinator.mount("providers", provider, name="anthropic")
+# Modules mount via coordinator
+await coordinator.mount("providers", provider, name="anthropic")
 await coordinator.hooks.emit("session:start", data)
 ```
 
@@ -70,8 +73,9 @@ Modules implement specific functionality:
 - **Providers**: LLM API integrations (Anthropic, OpenAI, Azure, Ollama)
 - **Tools**: Agent capabilities (filesystem, bash, web, search)
 - **Orchestrators**: Execution strategies (basic, streaming, events)
-- **Contexts**: Memory management (simple, persistent)
+- **Contexts**: ContextManager implementations for memory management (simple, persistent)
 - **Hooks**: Observability and control (logging, approval, redaction, streaming)
+- **Agents**: Configuration overlays for specialized sub-sessions
 
 ```python
 # Module implements contract
@@ -226,6 +230,16 @@ User Prompt
 2. **Maintenance**: Clear code paths
 3. **Debugging**: Easy to trace execution
 4. **Performance**: No unnecessary indirection
+
+### Decision Framework
+
+When faced with implementation decisions, apply these questions:
+
+1. **Necessity**: "Do we actually need this right now?"
+2. **Simplicity**: "What's the simplest way to solve this?"
+3. **Directness**: "Can we solve this more directly?"
+4. **Value**: "Does the complexity add proportional value?"
+5. **Maintenance**: "How easy will this be to understand later?"
 
 ## Libraries
 

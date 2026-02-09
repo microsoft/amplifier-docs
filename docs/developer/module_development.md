@@ -379,6 +379,10 @@ class SimpleOrchestrator:
         return "Max iterations reached"
 ```
 
+### Streaming Support
+
+For real-time output, use a streaming orchestrator (e.g., `loop-streaming`). Streaming orchestrators deliver tokens via hooks as they arrive from the provider. See [amplifier-module-loop-streaming](https://github.com/microsoft/amplifier-module-loop-streaming) for the reference implementation.
+
 ## Creating a Context Manager
 
 Context managers handle conversation memory.
@@ -461,7 +465,11 @@ class SimpleContext:
         return sum(len(str(m.get("content", ""))) for m in messages) // 4
 ```
 
+> **Critical**: Compaction must be **ephemeral** (non-destructive). `get_messages_for_request()` returns a compacted view without modifying stored history. `get_messages()` always returns the full, unmodified conversation for debugging and session resume.
+
 ## Observability
+
+Modules participate in Amplifier's observation system by registering and emitting events. This enables logging, metrics, audit trails, and debugging across the system.
 
 Modules can register observable events:
 
@@ -498,6 +506,17 @@ Configuration values can reference environment variables:
 ```yaml
 config:
   api_key: "${MY_API_KEY}"
+```
+
+Provider modules support debug configuration:
+
+```yaml
+providers:
+  - module: provider-anthropic
+    source: git+...
+    config:
+      default_model: claude-sonnet-4-5
+      debug: true
 ```
 
 ## Testing Modules

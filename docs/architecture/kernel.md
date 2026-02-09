@@ -154,11 +154,11 @@ Version any data shapes crossing kernel boundaries.
 
 ```python
 class ChatRequest(BaseModel):
-    """Versioned request format."""
-    schema_version: str = "1.0"
+    """Unified request format."""
     messages: list[Message]
+    tools: list[ToolSpec] | None = None
     # New fields are optional with defaults
-    temperature: float = 1.0  # Added in 1.1
+    temperature: float | None = None  # Added later, optional
 ```
 
 ### Explicit Errors
@@ -248,6 +248,16 @@ Watch for these anti-patterns:
 | "It's only one more dependency" | Dependencies compound |
 | "We need this for debugging" | Use hooks, not kernel changes |
 | "This is simpler than using hooks" | Directness in modules, not kernel |
+
+## Decision Framework
+
+When evaluating kernel changes, ask:
+
+1. **Necessity**: "Do we actually need this right now?"
+2. **Simplicity**: "What's the simplest way to solve this?"
+3. **Directness**: "Can we solve this more directly?"
+4. **Value**: "Does the complexity add proportional value?"
+5. **Maintenance**: "How easy will this be to understand later?"
 
 ## North Star
 
