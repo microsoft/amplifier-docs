@@ -5,243 +5,240 @@ description: Installing Amplifier CLI
 
 # Installation
 
-This guide covers installing the Amplifier CLI application.
+This guide covers installing the Amplifier CLI.
 
 ## Requirements
 
-- **Python**: 3.11 or higher
-- **Operating System**: macOS, Linux, or Windows (WSL recommended)
-- **API Key**: At least one LLM provider (Anthropic, OpenAI, Azure, or Ollama)
+- **Python 3.11+**
+- **[UV](https://github.com/astral-sh/uv)** - Fast Python package manager (recommended)
 
-## Installation Methods
-
-### Using pipx (Recommended)
-
-[pipx](https://pipx.pypa.io/) installs Python applications in isolated environments:
+### Install UV
 
 ```bash
-# Install pipx if you don't have it
-pip install pipx
-pipx ensurepath
-
-# Install Amplifier
-pipx install amplifier-app-cli
-```
-
-### Using pip
-
-```bash
-pip install amplifier-app-cli
-```
-
-### Using uv
-
-[uv](https://github.com/astral-sh/uv) is a fast Python package manager:
-
-```bash
-# Install uv if you don't have it
+# macOS/Linux/WSL
 curl -LsSf https://astral.sh/uv/install.sh | sh
 
-# Install Amplifier
-uv pip install amplifier-app-cli
+# Windows PowerShell
+powershell -c "irm https://astral.sh/uv/install.ps1 | iex"
 ```
 
-### From Source
+## Quick Install
+
+### Try Without Installing
 
 ```bash
-git clone https://github.com/microsoft/amplifier-app-cli.git
-cd amplifier-app-cli
-pip install -e .
+uvx --from git+https://github.com/microsoft/amplifier amplifier
 ```
 
-## Configuration
+This downloads and runs Amplifier in an isolated environment without permanent installation.
 
-### API Keys
+### Install Globally
 
-Configure at least one LLM provider:
+```bash
+uv tool install git+https://github.com/microsoft/amplifier
+```
 
-=== "Anthropic (Recommended)"
-    ```bash
-    export ANTHROPIC_API_KEY=your-key-here
-    ```
+This installs the `amplifier` command globally.
 
-=== "OpenAI"
-    ```bash
-    export OPENAI_API_KEY=your-key-here
-    ```
+## First-Time Setup
 
-=== "Azure OpenAI"
-    ```bash
-    export AZURE_OPENAI_API_KEY=your-key
-    export AZURE_OPENAI_ENDPOINT=https://your-resource.openai.azure.com
-    ```
+After installation, run:
 
-=== "Ollama (Local)"
-    ```bash
-    # No API key needed - just start Ollama
-    ollama serve
-    ```
+```bash
+amplifier init
+```
 
-!!! note "Environment Variables"
-    Add these to your shell profile (`~/.bashrc`, `~/.zshrc`, etc.) for persistence:
-    ```bash
-    echo 'export ANTHROPIC_API_KEY=your-key' >> ~/.zshrc
-    ```
+The setup wizard will:
 
-### Verifying Installation
+1. **Detect API keys** - Checks for `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, `AZURE_OPENAI_API_KEY`, `GOOGLE_API_KEY`
+2. **Configure provider** - Sets your preferred LLM provider
+3. **Set defaults** - Configures default model and settings
+
+**Tip**: Set environment variables before running `init` for faster setup:
+
+```bash
+export ANTHROPIC_API_KEY="your-key"
+amplifier init
+```
+
+## Shell Completion
+
+Enable tab completion for faster CLI usage:
+
+```bash
+amplifier --install-completion
+```
+
+This automatically:
+- Detects your shell (bash, zsh, fish)
+- Adds completion to your shell config
+- Safe to run multiple times
+
+After installation:
+```bash
+source ~/.bashrc  # or ~/.zshrc for zsh
+```
+
+## Provider Configuration
+
+### Anthropic (Recommended)
+
+```bash
+export ANTHROPIC_API_KEY="your-key"
+amplifier provider use anthropic
+```
+
+### OpenAI
+
+```bash
+export OPENAI_API_KEY="your-key"
+amplifier provider use openai
+```
+
+### Azure OpenAI
+
+```bash
+export AZURE_OPENAI_API_KEY="your-key"
+export AZURE_OPENAI_ENDPOINT="https://your-resource.openai.azure.com"
+export AZURE_OPENAI_DEPLOYMENT="your-deployment-name"
+
+# Or use Azure CLI authentication instead of API key
+export AZURE_USE_DEFAULT_CREDENTIAL="true"
+
+amplifier provider use azure
+```
+
+### Google Gemini
+
+```bash
+export GOOGLE_API_KEY="your-key"
+amplifier provider use google
+```
+
+### Ollama (Local)
+
+No API key needed - runs locally:
+
+```bash
+# Install Ollama first: https://ollama.ai
+ollama pull llama3.2
+
+amplifier provider use ollama
+```
+
+For remote Ollama servers:
+
+```bash
+export OLLAMA_HOST="http://your-server:11434"
+amplifier provider use ollama
+```
+
+## Context Window Limits
+
+Different models have different context limits:
+
+| Model | Context Window | Max Output |
+|-------|----------------|------------|
+| Claude Sonnet 4.5 | 200K tokens | 8K tokens |
+| Claude Opus | 200K tokens | 4K tokens |
+| GPT-4o | 128K tokens | 4K tokens |
+| GPT-4o-mini | 128K tokens | 16K tokens |
+| Gemini 2.5 Pro | 1M tokens | 8K tokens |
+| Ollama (varies) | Model dependent | Model dependent |
+
+Amplifier automatically manages context, compacting when needed.
+
+## Updating
+
+```bash
+# Check for updates
+amplifier update --check-only
+
+# Update Amplifier and all modules
+amplifier update
+
+# Force update (skip version detection)
+amplifier update --force
+```
+
+## Verifying Installation
 
 ```bash
 # Check version
 amplifier --version
 
-# Run a simple test
-amplifier run "Hello! What's 2+2?"
-```
+# Check current configuration
+amplifier provider current
+amplifier bundle current
 
-## Provider Configuration
-
-### Supported Models
-
-| Provider | Recommended Model | Capabilities |
-|----------|-------------------|--------------|
-| Anthropic | `claude-sonnet-4-5` | Tools, streaming, vision |
-| Anthropic | `claude-haiku-20250110` | Fast, efficient |
-| OpenAI | `gpt-4o` | Tools, streaming, vision |
-| OpenAI | `gpt-4o` | Tools, streaming, vision |
-| Azure | Deployment-specific | Depends on deployment |
-| Ollama | Local models | Varies by model |
-
-### Context Window Considerations
-
-Different models have different context windows:
-
-| Model | Context Window | Max Output |
-|-------|---------------|------------|
-| claude-sonnet-4-5 | 200,000 tokens | 8,192 tokens |
-| gpt-4o | 128,000 tokens | 16,384 tokens |
-| gpt-4o | 128,000 tokens | 16,384 tokens |
-
-Amplifier automatically manages context within these limits.
-
-### Custom Configuration
-
-Create `~/.amplifier/config.yaml` for persistent settings:
-
-```yaml
-default_profile: dev
-
-profiles:
-  dev:
-    providers:
-      - module: provider-anthropic
-        config:
-          default_model: claude-sonnet-4-5
-  
-  fast:
-    providers:
-      - module: provider-anthropic
-        config:
-          default_model: claude-haiku-20250110
-```
-
-## Optional Dependencies
-
-### For Development
-
-```bash
-# Install with development extras
-pip install "amplifier-app-cli[dev]"
-```
-
-### For Testing
-
-```bash
-# Install with test extras
-pip install "amplifier-app-cli[test]"
+# Test with a simple prompt
+amplifier run "Hello, world!"
 ```
 
 ## Troubleshooting
 
-### Command Not Found
+### "Command not found"
 
-If `amplifier` command isn't found after installation:
+Ensure UV tools are in your PATH:
 
 ```bash
-# For pipx
-pipx ensurepath
-source ~/.bashrc  # or restart terminal
-
-# For pip, ensure Scripts directory is in PATH
-# Linux/macOS: ~/.local/bin
-# Windows: %USERPROFILE%\AppData\Local\Programs\Python\PythonXX\Scripts
+# Add to ~/.bashrc or ~/.zshrc
+export PATH="$HOME/.local/bin:$PATH"
 ```
 
 ### API Key Issues
 
 ```bash
-# Verify API key is set
+# Verify key is set
 echo $ANTHROPIC_API_KEY
 
-# Test API key (Anthropic)
-curl https://api.anthropic.com/v1/messages \
-  -H "x-api-key: $ANTHROPIC_API_KEY" \
-  -H "anthropic-version: 2023-06-01" \
-  -H "content-type: application/json" \
-  -d '{"model":"claude-sonnet-4-5","max_tokens":10,"messages":[{"role":"user","content":"Hi"}]}'
+# Re-run init to reconfigure
+amplifier init
 ```
 
-### Token Validation Errors
-
-If you see token-related errors:
-
-1. Check your model's context window limits
-2. Reduce the size of your input
-3. Amplifier will automatically compact context if it exceeds limits
-
-### Python Version Issues
+### Module Loading Errors
 
 ```bash
-# Check Python version
-python --version
+# Refresh modules
+amplifier module refresh
 
-# If < 3.11, install newer version
-# macOS
-brew install python@3.11
-
-# Ubuntu
-sudo apt install python3.11
+# Check module status
+amplifier module list
 ```
 
-## Updating
-
-### Using pipx
+### Permission Issues
 
 ```bash
-pipx upgrade amplifier-app-cli
+# Check file permissions
+ls -la ~/.amplifier/
+
+# Reset configuration
+rm -rf ~/.amplifier/config.yaml
+amplifier init
 ```
 
-### Using pip
+## Development Setup
+
+For contributing to Amplifier:
 
 ```bash
-pip install --upgrade amplifier-app-cli
-```
+# Clone repository
+git clone https://github.com/microsoft/amplifier.git
+cd amplifier
 
-## Uninstalling
+# Install in development mode
+uv pip install -e .
 
-### Using pipx
-
-```bash
-pipx uninstall amplifier-app-cli
-```
-
-### Using pip
-
-```bash
-pip uninstall amplifier-app-cli
+# Run tests
+uv run pytest
 ```
 
 ## Next Steps
 
-- [Configuration](configuration.md) - Detailed configuration options
-- [First Session](first_session.md) - Walk through your first session
-- [User Guide](../user_guide/) - Complete CLI reference
+- **[Getting Started](index.md)** - Basic usage guide
+- **[CLI User Guide](../user_guide/)** - Complete command reference
+- **[Configuration](../user_guide/configuration.md)** - Advanced configuration
+
+## References
+
+- **→ [CLI README](https://github.com/microsoft/amplifier/blob/main/README.md)** - Full CLI documentation

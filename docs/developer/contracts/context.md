@@ -5,46 +5,59 @@ description: Memory management contract
 
 # Context Contract
 
-Context managers handle conversation memory, token management, and state persistence.
+Context managers handle conversation memory and message storage.
 
 ## Purpose
 
-Context managers:
+Context managers control **what the agent remembers**:
 
-- Store conversation history
-- Manage token limits dynamically
-- Implement compaction strategies (ephemeral, non-destructive)
-- Support persistence for session resumption
-- Provide observability through events
+- **Message storage** - Store conversation history
+- **Request preparation** - Return messages that fit within token limits
+- **Persistence** - Optionally persist across sessions
+- **Memory strategies** - Implement various memory patterns
 
-## Protocol
+**Key principle**: The context manager owns **policy** for memory. The orchestrator asks for messages; the context manager decides **how** to fit them within limits. Swap context managers to change memory behavior without modifying orchestrators.
+
+**Mechanism vs Policy**: Orchestrators provide the mechanism (request messages, make LLM calls). Context managers provide the policy (what to return, when to compact, how to fit within limits).
+
+## Protocol Definition
+
+**Source**: `amplifier_core/interfaces.py`
 
 ```python
-from typing import Protocol, runtime_checkable, Any
-
 @runtime_checkable
 class ContextManager(Protocol):
-    async def add_message(self, message: dict) -> None:
-        """Add a message to context."""
+    async def add_message(self, message: dict[str, Any]) -> None:
+        """Add a message to the context."""
         ...
 
     async def get_messages_for_request(
-        self, token_budget: int | None = None, provider: Any | None = None
-    ) -> list[dict]:
+        self,
+        token_budget: int | None = None,
+        provider: Any | None = None,
+    ) -> list[dict[str, Any]]:
         """
-        Get messages for LLM request.
-        
-        Performs ephemeral compaction if needed - does NOT modify stored history.
-        Provider info used to calculate dynamic token budget.
+        Get messages ready for an LLM request.
+
+        The context manager handles any compaction needed internally.
+        Returns messages that fit within the token budget.
+
+        Args:
+            token_budget: Optional explicit token limit (deprecated, prefer provider).
+            provider: Optional provider instance for dynamic budget calculation.
+                If provided, budget = context_window - max_output_tokens - safety_margin.
+
+        Returns:
+            Messages ready for LLM request, compacted if necessary.
         """
         ...
 
-    async def get_messages(self) -> list[dict]:
-        """Get all messages (full history, no compaction)."""
+    async def get_messages(self) -> list[dict[str, Any]]:
+        """Get all messages (raw, uncompacted) for transcripts/debugging."""
         ...
 
-    async def set_messages(self, messages: list[dict]) -> None:
-        """Replace all messages (used for session restore)."""
+    async def set_messages(self, messages: list[dict[str, Any]]) -> None:
+        """Set messages directly (for session resume)."""
         ...
 
     async def clear(self) -> None:
@@ -52,258 +65,280 @@ class ContextManager(Protocol):
         ...
 ```
 
-## Mount Function
-
-```python
-async def mount(coordinator, config=None):
-    config = config or {}
-    context = MyContext(config)
-    await coordinator.mount("session", context, name="context")
-    return context  # Return for graceful cleanup
-```
-
-## Configuration
-
-Common configuration options:
-
-| Option | Type | Description |
-|--------|------|-------------|
-| `max_tokens` | int | Default maximum context tokens |
-| `compaction_strategy` | string | How to compact ("truncate", "summarize") |
-| `preserve_system` | bool | Keep system messages on compact |
-| `persistence` | dict | Persistence configuration |
-
-### Critical vs Ephemeral Messages
-
-Some context manager implementations support message criticality:
-
-| Type | Behavior |
-|------|----------|
-| `critical` | Never compacted - preserved through all compaction |
-| `ephemeral` | Not persisted to storage - lost on session resume |
-
-## Events
-
-Context managers should emit these observability events:
-
-| Event | When | Data |
-|-------|------|------|
-| `context:pre_compact` | Before compaction | message_count, tokens |
-| `context:post_compact` | After compaction | message_count, tokens |
-| `context:include` | Context injected | source, content |
-
 ## Message Format
 
-Messages follow this structure:
+Messages follow a standard structure:
 
 ```python
+# User message
 {
-    "role": "user" | "assistant" | "system" | "tool",
-    "content": str | list,  # Text or content blocks
-    "tool_call_id": str | None,  # For tool results
-    "name": str | None,  # Tool name for tool messages
+    "role": "user",
+    "content": "User's input text"
+}
+
+# Assistant message
+{
+    "role": "assistant",
+    "content": "Assistant's response"
+}
+
+# Assistant message with tool calls
+{
+    "role": "assistant",
+    "content": None,
+    "tool_calls": [
+        {
+            "id": "call_123",
+            "type": "function",
+            "function": {"name": "read_file", "arguments": "{...}"}
+        }
+    ]
+}
+
+# System message
+{
+    "role": "system",
+    "content": "System instructions"
+}
+
+# Tool result
+{
+    "role": "tool",
+    "tool_call_id": "call_123",
+    "content": "Tool output"
 }
 ```
 
-## Dynamic Token Budget
+## Entry Point Pattern
 
-Context managers should calculate token budgets dynamically from provider info:
-
-```python
-async def get_messages_for_request(self, token_budget=None, provider=None):
-    # Calculate budget from provider if available
-    if provider and not token_budget:
-        info = provider.get_info()
-        defaults = info.defaults or {}
-        context_window = defaults.get("context_window", 100000)
-        max_output = defaults.get("max_output_tokens", 4096)
-        safety_margin = 1000
-        token_budget = context_window - max_output - safety_margin
-    
-    # Ephemeral compaction - return view without modifying stored history
-    return self._compact_to_budget(token_budget)
-```
-
-## Example Implementation
+### mount() Function
 
 ```python
-from amplifier_core.models import HookResult
+async def mount(coordinator: ModuleCoordinator, config: dict) -> ContextManager | Callable | None:
+    """
+    Initialize and return context manager instance.
 
-class SimpleContext:
-    def __init__(self, config):
-        self.max_tokens = config.get("max_tokens", 100000)
-        self.messages = []
-        self.preserve_system = config.get("preserve_system", True)
-
-    async def add_message(self, message):
-        self.messages.append(message)
-
-    async def get_messages_for_request(self, token_budget=None, provider=None):
-        """Return messages for LLM, with ephemeral compaction if needed."""
-        # Calculate budget
-        budget = self._calculate_budget(token_budget, provider)
-        
-        # Ephemeral compaction - don't modify self.messages
-        if self._estimate_tokens() > budget * 0.9:
-            return self._compact_messages(budget)
-        
-        return list(self.messages)
-
-    async def get_messages(self):
-        """Return full history (no compaction)."""
-        return list(self.messages)
-
-    async def set_messages(self, messages):
-        """Replace all messages (for session restore)."""
-        self.messages = list(messages)
-
-    async def clear(self):
-        self.messages = []
-
-    def _calculate_budget(self, token_budget, provider):
-        if token_budget:
-            return token_budget
-        if provider:
-            info = provider.get_info()
-            defaults = info.defaults or {}
-            context_window = defaults.get("context_window", self.max_tokens)
-            max_output = defaults.get("max_output_tokens", 4096)
-            return context_window - max_output - 1000
-        return self.max_tokens
-
-    def _estimate_tokens(self):
-        # Rough estimate: 4 chars per token
-        total_chars = sum(len(str(m.get("content", ""))) for m in self.messages)
-        return total_chars // 4
-
-    def _compact_messages(self, budget):
-        """Return compacted view WITHOUT modifying internal state."""
-        if self.preserve_system:
-            system_messages = [m for m in self.messages if m["role"] == "system"]
-            other_messages = [m for m in self.messages if m["role"] != "system"]
-        else:
-            system_messages = []
-            other_messages = list(self.messages)
-
-        # Keep recent messages that fit within budget
-        result = list(other_messages)
-        while self._estimate_tokens_for(system_messages + result) > budget * 0.7:
-            if result:
-                result.pop(0)
-            else:
-                break
-
-        return system_messages + result
-
-    def _estimate_tokens_for(self, messages):
-        return sum(len(str(m.get("content", ""))) for m in messages) // 4
-```
-
-## Persistent Context
-
-For session resumption, implement persistence:
-
-```python
-import json
-from pathlib import Path
-
-class PersistentContext:
-    def __init__(self, config):
-        self.storage_path = Path(config.get("storage_path"))
-        self.messages = self._load()
-        self.max_tokens = config.get("max_tokens", 100000)
-
-    async def add_message(self, message):
-        self.messages.append(message)
-        self._save()
-
-    async def get_messages_for_request(self, token_budget=None, provider=None):
-        budget = self._calculate_budget(token_budget, provider)
-        if self._estimate_tokens() > budget * 0.9:
-            return self._compact_messages(budget)
-        return list(self.messages)
-
-    async def get_messages(self):
-        return list(self.messages)
-
-    async def set_messages(self, messages):
-        self.messages = list(messages)
-        self._save()
-
-    def _load(self):
-        if self.storage_path.exists():
-            return json.loads(self.storage_path.read_text())
-        return []
-
-    def _save(self):
-        self.storage_path.parent.mkdir(parents=True, exist_ok=True)
-        self.storage_path.write_text(json.dumps(self.messages))
-
-    def _calculate_budget(self, token_budget, provider):
-        if token_budget:
-            return token_budget
-        if provider:
-            info = provider.get_info()
-            defaults = info.defaults or {}
-            return defaults.get("context_window", self.max_tokens) - defaults.get("max_output_tokens", 4096) - 1000
-        return self.max_tokens
-
-    def _estimate_tokens(self):
-        return sum(len(str(m.get("content", ""))) for m in self.messages) // 4
-
-    def _compact_messages(self, budget):
-        system = [m for m in self.messages if m["role"] == "system"]
-        other = [m for m in self.messages if m["role"] != "system"]
-        while self._estimate_tokens_for(system + other) > budget * 0.7 and other:
-            other.pop(0)
-        return system + other
-
-    def _estimate_tokens_for(self, messages):
-        return sum(len(str(m.get("content", ""))) for m in messages) // 4
-```
-
-## Debug Logging
-
-Context managers can emit debug events for observability:
-
-```python
-async def add_message(self, message):
-    self.messages.append(message)
-    
-    # Emit debug event
-    if self.hooks:
-        await self.hooks.emit("context:message_added:debug", {
-            "role": message.get("role"),
-            "content_length": len(str(message.get("content", ""))),
-            "total_messages": len(self.messages)
-        })
-```
-
-## Graceful Degradation
-
-Context managers should support graceful degradation:
-
-```python
-async def mount(coordinator, config=None):
-    config = config or {}
-    
-    # Try to load persistence backend
-    storage_path = config.get("storage_path")
-    if storage_path and Path(storage_path).parent.exists():
-        context = PersistentContext(config)
-    else:
-        # Fall back to in-memory context
-        context = SimpleContext(config)
-    
+    Returns:
+        - ContextManager instance
+        - Cleanup callable
+        - None for graceful degradation
+    """
+    context = MyContextManager(
+        max_tokens=config.get("max_tokens", 100000),
+        compaction_threshold=config.get("compaction_threshold", 0.8)
+    )
     await coordinator.mount("session", context, name="context")
     return context
 ```
 
+### pyproject.toml
+
+```toml
+[project.entry-points."amplifier.modules"]
+my-context = "my_context:mount"
+```
+
+## Non-Destructive Compaction
+
+**Critical Design Principle**: Compaction MUST be **ephemeral** - it returns a compacted VIEW without modifying the stored history.
+
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│                    NON-DESTRUCTIVE COMPACTION                   │
+├─────────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│  messages[]                    get_messages_for_request()       │
+│  ┌──────────┐                  ┌──────────┐                     │
+│  │ msg 1    │                  │ msg 1    │  (compacted view)   │
+│  │ msg 2    │   ──────────▶    │ [summ]   │                     │
+│  │ msg 3    │   ephemeral      │ msg N    │                     │
+│  │ ...      │   compaction     └──────────┘                     │
+│  │ msg N    │                                                   │
+│  └──────────┘                  get_messages()                   │
+│       │                        ┌──────────┐                     │
+│       │                        │ msg 1    │  (FULL history)     │
+│       └──────────────────────▶ │ msg 2    │                     │
+│         unchanged              │ msg 3    │                     │
+│                                │ ...      │                     │
+│                                │ msg N    │                     │
+│                                └──────────┘                     │
+│                                                                 │
+│  Key: Internal state is NEVER modified by compaction.           │
+│       Compaction produces temporary views for LLM requests.     │
+│       Full history is always available via get_messages().      │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────────┘
+```
+
+**Why Non-Destructive?**:
+- **Transcript integrity**: Full conversation history is preserved for replay/debugging
+- **Session resume**: Can resume from any point with complete context
+- **Reproducibility**: Same inputs produce same outputs
+- **Observability**: Hook systems can observe the full conversation
+
+## Tool Pair Preservation
+
+**Critical**: During compaction, tool_use and tool_result messages must be kept together. Separating them causes LLM API errors.
+
+```python
+async def _compact_internal(self) -> list[dict]:
+    """Internal compaction - preserves tool pairs."""
+    # Build tool_call_id -> tool_use index map
+    tool_use_ids = set()
+    for msg in self._messages:
+        if msg.get("role") == "assistant" and msg.get("tool_calls"):
+            for tc in msg["tool_calls"]:
+                tool_use_ids.add(tc.get("id"))
+
+    # Strategy: Keep system messages + recent messages
+    # But ensure we don't split tool pairs
+    system_messages = [m for m in self._messages if m["role"] == "system"]
+
+    # Find safe truncation point (not in middle of tool sequence)
+    keep_count = self._keep_recent
+    recent_start = max(0, len(self._messages) - keep_count)
+
+    # Adjust start to not split tool sequences
+    while recent_start > 0:
+        msg = self._messages[recent_start]
+        if msg.get("role") == "tool":
+            # This is a tool result - need to include the tool_use before it
+            recent_start -= 1
+        else:
+            break
+
+    recent_messages = self._messages[recent_start:]
+    return system_messages + recent_messages
+```
+
+## Debug Logging
+
+Context managers should emit debug events for observability:
+
+```python
+async def add_message(self, message: dict[str, Any]) -> None:
+    """Add message with debug logging."""
+    self._messages.append(message)
+    self._token_count += self._estimate_tokens(message)
+
+    # Emit debug event
+    await self._hooks.emit("context:message_added", {
+        "role": message.get("role"),
+        "token_count": self._token_count,
+        "message_count": len(self._messages)
+    })
+```
+
+## Graceful Degradation
+
+Context managers can return `None` from `mount()` for graceful degradation:
+
+```python
+async def mount(coordinator, config=None):
+    config = config or {}
+
+    # Check for required configuration
+    persistence_path = config.get("persistence_path")
+    if not persistence_path:
+        # Fall back to in-memory context
+        return None
+
+    context = PersistentContext(persistence_path)
+    await coordinator.mount("session", context, name="context")
+    return context
+```
+
+## Observability
+
+Register compaction events:
+
+```python
+coordinator.register_contributor(
+    "observability.events",
+    "my-context",
+    lambda: ["context:pre_compact", "context:post_compact", "context:message_added"]
+)
+```
+
+Standard events to emit:
+- `context:pre_compact` - Before compaction (include message_count, token_count)
+- `context:post_compact` - After compaction (include new counts)
+- `context:message_added` - After adding a message
+
+## Testing
+
+Use test utilities from `amplifier_core/testing.py`:
+
+```python
+from amplifier_core.testing import MockContextManager
+
+@pytest.mark.asyncio
+async def test_context_manager():
+    context = MyContextManager(max_tokens=1000)
+
+    # Add messages
+    await context.add_message({"role": "user", "content": "Hello"})
+    await context.add_message({"role": "assistant", "content": "Hi there!"})
+
+    # Get messages for request (may compact)
+    messages = await context.get_messages_for_request()
+    assert len(messages) == 2
+    assert messages[0]["role"] == "user"
+
+    # Get raw messages (no compaction)
+    raw_messages = await context.get_messages()
+    assert len(raw_messages) == 2
+
+    # Test clear
+    await context.clear()
+    assert len(await context.get_messages()) == 0
+
+
+@pytest.mark.asyncio
+async def test_compaction_preserves_tool_pairs():
+    """Verify tool_use and tool_result stay together during compaction."""
+    context = MyContextManager(max_tokens=100, compaction_threshold=0.5)
+
+    # Add messages including tool sequence
+    await context.add_message({"role": "user", "content": "Read file.txt"})
+    await context.add_message({
+        "role": "assistant",
+        "content": None,
+        "tool_calls": [{"id": "call_123", "type": "function", "function": {...}}]
+    })
+    await context.add_message({
+        "role": "tool",
+        "tool_call_id": "call_123",
+        "content": "File contents..."
+    })
+
+    # Force compaction by adding more messages
+    for i in range(50):
+        await context.add_message({"role": "user", "content": f"Message {i}"})
+
+    # Get messages for request (triggers compaction)
+    messages = await context.get_messages_for_request()
+
+    # Verify tool pairs are preserved
+    tool_use_ids = set()
+    tool_result_ids = set()
+    for msg in messages:
+        if msg.get("tool_calls"):
+            for tc in msg["tool_calls"]:
+                tool_use_ids.add(tc.get("id"))
+        if msg.get("role") == "tool":
+            tool_result_ids.add(msg.get("tool_call_id"))
+
+    # Every tool result should have matching tool use
+    assert tool_result_ids.issubset(tool_use_ids), "Orphaned tool results found!"
+```
+
 ## Related Contracts
 
-- **[Orchestrator Contract](orchestrator.md)** - Orchestrators call context managers
-- **[Hook Contract](hook.md)** - Hooks can inject context via `inject_context` action
+- **[Orchestrator Contract](orchestrator.md)** - Orchestrators call context methods
+- **[Hook Contract](hook.md)** - Hooks can observe context events
 
-## Authoritative Reference
+## References
 
-**→ [Context Contract](https://github.com/microsoft/amplifier-core/blob/main/docs/contracts/CONTEXT_CONTRACT.md)** - Complete specification
+- **→ [CONTEXT_CONTRACT.md](https://github.com/microsoft/amplifier-core/blob/main/docs/contracts/CONTEXT_CONTRACT.md)** - Authoritative contract specification
+- **→ [amplifier-module-context-simple](https://github.com/microsoft/amplifier-module-context-simple)** - Reference implementation

@@ -1,11 +1,11 @@
-# Documentation Regeneration Recipe
+# Documentation Regeneration Recipe - v2 with Surgical Updates
 name: "docs-regenerate"
-description: "Regenerate stale documentation from source files"
-version: "1.0.0"
-tags: ["documentation", "regeneration", "content"]
+description: "Regenerate stale documentation with surgical updates and semantic diff filtering"
+version: "2.0.0"
+tags: ["documentation", "regeneration", "content", "deterministic"]
 
 context:
-  # Mode: "single" for one doc, "batch" for multiple, "priority" for high-priority only
+  # Mode: "single" for one doc, "batch" for multiple
   mode: "single"
   # For single mode: specific doc path to regenerate
   doc_path: ""
@@ -15,15 +15,21 @@ context:
   priority_filter: "high"
   # Source directories
   repos_dir: "~/repo/amplifier-sources"
+  docs_dir: "./docs"
   outline_path: "./outlines/amplifier-docs-outline.json"
   analysis_path: "./sync-output/cache/content-analysis.json"
   # Output
   output_dir: "./sync-output/regenerated"
+  # Minimum new content ratio to accept changes (0.0-1.0)
+  # Files with less than this ratio of new content are considered "cosmetic only" and skipped
+  min_change_ratio: "0.05"
 
 steps:
   - id: "setup"
     type: "bash"
-    command: "mkdir -p {{output_dir}} && echo 'Setup complete. Mode: {{mode}}'"
+    command: |
+      mkdir -p {{output_dir}}/staging
+      echo 'Setup complete. Mode: {{mode}}'
     output: "setup_result"
     timeout: 30
 
@@ -61,7 +67,8 @@ steps:
                       "sources": section.get("sources", []),
                       "relationship": doc.get("relationship", "DERIVED"),
                       "priority": doc.get("priority", "medium"),
-                      "staleness_reasons": doc.get("staleness_reasons", [])
+                      "staleness_reasons": doc.get("staleness_reasons", []),
+                      "stale_sections": doc.get("stale_sections", [])
                   })
                   break
       else:
@@ -79,7 +86,8 @@ steps:
                   "sources": section.get("sources", []),
                   "relationship": doc.get("relationship", "DERIVED"),
                   "priority": doc.get("priority", "medium"),
-                  "staleness_reasons": doc.get("staleness_reasons", [])
+                  "staleness_reasons": doc.get("staleness_reasons", []),
+                  "stale_sections": doc.get("stale_sections", [])
               })
               
               if len(selected) >= batch_limit:
@@ -93,82 +101,310 @@ steps:
     parse_json: true
     timeout: 60
 
+  # NEW: Read existing documentation before regenerating
+  - id: "read-existing-docs"
+    type: "bash"
+    command: |
+      python3 << 'EOF'
+      import json
+      import os
+      from pathlib import Path
+      
+      selected = json.loads('''{{selected_docs}}''')
+      docs_dir = "{{docs_dir}}"
+      output_dir = "{{output_dir}}"
+      
+      existing = {}
+      
+      for doc in selected.get("docs", []):
+          doc_path = doc["doc_path"]
+          full_path = Path(docs_dir).parent / doc_path  # doc_path includes "docs/"
+          
+          if full_path.exists():
+              with open(full_path) as f:
+                  content = f.read()
+              
+              # Extract frontmatter
+              frontmatter = ""
+              body = content
+              if content.startswith("---"):
+                  parts = content.split("---", 2)
+                  if len(parts) >= 3:
+                      frontmatter = parts[1].strip()
+                      body = parts[2].strip()
+              
+              existing[doc_path] = {
+                  "full_content": content,
+                  "frontmatter": frontmatter,
+                  "body": body,
+                  "line_count": len(content.splitlines())
+              }
+          else:
+              existing[doc_path] = {"exists": False}
+      
+      # Save for next step
+      staging_dir = Path(output_dir) / "staging"
+      with open(staging_dir / "existing-docs.json", "w") as f:
+          json.dump(existing, f, indent=2)
+      
+      print(json.dumps({
+          "docs_read": len([d for d in existing.values() if d.get("full_content")]),
+          "docs_missing": len([d for d in existing.values() if not d.get("full_content")])
+      }))
+      EOF
+    output: "existing_docs_result"
+    parse_json: true
+    timeout: 60
+
+  # IMPROVED: Surgical regeneration that preserves unchanged content
   - id: "regenerate-docs"
     agent: "foundation:zen-architect"
     mode: "ARCHITECT"
     prompt: |
-      Regenerate documentation for stale docs. For each doc, read the source files and create updated documentation content.
+      Perform SURGICAL documentation updates. You MUST preserve existing content that doesn't need changes.
       
-      ## Selected Docs to Regenerate
+      ## CRITICAL: DETERMINISM REQUIREMENTS
+      
+      1. **PRESERVE unchanged sections VERBATIM** - Copy them exactly, character-for-character
+      2. **Use EXACT terminology from source code** - Don't paraphrase; use the same words
+      3. **Keep IDENTICAL structure** - Same heading hierarchy, same section order
+      4. **MINIMAL changes only** - Only add/modify what staleness_reasons specifically require
+      5. **Match EXACT formatting** - Same code fence style, same list format, same spacing
+      
+      ## Existing Documentation
+      
+      The current docs have been saved to: {{output_dir}}/staging/existing-docs.json
+      
+      Read this file FIRST to see the current content for each doc.
+      
+      ## Selected Docs to Update
       {{selected_docs}}
       
       ## Source Repository Location
       All source repos are in: {{repos_dir}}
       
-      ## Instructions
+      ## For EACH doc:
       
-      For EACH doc in the selected list:
+      1. **Read the existing doc** from existing-docs.json
+         - Note the exact frontmatter (preserve it exactly)
+         - Note the structure and section headings
+         - Identify which sections DON'T need changes (keep verbatim)
       
-      1. **Read all source files** listed in the doc's "sources" array
-         - Path format: {{repos_dir}}/{repo}/{path}
-         - Read each source file completely
+      2. **Read source files** from {{repos_dir}}/{repo}/{path}
+         - Only read sources relevant to the staleness_reasons
       
-      2. **Analyze what's missing** based on staleness_reasons
-         - Missing features need to be documented
-         - Outdated models need version updates
-         - Missing config options need to be added
+      3. **Identify SPECIFIC gaps** from staleness_reasons:
+         - "missing_features" → Find and document new features from source
+         - "outdated_models" → Update model/version lists
+         - "missing_config" → Add missing configuration options
+         - "api_changes" → Update API signatures
       
-      3. **Generate updated documentation** that:
-         - Keeps the existing structure and frontmatter
-         - Adds missing configuration options with descriptions
-         - Updates model lists to match source
-         - Documents missing features with examples
-         - Uses the same tone and style as existing docs
+      4. **Surgically update** the document:
+         - START with the existing doc content (copy it)
+         - KEEP all unchanged sections exactly as they are
+         - INSERT new content in the appropriate location
+         - UPDATE only the specific values/lists that are stale
+         - PRESERVE the exact frontmatter
       
-      4. **Save the regenerated doc** to: {{output_dir}}/{doc_filename}
+      5. **Save to**: {{output_dir}}/staging/{doc_filename}
          - Where doc_filename is the basename of doc_path
       
-      5. **Create a change summary** for each doc listing what was added/changed
+      ## What NOT to do:
+      - Do NOT rephrase existing sentences that are still accurate
+      - Do NOT reorganize sections that don't need it
+      - Do NOT change formatting style (code fence language, list markers)
+      - Do NOT add content that isn't in the source files
       
-      Work through ALL selected docs. Be thorough - read sources completely before writing.
-      
-      After completing all docs, provide a summary of what was regenerated.
+      Work through ALL selected docs. Be surgical - the goal is MINIMAL diff.
     output: "regeneration_result"
     timeout: 900
+
+  # NEW: Semantic diff analysis - auto-filter cosmetic-only changes
+  - id: "semantic-diff-filter"
+    type: "bash"
+    command: |
+      python3 << 'EOF'
+      import json
+      import re
+      import shutil
+      from pathlib import Path
+      
+      output_dir = Path("{{output_dir}}")
+      docs_dir = Path("{{docs_dir}}").parent  # Go up since doc_path includes "docs/"
+      staging_dir = output_dir / "staging"
+      min_ratio = float("{{min_change_ratio}}")
+      
+      # Load existing docs info
+      existing_path = staging_dir / "existing-docs.json"
+      if existing_path.exists():
+          with open(existing_path) as f:
+              existing = json.load(f)
+      else:
+          existing = {}
+      
+      results = {"accepted": [], "rejected": [], "analysis": []}
+      
+      def extract_meaningful_content(text):
+          """Extract words, ignoring formatting and common words."""
+          # Remove frontmatter
+          text = re.sub(r'^---\n.*?\n---\n', '', text, flags=re.DOTALL)
+          # Remove code blocks (keep just the code, not fences)
+          text = re.sub(r'```\w*\n', '', text)
+          text = re.sub(r'```', '', text)
+          # Extract words
+          words = re.findall(r'\b[a-zA-Z_][a-zA-Z0-9_]*\b', text.lower())
+          # Filter out very common words
+          stopwords = {'the', 'a', 'an', 'is', 'are', 'was', 'were', 'be', 'been', 
+                       'being', 'have', 'has', 'had', 'do', 'does', 'did', 'will',
+                       'would', 'could', 'should', 'may', 'might', 'must', 'shall',
+                       'can', 'to', 'of', 'in', 'for', 'on', 'with', 'at', 'by',
+                       'from', 'or', 'and', 'not', 'this', 'that', 'it', 'as', 'if'}
+          return [w for w in words if w not in stopwords and len(w) > 2]
+      
+      # Process each staged file
+      for staged_file in staging_dir.glob("*.md"):
+          filename = staged_file.name
+          
+          # Find the original doc path
+          original_path = None
+          for doc_path, info in existing.items():
+              if Path(doc_path).name == filename or doc_path.endswith(filename):
+                  original_path = docs_dir / doc_path
+                  break
+          
+          # Also try common locations
+          if not original_path or not original_path.exists():
+              for subdir in ["architecture", "developer", "developer/contracts", 
+                            "developer_guides/foundation/amplifier_foundation",
+                            "getting_started", "modules/providers"]:
+                  test_path = docs_dir / "docs" / subdir / filename
+                  if test_path.exists():
+                      original_path = test_path
+                      break
+          
+          if not original_path or not original_path.exists():
+              # New file - always accept
+              shutil.copy(staged_file, output_dir / filename)
+              results["accepted"].append({"file": filename, "reason": "new file"})
+              continue
+          
+          # Read both versions
+          with open(original_path) as f:
+              original_content = f.read()
+          with open(staged_file) as f:
+              staged_content = f.read()
+          
+          # If identical, skip
+          if original_content.strip() == staged_content.strip():
+              results["rejected"].append({"file": filename, "reason": "identical"})
+              continue
+          
+          # Extract meaningful words
+          orig_words = set(extract_meaningful_content(original_content))
+          staged_words = set(extract_meaningful_content(staged_content))
+          
+          # Calculate change metrics
+          new_words = staged_words - orig_words
+          removed_words = orig_words - staged_words
+          
+          total_original = len(orig_words) if orig_words else 1
+          new_ratio = len(new_words) / total_original
+          
+          analysis = {
+              "file": filename,
+              "original_words": len(orig_words),
+              "staged_words": len(staged_words),
+              "new_words": len(new_words),
+              "removed_words": len(removed_words),
+              "new_ratio": round(new_ratio, 4),
+              "threshold": min_ratio,
+              "new_word_sample": list(new_words)[:15]
+          }
+          
+          if new_ratio >= min_ratio:
+              # Meaningful change - accept
+              shutil.copy(staged_file, output_dir / filename)
+              analysis["status"] = "ACCEPTED"
+              results["accepted"].append({"file": filename, "new_ratio": new_ratio, "new_words": len(new_words)})
+          else:
+              # Cosmetic only - reject
+              analysis["status"] = "REJECTED (cosmetic)"
+              results["rejected"].append({"file": filename, "new_ratio": new_ratio, "reason": "below threshold"})
+          
+          results["analysis"].append(analysis)
+      
+      # Save detailed analysis
+      with open(output_dir / "diff-analysis.json", "w") as f:
+          json.dump(results, f, indent=2)
+      
+      # Print summary
+      print(json.dumps({
+          "accepted": len(results["accepted"]),
+          "rejected": len(results["rejected"]),
+          "accepted_files": [a["file"] for a in results["accepted"]],
+          "rejected_files": [r["file"] for r in results["rejected"]]
+      }))
+      EOF
+    output: "diff_filter_result"
+    parse_json: true
+    timeout: 120
 
   - id: "validate-output"
     agent: "foundation:file-ops"
     prompt: |
-      Validate the regenerated documentation files.
+      Validate the accepted regenerated documentation files.
       
-      1. List all files in: {{output_dir}}
+      Diff filter results:
+      {{diff_filter_result}}
+      
+      1. List files directly in: {{output_dir}} (not staging subdirectory)
+         Only .md files that passed the semantic diff filter
+      
       2. For each file, check:
-         - File exists and is not empty
          - Has valid markdown frontmatter (starts with ---)
          - Has proper heading structure
+         - No obvious placeholder text
       
-      3. Report:
-         - Number of files generated
-         - Any validation issues found
-         - Total bytes written
-      
-      Print a validation summary.
+      3. Report validation summary.
     output: "validation_result"
     timeout: 120
 
-  - id: "generate-diff-report"
+  - id: "generate-report"
     type: "bash"
     command: |
       echo "=== REGENERATION COMPLETE ==="
-      echo "Output directory: {{output_dir}}"
       echo ""
-      echo "Files generated:"
-      ls -la {{output_dir}}/*.md 2>/dev/null || echo "No markdown files found"
+      echo "📊 Semantic Diff Analysis:"
+      if [ -f "{{output_dir}}/diff-analysis.json" ]; then
+        python3 -c "
+      import json
+      with open('{{output_dir}}/diff-analysis.json') as f:
+          d = json.load(f)
+      print(f'  ✅ Accepted: {len(d[\"accepted\"])} files (meaningful changes)')
+      print(f'  ⏭️  Skipped: {len(d[\"rejected\"])} files (cosmetic only)')
+      "
+      fi
       echo ""
-      echo "To review changes:"
-      echo "  diff -u docs/path/to/file.md {{output_dir}}/file.md"
+      echo "📁 Files ready to apply:"
+      ls -la {{output_dir}}/*.md 2>/dev/null || echo "  (none)"
       echo ""
-      echo "To apply changes:"
-      echo "  cp {{output_dir}}/file.md docs/path/to/file.md"
+      if [ -f "{{output_dir}}/diff-analysis.json" ]; then
+        echo "📋 Change details:"
+        python3 -c "
+      import json
+      with open('{{output_dir}}/diff-analysis.json') as f:
+          d = json.load(f)
+      for a in d.get('analysis', []):
+          status = '✅' if a.get('status') == 'ACCEPTED' else '⏭️'
+          print(f\"  {status} {a['file']}: {a['new_words']} new words ({a['new_ratio']*100:.1f}% change)\")
+          if a.get('new_word_sample'):
+              print(f\"     Sample: {', '.join(a['new_word_sample'][:8])}...\")
+      "
+      fi
+      echo ""
+      echo "To apply all accepted changes:"
+      echo "  for f in {{output_dir}}/*.md; do"
+      echo "    # Find original and copy"
+      echo "  done"
     output: "final_report"
     timeout: 30

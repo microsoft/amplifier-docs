@@ -5,7 +5,7 @@ description: Mental model for amplifier-foundation's design
 
 # Core Concepts
 
-Mental model for Amplifier Foundation. For code examples, see [PATTERNS.md](patterns.md).
+Mental model for Amplifier Foundation. For code examples, see [Common Patterns](patterns.md).
 
 ## What is a Bundle?
 
@@ -29,7 +29,7 @@ Bundle → to_mount_plan() → Mount Plan → AmplifierSession
 | `instruction` | System instruction (markdown body) |
 | `spawn` | Tool inheritance policy for spawned agents |
 
-Bundles are markdown files with YAML frontmatter. See [PATTERNS.md](patterns.md) for format examples.
+Bundles are markdown files with YAML frontmatter. See [Common Patterns](patterns.md) for format examples.
 
 ## Composition
 
@@ -71,7 +71,7 @@ async with prepared.create_session() as session:
     response = await session.execute("Hello!")
 ```
 
-`prepare()` downloads modules from git URLs, installs dependencies, and returns a PreparedBundle with a module resolver.
+`prepare()` downloads modules from git URLs, installs dependencies, and returns a PreparedBundle with module resolver.
 
 ## @Mention Resolution
 
@@ -97,7 +97,7 @@ Bundles have a **structural** classification based on how they load. This affect
 | Term | Definition | Registry State |
 |------|------------|----------------|
 | **Root bundle** | A `/bundle.md` or `/bundle.yaml` at the root of a repo or directory tree. Establishes the namespace and root directory for path resolution. | `is_root = True` |
-| **Nested bundle** | Any bundle loaded via `#subdirectory=` URIs or `@namespace:path` references. Paths resolve relative to its location, shares the namespace with the root. | `is_root = False` |
+| **Nested bundle** | Any bundle loaded via `#subdirectory=` URIs or `@namespace:path` references. Paths resolve relative to its location, shares namespace with root. | `is_root = False` |
 
 **Key insight:** The namespace comes from `bundle.name`, not the repo URL or directory name.
 
@@ -134,6 +134,21 @@ When `foundation:bundles/with-anthropic` loads:
 2. It shares the `foundation` namespace
 3. Its own includes resolve relative to its location
 
+### Structural vs Conventional
+
+Bundles have two independent classification systems:
+
+| Layer | Enforced By | Purpose |
+|-------|-------------|---------|
+| **Structural** | Code (registry.py) | How bundles load, namespace registration |
+| **Conventional** | Patterns (see BUNDLE_GUIDE.md) | How to organize repos for maximum utility |
+
+A bundle can be:
+- **Structurally:** Nested (`is_root=False`) - loaded under root's directory
+- **Conventionally:** A "standalone bundle" - ready to use as-is from `/bundles/`
+
+These aren't contradictions—they describe different aspects.
+
 ## Mount Plans vs Bundles
 
 - **Mount plans are REQUIRED**: AmplifierSession needs a mount plan to run
@@ -155,7 +170,7 @@ bundle = await load_bundle("./bundle.md")
 agent = await load_bundle("./agents/my-agent.md")
 ```
 
-See [AGENT_AUTHORING.md](https://github.com/microsoft/amplifier-foundation/blob/main/docs/AGENT_AUTHORING.md) for agent-specific guidance (the `description` field pattern).
+See [Agent Authoring](../../../../../developer/agent_authoring.md) for agent-specific guidance (the `description` field pattern).
 
 ## Session Capabilities
 
@@ -201,6 +216,10 @@ Foundation provides **mechanism** for bundle composition. It doesn't decide whic
 
 ## Next Steps
 
-- **[API_REFERENCE.md](https://github.com/microsoft/amplifier-foundation/blob/main/docs/API_REFERENCE.md)** - API index pointing to source
-- **[PATTERNS.md](patterns.md)** - Common usage patterns with code examples
-- **[URI_FORMATS.md](https://github.com/microsoft/amplifier-foundation/blob/main/docs/URI_FORMATS.md)** - Source URI reference
+- **[API Reference](api_reference.md)** - API index pointing to source
+- **[Common Patterns](patterns.md)** - Common usage patterns with code examples
+- **[URI Formats](uri_formats.md)** - Source URI reference
+
+## References
+
+**→ [CONCEPTS.md](https://github.com/microsoft/amplifier-foundation/blob/main/docs/CONCEPTS.md)** - Source concepts document

@@ -5,199 +5,176 @@ description: Quick introduction to Amplifier
 
 # Getting Started
 
-Welcome to Amplifier! This guide will get you up and running quickly.
+Welcome to Amplifier! This guide will help you get up and running quickly.
 
 ## What is Amplifier?
 
-Amplifier is a modular AI assistant platform that makes AI dramatically more effective by providing:
+Amplifier is a **modular AI agent system** that lets you build, customize, and run AI-powered development workflows. It follows a Linux kernel-inspired architecture:
 
-- **Domain knowledge and context** from your work
-- **Understanding of your patterns** and preferences
-- **Ability to work on multiple things** simultaneously
-- **Integration with your development workflow**
-
-Think of Amplifier like a Linux kernel for AI assistants: a small, stable core with a rich ecosystem of modules.
+- **Tiny kernel** (`amplifier-core`) - Provides mechanisms only (~2,600 lines)
+- **Pluggable modules** - All features live at the edges as replaceable components
+- **Composable configuration** - Mix and match capabilities via bundles
 
 ## Quick Start
 
-### 1. Install
+### Install
 
 ```bash
-# Using pipx (recommended)
-pipx install amplifier-app-cli
+# Try without installing
+uvx --from git+https://github.com/microsoft/amplifier amplifier
 
-# Or using pip
-pip install amplifier-app-cli
+# Or install globally
+uv tool install git+https://github.com/microsoft/amplifier
 ```
 
-### 2. Configure
-
-Set up your API credentials:
+### First Run
 
 ```bash
-# Anthropic (recommended)
-export ANTHROPIC_API_KEY=your-key-here
+# Interactive setup (auto-runs on first use)
+amplifier init
 
-# Or OpenAI
-export OPENAI_API_KEY=your-key-here
-
-# Or Azure OpenAI
-export AZURE_OPENAI_API_KEY=your-key
-export AZURE_OPENAI_ENDPOINT=your-endpoint
-
-# Or Ollama (local, no API key needed)
-# Just ensure Ollama is running: ollama serve
+# Start a conversation
+amplifier
 ```
 
-### 3. Run
+The `init` wizard will:
+1. Detect available API keys from environment variables
+2. Help you configure your preferred provider
+3. Set up default settings
 
-```bash
-# Start a session
-amplifier run "What files are in this directory?"
+### Provider Support
 
-# Or start interactive REPL
-amplifier repl
-```
-
-## Provider Support
-
-Amplifier supports multiple LLM providers:
-
-| Provider | Models | Setup |
+| Provider | Models | Notes |
 |----------|--------|-------|
-| **Anthropic** | claude-sonnet-4-5, claude-haiku-20250110 | `ANTHROPIC_API_KEY` |
-| **OpenAI** | gpt-4o, gpt-4o, gpt-4o-mini | `OPENAI_API_KEY` |
-| **Azure OpenAI** | Deployment-based | `AZURE_OPENAI_API_KEY` + `AZURE_OPENAI_ENDPOINT` |
-| **Ollama** | Local models | Install Ollama, run `ollama serve` |
+| **Anthropic** | Claude Sonnet, Opus, Haiku | Recommended, most tested |
+| **OpenAI** | GPT-4o, GPT-4o-mini, o1 | Good alternative |
+| **Azure OpenAI** | GPT models via Azure | Enterprise users |
+| **Google Gemini** | Gemini 2.5 Flash, Pro | Large context windows |
+| **Ollama** | Local models | Free, no API key needed |
 
-!!! note "Provider Priority"
-    If multiple providers are configured, Amplifier uses the first available one. You can specify provider preferences in your bundle configuration.
+Set your API key before running:
 
-## Core Concepts
+```bash
+export ANTHROPIC_API_KEY="your-key"
+# or
+export OPENAI_API_KEY="your-key"
+# or
+export GOOGLE_API_KEY="your-key"
+```
+
+## Basic Usage
+
+### Single Command
+
+```bash
+# Execute a single prompt
+amplifier run "Create a Python function to calculate fibonacci numbers"
+
+# Use specific provider/model
+amplifier run -p anthropic -m claude-sonnet-4-5 "Your prompt"
+
+# Pipe input
+echo "Summarize this" | amplifier run
+```
+
+### Interactive Mode
+
+```bash
+# Start interactive session
+amplifier
+
+# You'll see a prompt like:
+# amplifier> Type your message...
+```
 
 ### Sessions
 
-A **session** is a single conversation with the AI. Sessions maintain context (conversation history) and can be resumed later.
+Amplifier automatically saves conversation state:
 
 ```bash
-# New session
-amplifier run "Hello!"
+# Continue most recent session
+amplifier continue
 
-# Resume previous session
-amplifier run --resume
+# Continue with new prompt
+amplifier continue "Follow up question"
+
+# List sessions
+amplifier session list
+
+# Resume specific session
+amplifier session resume <session-id>
 ```
 
-### Bundles
-
-**Bundles** are configuration files that define what modules to load. They're markdown files with YAML frontmatter:
-
-```markdown
----
-bundle:
-  name: my-app
-  version: 1.0.0
-
-providers:
-  - module: provider-anthropic
-    config:
-      default_model: claude-sonnet-4-5
----
-
-You are a helpful assistant.
-```
-
-### Tools
-
-**Tools** are capabilities that agents can use: reading files, executing commands, searching the web, etc.
-
-```bash
-# Tools are automatically available
-amplifier run "Read the README.md file"
-amplifier run "Run the tests"
-```
-
-### Agents
-
-**Agents** are specialized assistants configured for specific tasks. Agents can delegate to other agents.
-
-```bash
-# Use a specific agent
-amplifier run --agent explorer "Map the codebase structure"
-```
-
-## Context Window and Token Management
+## Context Window Awareness
 
 Amplifier automatically manages context windows:
 
-- **Dynamic budgeting**: Context managers query provider info to calculate available tokens
-- **Automatic compaction**: When approaching limits, older messages are compacted
-- **Token awareness**: Tools can report estimated token usage
+| Model | Context Window | Behavior |
+|-------|----------------|----------|
+| Claude Sonnet | 200K tokens | Full context available |
+| GPT-4o | 128K tokens | Full context available |
+| Smaller models | 8K-32K | Auto-compacts when needed |
 
-The formula: `available = context_window - max_output_tokens - safety_margin`
+When conversations exceed limits, Amplifier gracefully compacts older messages while preserving:
+- System instructions
+- Recent conversation
+- Tool call/result pairs
 
-## Validation
+## Bundles
 
-Amplifier validates configuration at multiple levels:
-
-- **Bundle validation**: Ensures configuration is well-formed
-- **Mount plan validation**: Verifies required modules exist
-- **Runtime validation**: Hooks can validate operations before execution
+Bundles are composable configuration packages:
 
 ```bash
-# Validate a bundle
-amplifier validate ./my-bundle.md
+# See current bundle
+amplifier bundle current
+
+# List available bundles
+amplifier bundle list
+
+# Switch bundles
+amplifier bundle use my-custom-bundle
 ```
 
-## What's Next?
+The default **foundation** bundle provides:
+- Common development tools (filesystem, bash, web)
+- Streaming output
+- Session persistence
 
-<div class="grid">
+## Common Commands
 
-<div class="card">
-<h3><a href="installation/">Installation</a></h3>
-<p>Detailed installation instructions and requirements.</p>
-</div>
+```bash
+# Configuration
+amplifier init                    # First-time setup
+amplifier provider use anthropic  # Set provider
+amplifier bundle use foundation   # Set bundle
 
-<div class="card">
-<h3><a href="configuration/">Configuration</a></h3>
-<p>Learn about configuration files and options.</p>
-</div>
+# Running
+amplifier                         # Interactive mode
+amplifier run "prompt"            # Single command
+amplifier continue               # Resume last session
 
-<div class="card">
-<h3><a href="first_session/">First Session</a></h3>
-<p>Walk through your first Amplifier session.</p>
-</div>
+# Tools
+amplifier tool list              # List available tools
+amplifier tool info <tool-name>  # Tool details
 
-<div class="card">
-<h3><a href="../user_guide/">User Guide</a></h3>
-<p>Complete guide to using Amplifier CLI.</p>
-</div>
+# Sessions
+amplifier session list           # List sessions
+amplifier session show <id>      # Session details
 
-</div>
-
-## Architecture Overview
-
-```
-┌─────────────────────────────────────────┐
-│  amplifier-app-cli (Application)        │
-│  • Configuration, Bundles, Profiles     │
-│  • User interaction (CLI/REPL)          │
-└────────────────┬────────────────────────┘
-                 │
-                 ▼
-┌─────────────────────────────────────────┐
-│  amplifier-core (Kernel)                │
-│  • Session lifecycle                    │
-│  • Module loading                       │
-│  • Event emission                       │
-└────────────────┬────────────────────────┘
-                 │
-                 ▼
-┌─────────────────────────────────────────┐
-│  Modules (Userspace)                    │
-│  • Providers (Anthropic, OpenAI, etc.)  │
-│  • Tools (filesystem, bash, web, etc.)  │
-│  • Hooks (logging, approval, etc.)      │
-└─────────────────────────────────────────┘
+# Utilities
+amplifier update                 # Update Amplifier
+amplifier --version              # Show version
 ```
 
-For detailed architecture documentation, see the [Architecture](../architecture/) section.
+## Next Steps
+
+- **[Installation](installation.md)** - Detailed installation options
+- **[CLI User Guide](../user_guide/)** - Complete command reference
+- **[Architecture](../architecture/)** - Understand the system design
+
+## References
+
+> **Note**: The Amplifier CLI is a **reference implementation**. You can use it as-is, fork it, or build your own CLI using amplifier-core.
+
+- **→ [CLI README](https://github.com/microsoft/amplifier/blob/main/README.md)** - Full CLI documentation
+- **→ [User Onboarding](https://github.com/microsoft/amplifier/blob/main/docs/USER_ONBOARDING.md)** - Complete user guide
