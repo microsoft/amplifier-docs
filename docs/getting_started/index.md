@@ -11,9 +11,10 @@ Welcome to Amplifier! This guide will help you get up and running quickly.
 
 Amplifier is a **modular AI agent system** that lets you build, customize, and run AI-powered development workflows. It follows a Linux kernel-inspired architecture:
 
-- **Tiny kernel** (`amplifier-core`) - Provides mechanisms only (~2,600 lines)
+- **Tiny kernel** (`amplifier-core`) - Provides mechanisms only
 - **Pluggable modules** - All features live at the edges as replaceable components
 - **Composable configuration** - Mix and match capabilities via bundles
+- **Load-time validation** - The kernel validates module configurations at load time
 
 ## Quick Start
 
@@ -62,6 +63,11 @@ export OPENAI_API_KEY="your-key"
 export GOOGLE_API_KEY="your-key"
 ```
 
+```bash
+# Ollama (local, no API key needed)
+amplifier provider use ollama
+```
+
 ## Basic Usage
 
 ### Single Command
@@ -107,7 +113,7 @@ amplifier session resume <session-id>
 
 ## Context Window Awareness
 
-Amplifier automatically manages context windows:
+Amplifier automatically manages context windows. Providers report their model's context window size, enabling automatic token budget management.
 
 | Model | Context Window | Behavior |
 |-------|----------------|----------|

@@ -14,8 +14,17 @@ Agents are specialized configurations that can be invoked as sub-sessions for fo
 | `explorer` | Breadth-first codebase exploration | Understanding new codebases |
 | `bug-hunter` | Systematic debugging | Finding and fixing bugs |
 | `zen-architect` | System design with simplicity | Architecture decisions |
-| `researcher` | Research and synthesis | Gathering information |
 | `modular-builder` | Code implementation | Writing new code |
+| `web-research` | Research and synthesis | Gathering information |
+| `file-ops` | Targeted file operations | Reading, writing, searching files |
+| `git-ops` | Git and GitHub operations | Commits, PRs, branch management |
+| `session-analyst` | Session analysis and debugging | Investigating session issues |
+| `security-guardian` | Security review and auditing | Pre-deployment security checks |
+| `test-coverage` | Test coverage analysis | Identifying test gaps |
+| `foundation-expert` | Bundle and agent authoring guidance | Creating bundles and agents |
+| `ecosystem-expert` | Multi-repo coordination | Cross-repo workflows |
+| `integration-specialist` | External service integration | API and MCP server setup |
+| `post-task-cleanup` | Post-task codebase hygiene | Cleaning up after task completion |
 
 ## Using Agents
 
@@ -131,7 +140,7 @@ Main Session
 @zen-architect Design a notification system
 ```
 
-### `researcher`
+### `web-research`
 
 **Purpose**: Research and information synthesis.
 
@@ -150,7 +159,7 @@ Main Session
 
 **Example**:
 ```bash
-@researcher What are the best practices for API versioning?
+@web-research What are the best practices for API versioning?
 ```
 
 ### `modular-builder`
@@ -213,7 +222,7 @@ tools:
 providers:
   - module: provider-anthropic
     config:
-      default_model: claude-opus-4-1
+      default_model: claude-opus-4-6
 ---
 
 # Database Optimization Specialist
@@ -250,7 +259,7 @@ tools:
 providers:
   - module: provider-anthropic
     config:
-      default_model: claude-opus-4-1
+      default_model: claude-opus-4-6
       temperature: 0.3
 
 # Optional - override hooks
@@ -285,7 +294,7 @@ agents:
     providers:
       - module: provider-anthropic
         config:
-          default_model: claude-opus-4-1
+          default_model: claude-opus-4-6
 ```
 
 ### Limiting Tools

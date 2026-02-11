@@ -187,6 +187,26 @@ amplifier continue "Fix the SQL injection vulnerability you identified"
 amplifier continue "Now write tests for the fix"
 ```
 
+## Conversational Single-Shot Workflows
+
+You can build context across multiple single-shot commands, combining focused execution with conversational continuity:
+
+```bash
+# Analyze in one shot
+amplifier run "Review the database schema for performance issues"
+
+# Build on the analysis with follow-ups
+amplifier continue "Which tables need indexing?"
+amplifier continue "Generate the migration for those indexes"
+amplifier continue "Write tests to verify query performance improved"
+```
+
+Each `continue` picks up the full conversation history, so the assistant remembers all previous analysis and decisions. This is particularly useful for:
+
+- **Scripted workflows**: Chain commands in shell scripts
+- **Incremental refinement**: Build up complex solutions step by step
+- **Context preservation**: Maintain analysis across separate commands without interactive mode
+
 ## Session IDs
 
 Session IDs follow the format:

@@ -7,44 +7,26 @@ description: Pre-configured capability sets for Amplifier
 
 Profiles are pre-configured capability sets that define which modules (providers, tools, hooks) are available during a session.
 
-## Built-in Profiles
+## Profile Concepts
 
-| Profile | Description | Use Case |
-|---------|-------------|----------|
-| `foundation` | Minimal - just LLM access | Simple chat, no tools |
-| `base` | Basic tools (filesystem, bash) | Light development work |
-| `dev` | Full development suite | Day-to-day development |
-| `test` | Testing focused | Running tests, debugging |
-| `full` | All features enabled | Exploring capabilities |
+Profiles are defined in Markdown files with YAML frontmatter. They support inheritance via `extends`, overlay merging across search paths, and compilation to Mount Plans for `AmplifierSession`.
 
 ## Using Profiles
 
-### List Available Profiles
+Profiles are loaded by the application via bundles. In the Amplifier CLI, bundles compose profiles and other configuration:
 
 ```bash
-amplifier profile list
-```
+# List available bundles (which load profiles)
+amplifier bundle list
 
-### Use a Profile
+# Use a specific bundle
+amplifier bundle use my-bundle
 
-```bash
-# For a single command
-amplifier run --profile dev "Analyze this code"
+# Show current bundle
+amplifier bundle current
 
-# Set as default
-amplifier profile use dev
-```
-
-### Show Profile Configuration
-
-```bash
-amplifier profile show dev
-```
-
-### Check Current Profile
-
-```bash
-amplifier profile current
+# Show bundle details
+amplifier bundle show my-bundle
 ```
 
 ## Profile Contents
@@ -121,14 +103,12 @@ Custom instructions that will be included in the system prompt.
 
 ```yaml
 ---
-# Required
-name: profile-name
-
-# Optional - inherit from another profile
-extends: base
-
-# Optional
-description: What this profile is for
+# Required - profile metadata
+profile:
+  name: profile-name
+  version: 1.0.0
+  description: What this profile is for
+  extends: base  # Optional - inherit from another profile
 
 # Optional - override session settings
 session:
@@ -138,30 +118,28 @@ session:
 # Optional - configure providers
 providers:
   - module: provider-anthropic
+    source: git+https://github.com/microsoft/amplifier-module-provider-anthropic@main
     config:
-      default_model: claude-opus-4-1
+      model: claude-sonnet-4-5
 
 # Optional - add/configure tools
 tools:
   - module: tool-filesystem
   - module: tool-bash
-    config:
-      timeout: 60
 
 # Optional - configure hooks
 hooks:
   - module: hooks-logging
-    config:
-      level: debug
 
-# Optional - define agents
-agents:
-  my-agent:
-    description: A specialized agent
-    tools:
-      - tool-filesystem
-    system:
-      instruction: You are a specialist in...
+# Optional - agent availability
+#   agents: all              # All discovered agents
+#   agents: none             # No agents
+#   agents: [explorer, bug-hunter]  # Specific agents only
+
+# Optional - exclude inherited modules
+exclude:
+  hooks:
+    - hooks-logging
 ---
 ```
 
@@ -272,9 +250,6 @@ See [Collections](collections.md) for more details.
 ### Profile Not Found
 
 ```bash
-# Check profile exists
-amplifier profile list
-
 # Check profile locations
 ls ~/.amplifier/profiles/
 ls .amplifier/profiles/
@@ -282,21 +257,11 @@ ls .amplifier/profiles/
 
 ### Profile Not Loading
 
-Verify YAML syntax:
-
-```bash
-# Show profile content
-amplifier profile show my-profile
-```
+Verify YAML frontmatter syntax in the profile `.md` file. Ensure the `profile:` section contains a valid `name` field.
 
 ### Inheritance Issues
 
-Check the inheritance chain:
-
-```bash
-# Show full resolved profile
-amplifier profile show my-profile --resolved
-```
+Check the inheritance chain by examining the `extends` field in each profile's frontmatter and ensuring parent profiles exist in the search paths.
 
 ## Best Practices
 

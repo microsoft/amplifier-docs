@@ -100,7 +100,6 @@ amplifier provider use openai
 ```bash
 export AZURE_OPENAI_API_KEY="your-key"
 export AZURE_OPENAI_ENDPOINT="https://your-resource.openai.azure.com"
-export AZURE_OPENAI_DEPLOYMENT="your-deployment-name"
 
 # Or use Azure CLI authentication instead of API key
 export AZURE_USE_DEFAULT_CREDENTIAL="true"
@@ -121,7 +120,7 @@ No API key needed - runs locally:
 
 ```bash
 # Install Ollama first: https://ollama.ai
-ollama pull llama3.2
+ollama pull llama3.2:3b
 
 amplifier provider use ollama
 ```
@@ -133,20 +132,11 @@ export OLLAMA_HOST="http://your-server:11434"
 amplifier provider use ollama
 ```
 
-## Context Window Limits
+The kernel validates module configurations at load time, ensuring your setup is correct before execution.
 
-Different models have different context limits:
+## Context Window Management
 
-| Model | Context Window | Max Output |
-|-------|----------------|------------|
-| Claude Sonnet 4.5 | 200K tokens | 8K tokens |
-| Claude Opus | 200K tokens | 4K tokens |
-| GPT-4o | 128K tokens | 4K tokens |
-| GPT-4o-mini | 128K tokens | 16K tokens |
-| Gemini 2.5 Pro | 1M tokens | 8K tokens |
-| Ollama (varies) | Model dependent | Model dependent |
-
-Amplifier automatically manages context, compacting when needed.
+Providers report their model's context window size and max output tokens at runtime, enabling automatic token budget management. Amplifier automatically manages context, compacting older messages when conversations approach limits while preserving system instructions and recent exchanges.
 
 ## Updating
 
@@ -240,5 +230,7 @@ uv run pytest
 - **[Configuration](../user_guide/configuration.md)** - Advanced configuration
 
 ## References
+
+> **Note**: The Amplifier CLI is a **reference implementation**. You can use it as-is, fork it, or build your own CLI using amplifier-core.
 
 - **→ [CLI README](https://github.com/microsoft/amplifier/blob/main/README.md)** - Full CLI documentation

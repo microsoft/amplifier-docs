@@ -11,9 +11,9 @@ Amplifier supports multiple LLM providers. This guide covers setting up each one
 
 | Provider | Models | Best For |
 |----------|--------|----------|
-| **Anthropic** | Claude 4, Claude 3.5 | General purpose, coding, analysis |
-| **OpenAI** | GPT-4, GPT-4o | Broad capabilities, function calling |
-| **Azure OpenAI** | GPT-4, GPT-4o | Enterprise, compliance requirements |
+| **Anthropic** | Claude 4 Sonnet, Opus, Haiku | General purpose, coding, analysis |
+| **OpenAI** | GPT-5.1, GPT-5-mini | Broad capabilities, function calling |
+| **Azure OpenAI** | GPT-5.1 via Azure | Enterprise, compliance requirements |
 | **Ollama** | Llama, Mistral, etc. | Local/offline, privacy, experimentation |
 | **vLLM** | Any vLLM-compatible | Self-hosted inference, high throughput |
 
@@ -46,8 +46,8 @@ amplifier provider use anthropic
 | Model | Description |
 |-------|-------------|
 | `claude-sonnet-4-5` | Latest, balanced performance (default) |
-| `claude-opus-4-1` | Most capable, best for complex tasks |
-| `claude-haiku-3-5` | Fastest, good for simple tasks |
+| `claude-opus-4-6` | Most capable, best for complex tasks |
+| `claude-haiku-4-5` | Fastest, good for simple tasks |
 
 ```bash
 # Use a specific model
@@ -74,9 +74,9 @@ amplifier provider use openai
 
 | Model | Description |
 |-------|-------------|
-| `gpt-4o` | Latest, multimodal (default) |
-| `gpt-4-turbo` | Fast, capable |
-| `gpt-4` | Original GPT-4 |
+| `gpt-5.1-codex` | GPT-5 optimized for code (default) |
+| `gpt-5.1` | Latest GPT-5 model |
+| `gpt-5-mini` | Smaller, faster GPT-5 |
 
 ## Azure OpenAI
 
@@ -133,7 +133,7 @@ ollama serve
 ### Pull a Model
 
 ```bash
-ollama pull llama3.1
+ollama pull llama3.2
 ollama pull codellama
 ollama pull mistral
 ```
@@ -153,7 +153,7 @@ Any model you've pulled with `ollama pull`:
 ollama list
 
 # Use specific model
-amplifier run --model llama3.1 "Hello!"
+amplifier run --model llama3.2 "Hello!"
 ```
 
 ## vLLM (Self-Hosted)
@@ -235,7 +235,7 @@ providers:
 
   ollama:
     base_url: http://localhost:11434
-    default_model: llama3.1
+    default_model: llama3.2
 
   vllm:
     base_url: http://your-server:8000/v1

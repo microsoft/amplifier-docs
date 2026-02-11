@@ -32,8 +32,8 @@ amplifier run [OPTIONS] PROMPT
 
 | Option | Description |
 |--------|-------------|
-| `--profile, -p` | Profile to use |
-| `--provider` | LLM provider (anthropic, openai, etc.) |
+| `--bundle` | Bundle to use |
+| `--provider, -p` | LLM provider (anthropic, openai, etc.) |
 | `--model, -m` | Specific model to use |
 | `--max-tokens` | Maximum response tokens |
 | `--output-format, -o` | Output format: `text`, `json`, `json-trace` |
@@ -47,7 +47,7 @@ amplifier run [OPTIONS] PROMPT
 amplifier run "Explain this code"
 
 # With options
-amplifier run --profile dev --model claude-opus-4-1 "Complex task"
+amplifier run --bundle dev --model claude-opus-4-1 "Complex task"
 
 # JSON output for scripting
 amplifier run --output-format json "What is 2+2?"
@@ -161,54 +161,62 @@ amplifier session cleanup [OPTIONS]
 |--------|-------------|
 | `--days, -d` | Delete sessions older than N days (default: 30) |
 
-## Profile Commands
+## Bundle Commands
 
-### `profile list`
+### `bundle list`
 
-List available profiles.
+List available bundles.
 
 ```bash
-amplifier profile list
+amplifier bundle list
 ```
 
-### `profile use`
+### `bundle use`
 
-Set the active profile.
+Set the active bundle.
 
 ```bash
-amplifier profile use PROFILE_NAME
+amplifier bundle use BUNDLE_NAME [--local|--project|--global]
 ```
 
-### `profile show`
+### `bundle show`
 
-Show profile configuration.
+Show bundle details.
 
 ```bash
-amplifier profile show [PROFILE_NAME]
+amplifier bundle show [BUNDLE_NAME]
 ```
 
-### `profile current`
+### `bundle current`
 
-Show the current active profile.
+Show the current active bundle.
 
 ```bash
-amplifier profile current
+amplifier bundle current
 ```
 
-### `profile default`
+### `bundle add`
 
-Show or set the default profile.
+Register a bundle from a git URL.
 
 ```bash
-amplifier profile default [PROFILE_NAME]
+amplifier bundle add GIT_URL [--name ALIAS]
 ```
 
-### `profile reset`
+### `bundle remove`
 
-Reset profile to default.
+Unregister a bundle.
 
 ```bash
-amplifier profile reset
+amplifier bundle remove BUNDLE_NAME
+```
+
+### `bundle clear`
+
+Reset to default (foundation) bundle.
+
+```bash
+amplifier bundle clear
 ```
 
 ## Provider Commands
@@ -226,7 +234,7 @@ amplifier provider list
 Set the active provider.
 
 ```bash
-amplifier provider use PROVIDER_NAME
+amplifier provider use PROVIDER_NAME [--local|--project|--global]
 ```
 
 ### `provider current`
@@ -242,7 +250,7 @@ amplifier provider current
 Reset to default provider.
 
 ```bash
-amplifier provider reset
+amplifier provider reset [--scope SCOPE]
 ```
 
 ## Module Commands
@@ -264,19 +272,23 @@ amplifier module list [OPTIONS]
 Add a module.
 
 ```bash
-amplifier module add MODULE_NAME [OPTIONS]
+amplifier module add MODULE_NAME [--local|--project|--global]
 ```
-
-| Option | Description |
-|--------|-------------|
-| `--source, -s` | Module source (git URL or path) |
 
 ### `module remove`
 
 Remove a module.
 
 ```bash
-amplifier module remove MODULE_NAME
+amplifier module remove MODULE_NAME [--scope SCOPE]
+```
+
+### `module current`
+
+Show current module configuration.
+
+```bash
+amplifier module current
 ```
 
 ### `module show`
@@ -300,7 +312,7 @@ amplifier module check-updates
 Refresh module cache.
 
 ```bash
-amplifier module refresh
+amplifier module refresh [MODULE_NAME] [--mutable-only]
 ```
 
 ## Collection Commands
@@ -364,7 +376,7 @@ amplifier source list
 Add a source override (for local development).
 
 ```bash
-amplifier source add MODULE_NAME SOURCE_PATH
+amplifier source add ID URI [--local|--project|--global]
 ```
 
 ### `source remove`
@@ -372,7 +384,7 @@ amplifier source add MODULE_NAME SOURCE_PATH
 Remove a source override.
 
 ```bash
-amplifier source remove MODULE_NAME
+amplifier source remove ID [--scope SCOPE]
 ```
 
 ### `source show`
@@ -380,33 +392,43 @@ amplifier source remove MODULE_NAME
 Show source override details.
 
 ```bash
-amplifier source show MODULE_NAME
+amplifier source show ID
 ```
 
 ## Tool Commands
 
 ### `tool list`
 
-List available tools from the active profile.
+List available tools.
 
 ```bash
-amplifier tool list
+amplifier tool list [OPTIONS]
 ```
+
+| Option | Description |
+|--------|-------------|
+| `--modules` | Show module names (fast) |
+| `--bundle BUNDLE` | Specify bundle |
+| `--output json` | JSON output |
 
 ### `tool info`
 
 Show tool details.
 
 ```bash
-amplifier tool info TOOL_NAME
+amplifier tool info TOOL_NAME [OPTIONS]
 ```
+
+| Option | Description |
+|--------|-------------|
+| `--module MODULE` | Show module info (fast) |
 
 ### `tool invoke`
 
 Directly invoke a tool (for testing).
 
 ```bash
-amplifier tool invoke TOOL_NAME [ARGS]
+amplifier tool invoke TOOL_NAME KEY=VALUE...
 ```
 
 ## Agent Commands
@@ -425,6 +447,42 @@ Show agent details.
 
 ```bash
 amplifier agents show AGENT_NAME
+```
+
+## Notify Commands
+
+### `notify status`
+
+Show current notification settings.
+
+```bash
+amplifier notify status
+```
+
+### `notify desktop`
+
+Enable or disable desktop/terminal notifications.
+
+```bash
+amplifier notify desktop --enable [--scope SCOPE]
+amplifier notify desktop --disable [--scope SCOPE]
+```
+
+### `notify ntfy`
+
+Enable or disable ntfy.sh push notifications.
+
+```bash
+amplifier notify ntfy --enable --topic TOPIC [--scope SCOPE]
+amplifier notify ntfy --disable [--scope SCOPE]
+```
+
+### `notify reset`
+
+Clear all notification settings.
+
+```bash
+amplifier notify reset --all [--scope SCOPE]
 ```
 
 ## Other Commands
@@ -447,46 +505,10 @@ amplifier update [OPTIONS]
 
 | Option | Description |
 |--------|-------------|
-| `--cli` | Update CLI only |
-| `--modules` | Update modules only |
-| `--collections` | Update collections only |
-
-## Output Formats
-
-The `--output-format` option supports:
-
-### `text` (default)
-
-Human-readable markdown output rendered in the terminal.
-
-### `json`
-
-Structured JSON for automation:
-
-```json
-{
-  "status": "success",
-  "response": "The answer is...",
-  "session_id": "abc123",
-  "model": "claude-sonnet-4-5",
-  "timestamp": "2024-01-15T10:30:00Z"
-}
-```
-
-### `json-trace`
-
-Complete execution trace including tool calls:
-
-```json
-{
-  "status": "success",
-  "response": "...",
-  "trace": [
-    {"type": "tool_call", "tool": "bash", "input": {...}, "output": {...}},
-    {"type": "llm_response", "content": "..."}
-  ]
-}
-```
+| `--check-only` | Check for updates without installing |
+| `--force` | Force update all sources (skip update detection) |
+| `-y, --yes` | Skip confirmation prompts |
+| `--verbose` | Show detailed multi-line output per source |
 
 ## Environment Variables
 
@@ -496,9 +518,8 @@ Complete execution trace including tool calls:
 | `OPENAI_API_KEY` | OpenAI API key |
 | `AZURE_OPENAI_API_KEY` | Azure OpenAI API key |
 | `AZURE_OPENAI_ENDPOINT` | Azure OpenAI endpoint |
-| `AMPLIFIER_PROFILE` | Default profile |
-| `AMPLIFIER_PROVIDER` | Default provider |
-| `AMPLIFIER_DEBUG` | Enable debug logging |
+| `AZURE_OPENAI_API_VERSION` | Azure OpenAI API version |
+| `AZURE_USE_DEFAULT_CREDENTIAL` | Use Azure DefaultAzureCredential |
 
 ## Configuration Files
 
