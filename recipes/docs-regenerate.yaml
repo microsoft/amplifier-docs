@@ -1,23 +1,23 @@
-# Documentation Regeneration Recipe - v3 with Evidence Validation & Auto-Apply
+# Documentation Regeneration Recipe - v4 with Hash-Diff Selection
 name: "docs-regenerate"
-description: "Regenerate stale documentation with evidence-based validation, auto-apply, and approval-gated commit"
-version: "3.0.0"
-tags: ["documentation", "regeneration", "content", "deterministic", "evidence-based"]
+description: "Regenerate documentation using source hash diffs for incremental updates, with evidence validation and approval-gated commit"
+version: "4.0.0"
+tags: ["documentation", "regeneration", "incremental", "evidence-based"]
 
 context:
-  # Mode: "single" for one doc, "batch" for multiple
-  mode: "single"
+  # Mode: "incremental" (only changed sources), "full" (all sections), "single" (one doc)
+  mode: "incremental"
   # For single mode: specific doc path to regenerate
   doc_path: ""
-  # For batch mode: limit number of docs to regenerate
-  batch_limit: 5
-  # Priority filter: "all", "high", "medium", "low"
-  priority_filter: "high"
+  # Limit number of docs to regenerate per run
+  batch_limit: 10
   # Source directories
   repos_dir: "~/repo/amplifier-sources"
   docs_dir: "./docs"
   outline_path: "./outlines/amplifier-docs-outline.json"
-  analysis_path: "./sync-output/cache/content-analysis.json"
+  # Hash files for incremental detection
+  hashes_path: "./sync-output/cache/source-hashes.json"
+  baseline_path: "./baseline-hashes.json"
   # Output
   output_dir: "./sync-output/regenerated"
   # Minimum new content ratio to accept changes (0.0-1.0)
@@ -42,71 +42,85 @@ stages:
         type: "bash"
         command: |
           python3 << 'EOF'
-          import json
+          import json, sys
 
           mode = "{{mode}}"
           doc_path = "{{doc_path}}"
-          priority_filter = "{{priority_filter}}"
           batch_limit = int("{{batch_limit}}")
 
-          # Load analysis
-          with open("{{analysis_path}}") as f:
-              analysis = json.load(f)
+          # Load current source hashes
+          try:
+              with open("{{hashes_path}}") as f:
+                  current = json.load(f)
+          except FileNotFoundError:
+              print('{"error": "No source-hashes.json found. Run docs-sync first.", "count": 0, "docs": []}')
+              sys.exit(0)
 
           # Load outline for source mappings
           with open("{{outline_path}}") as f:
               outline = json.load(f)
 
-          # Build section lookup
+          # Load baseline (no baseline = first run, everything is changed)
+          try:
+              with open("{{baseline_path}}") as f:
+                  baseline = json.load(f)
+          except FileNotFoundError:
+              baseline = {"sections": {}}
+
+          # Build section lookup from outline
           section_lookup = {s["doc_path"]: s for s in outline.get("content_sections", [])}
 
           def make_staging_name(dp):
-              """Convert doc_path to collision-safe staging filename.
-              e.g. 'docs/architecture/index.md' -> 'docs__architecture__index.md'"""
+              """e.g. 'docs/architecture/index.md' -> 'docs__architecture__index.md'"""
               return dp.replace("/", "__")
 
+          def section_changed(section_id):
+              """Compare source hashes: any difference means section needs regeneration."""
+              cur = current.get("sections", {}).get(section_id, {})
+              base = baseline.get("sections", {}).get(section_id, {})
+              cur_hashes = {(s.get("repo",""), s.get("path","")): s.get("hash") for s in cur.get("sources", [])}
+              base_hashes = {(s.get("repo",""), s.get("path","")): s.get("hash") for s in base.get("sources", [])}
+              return cur_hashes != base_hashes
+
+          no_baseline = len(baseline.get("sections", {})) == 0
           selected = []
 
-          if mode == "single" and doc_path:
-              # Find specific doc
-              for doc in analysis["stale_docs"]:
-                  if doc["doc_path"] == doc_path:
-                      section = section_lookup.get(doc_path, {})
-                      selected.append({
-                          "doc_path": doc_path,
-                          "staging_name": make_staging_name(doc_path),
-                          "sources": section.get("sources", []),
-                          "relationship": doc.get("relationship", "DERIVED"),
-                          "priority": doc.get("priority", "medium"),
-                          "staleness_reasons": doc.get("staleness_reasons", []),
-                          "stale_sections": doc.get("stale_sections", [])
-                      })
-                      break
-          else:
-              # Batch mode - select by priority
-              for doc in analysis["stale_docs"]:
-                  if priority_filter != "all" and doc["priority"] != priority_filter:
+          for section_id, section in current.get("sections", {}).items():
+              dp = section.get("doc_path", "")
+              if not dp:
+                  continue
+
+              # Single mode: only process the specified doc
+              if mode == "single":
+                  if doc_path and dp != doc_path:
                       continue
-
-                  section = section_lookup.get(doc["doc_path"], {})
-                  if not section.get("sources"):
+              # Incremental mode: only process sections with changed source hashes
+              elif mode == "incremental":
+                  if not section_changed(section_id):
                       continue
+              # Full mode: process everything (no filtering)
 
-                  selected.append({
-                      "doc_path": doc["doc_path"],
-                      "staging_name": make_staging_name(doc["doc_path"]),
-                      "sources": section.get("sources", []),
-                      "relationship": doc.get("relationship", "DERIVED"),
-                      "priority": doc.get("priority", "medium"),
-                      "staleness_reasons": doc.get("staleness_reasons", []),
-                      "stale_sections": doc.get("stale_sections", [])
-                  })
+              # Look up source mappings from outline
+              outline_section = section_lookup.get(dp, {})
+              if not outline_section.get("sources"):
+                  continue
 
-                  if len(selected) >= batch_limit:
-                      break
+              selected.append({
+                  "doc_path": dp,
+                  "staging_name": make_staging_name(dp),
+                  "sources": outline_section.get("sources", []),
+              })
 
-          # Output
-          result = {"count": len(selected), "docs": selected}
+              if len(selected) >= batch_limit:
+                  break
+
+          result = {
+              "count": len(selected),
+              "mode": mode,
+              "no_baseline": no_baseline,
+              "total_sections": len(current.get("sections", {})),
+              "docs": selected
+          }
           print(json.dumps(result))
           EOF
         output: "selected_docs"
@@ -179,7 +193,7 @@ stages:
           1. **PRESERVE unchanged sections VERBATIM** - Copy them exactly, character-for-character
           2. **Use EXACT terminology from source code** - Don't paraphrase; use the same words
           3. **Keep IDENTICAL structure** - Same heading hierarchy, same section order
-          4. **MINIMAL changes only** - Only add/modify what staleness_reasons specifically require
+          4. **MINIMAL changes only** - Only update what actually differs between source and doc
           5. **Match EXACT formatting** - Same code fence style, same list format, same spacing
 
           ## Existing Documentation
@@ -191,6 +205,8 @@ stages:
           ## Selected Docs to Update
           {{selected_docs}}
 
+          These docs were selected because their source files changed since the last regeneration.
+
           ## Source Repository Location
           All source repos are in: {{repos_dir}}
 
@@ -201,20 +217,20 @@ stages:
              - Note the structure and section headings
              - Identify which sections DON'T need changes (keep verbatim)
 
-          2. **Read source files** from {{repos_dir}}/{repo}/{path}
-             - Only read sources relevant to the staleness_reasons
+          2. **Read ALL source files** listed in "sources" from {{repos_dir}}/{repo}/{path}
 
-          3. **Identify SPECIFIC gaps** from staleness_reasons:
-             - "missing_features" -> Find and document new features from source
-             - "outdated_models" -> Update model/version lists
-             - "missing_config" -> Add missing configuration options
-             - "api_changes" -> Update API signatures
+          3. **Compare source code against existing doc** to find gaps:
+             - Config keys/options in source but missing from doc
+             - API signatures that changed (parameters, return types, defaults)
+             - New features or capabilities added to source
+             - Model names or versions that are outdated in doc
+             - Environment variables documented in source but missing from doc
 
           4. **Surgically update** the document:
              - START with the existing doc content (copy it)
              - KEEP all unchanged sections exactly as they are
              - INSERT new content in the appropriate location
-             - UPDATE only the specific values/lists that are stale
+             - UPDATE only the specific values/lists that differ from source
              - PRESERVE the exact frontmatter
 
           5. **Save to**: {{output_dir}}/staging/{staging_name}
@@ -567,6 +583,8 @@ stages:
           Evidence validation results: {{evidence_result}}
           Diff filter results: {{diff_filter_result}}
 
+          Also stage and include baseline-hashes.json in the commit (it was updated by the previous step).
+
           Create a commit with:
           - Type prefix "docs:"
           - Summarize which docs were regenerated
@@ -575,12 +593,60 @@ stages:
         output: "commit_result"
         timeout: 120
 
+      # Per-section baseline update: only advance baseline for sections that were committed
+      - id: "update-baseline"
+        type: "bash"
+        command: |
+          python3 << 'EOF'
+          import json
+          from pathlib import Path
+
+          # What was actually applied (committed docs)
+          applied = json.loads('''{{apply_result}}''')
+          committed_docs = {f["doc_path"] for f in applied.get("files", [])}
+
+          if not committed_docs:
+              print(json.dumps({"sections_updated": 0, "message": "No docs committed, baseline unchanged"}))
+              exit(0)
+
+          # Current source hashes
+          with open("{{hashes_path}}") as f:
+              current = json.load(f)
+
+          # Existing baseline (or empty for first run)
+          baseline_path = Path("{{baseline_path}}")
+          if baseline_path.exists():
+              with open(baseline_path) as f:
+                  baseline = json.load(f)
+          else:
+              baseline = {"sections": {}}
+
+          # Merge: only update sections whose docs were actually committed
+          updated = 0
+          for section_id, section_data in current.get("sections", {}).items():
+              if section_data.get("doc_path") in committed_docs:
+                  baseline["sections"][section_id] = section_data
+                  updated += 1
+
+          baseline["last_updated"] = current.get("generated_at", "")
+
+          with open(baseline_path, "w") as f:
+              json.dump(baseline, f, indent=2)
+
+          print(json.dumps({"sections_updated": updated, "total_baseline": len(baseline["sections"])}))
+          EOF
+        output: "baseline_result"
+        parse_json: true
+        timeout: 60
+
       - id: "generate-report"
         type: "bash"
         command: |
           echo "=== REGENERATION COMPLETE ==="
           echo ""
           echo "Commit: {{commit_result}}"
+          echo ""
+          echo "Baseline: {{baseline_result}}"
           echo ""
           if [ -f "{{output_dir}}/diff-analysis.json" ]; then
             echo "Change details:"

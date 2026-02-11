@@ -1,14 +1,15 @@
 # Amplifier Documentation Synchronization Recipe
 name: "docs-sync"
-description: "Synchronize amplifier-docs with source repositories and generate freshness report"
-version: "1.0.0"
-tags: ["documentation", "sync", "freshness"]
+description: "Synchronize amplifier-docs with source repositories, compute source hashes, and report changes since last regeneration"
+version: "2.0.0"
+tags: ["documentation", "sync", "freshness", "incremental"]
 
 context:
   mode: "check"
   repos_dir: "~/repo/amplifier-sources"
   outline_path: "./outlines/amplifier-docs-outline.json"
   output_dir: "./sync-output"
+  baseline_path: "./baseline-hashes.json"
 
 steps:
   - id: "setup"
@@ -68,38 +69,130 @@ steps:
     output: "hash_result"
     timeout: 300
 
-  - id: "analyze-freshness"
-    agent: "foundation:zen-architect"
-    mode: "ANALYZE"
-    prompt: |
-      Generate a documentation freshness report based on the source hash computation.
-      
-      Read the hash results from: {{output_dir}}/cache/source-hashes.json
-      
-      Create a comprehensive markdown report with:
-      
-      1. **Executive Summary**
-         - Total documentation pages analyzed
-         - Source files found vs missing  
-         - Health status (HEALTHY >90%, WARNING 70-90%, CRITICAL <70%)
-      
-      2. **Missing Sources** (Critical)
-         - List sections with missing sources, grouped by repository
-         - Include doc_path and missing source paths
-      
-      3. **Sources by Repository**
-         - Count of source files per repository
-      
-      4. **Recommendations**
-         - Priority actions based on findings
-      
-      Save to: {{output_dir}}/reports/freshness-report.md
-      Print summary to stdout.
+  # Diff current hashes against baseline to find what changed
+  - id: "hash-diff"
+    type: "bash"
+    command: |
+      python3 << 'EOF'
+      import json
+      from pathlib import Path
+
+      hashes_path = "{{output_dir}}/cache/source-hashes.json"
+      baseline_path = "{{baseline_path}}"
+
+      with open(hashes_path) as f:
+          current = json.load(f)
+
+      try:
+          with open(baseline_path) as f:
+              baseline = json.load(f)
+      except FileNotFoundError:
+          baseline = {"sections": {}}
+
+      no_baseline = len(baseline.get("sections", {})) == 0
+      changed = []
+      unchanged = []
+      missing_sources = []
+
+      for section_id, section in current.get("sections", {}).items():
+          dp = section.get("doc_path", "")
+          cur_hashes = {(s.get("repo",""), s.get("path","")): s.get("hash") for s in section.get("sources", [])}
+          base_hashes = {(s.get("repo",""), s.get("path","")): s.get("hash") for s in baseline.get("sections", {}).get(section_id, {}).get("sources", [])}
+
+          # Check for missing source files
+          missing = [s for s in section.get("sources", []) if not s.get("exists", True)]
+          if missing:
+              missing_sources.append({"section": section_id, "doc_path": dp, "missing": [f"{s['repo']}/{s['path']}" for s in missing]})
+
+          if cur_hashes != base_hashes:
+              # Find which specific files changed
+              changed_files = [k for k in cur_hashes if cur_hashes[k] != base_hashes.get(k)]
+              new_files = [k for k in cur_hashes if k not in base_hashes]
+              changed.append({"section": section_id, "doc_path": dp, "changed_files": len(changed_files), "new_files": len(new_files)})
+          else:
+              unchanged.append(section_id)
+
+      result = {
+          "no_baseline": no_baseline,
+          "total_sections": len(current.get("sections", {})),
+          "changed": len(changed),
+          "unchanged": len(unchanged),
+          "missing_sources": len(missing_sources),
+          "changed_sections": changed,
+          "missing_source_details": missing_sources
+      }
+      print(json.dumps(result))
+      EOF
+    output: "hash_diff_result"
+    parse_json: true
+    timeout: 60
+
+  - id: "freshness-report"
+    type: "bash"
+    command: |
+      python3 << 'EOF'
+      import json
+      from pathlib import Path
+      from datetime import datetime
+
+      diff = json.loads('''{{hash_diff_result}}''')
+      report_path = Path("{{output_dir}}/reports/freshness-report.md")
+      report_path.parent.mkdir(parents=True, exist_ok=True)
+
+      lines = [
+          "# Documentation Freshness Report",
+          f"\n**Generated:** {datetime.now().strftime('%Y-%m-%d %H:%M')}",
+          f"**Method:** Source hash diff (baseline comparison)\n",
+          "---\n",
+          "## Summary\n",
+          "| Metric | Value |",
+          "|--------|-------|",
+          f"| **Total Sections** | {diff['total_sections']} |",
+          f"| **Changed (need regeneration)** | {diff['changed']} |",
+          f"| **Unchanged** | {diff['unchanged']} |",
+          f"| **Missing Sources** | {diff['missing_sources']} |",
+          f"| **Baseline Exists** | {'Yes' if not diff['no_baseline'] else 'No (first run - all sections shown as changed)'} |",
+          "",
+      ]
+
+      if diff["changed_sections"]:
+          lines.append("\n## Changed Sections\n")
+          lines.append("| Section | Doc Path | Changed Files |")
+          lines.append("|---------|----------|---------------|")
+          for s in diff["changed_sections"]:
+              lines.append(f"| {s['section']} | {s['doc_path']} | {s['changed_files']} |")
+
+      if diff["missing_source_details"]:
+          lines.append("\n## Missing Sources (Warning)\n")
+          for m in diff["missing_source_details"]:
+              lines.append(f"- **{m['doc_path']}**: {', '.join(m['missing'])}")
+
+      if diff["changed"] == 0 and not diff["no_baseline"]:
+          lines.append("\n## Status: UP TO DATE\n")
+          lines.append("No source files have changed since the last regeneration. Documentation is current.")
+      elif diff["changed"] > 0:
+          lines.append(f"\n## Next Step\n")
+          lines.append(f"Run `docs-regenerate` to update {diff['changed']} section(s):")
+          lines.append(f"```")
+          lines.append(f"amplifier tool invoke recipes operation=execute recipe_path=recipes/docs-regenerate.yaml")
+          lines.append(f"```")
+
+      report = "\n".join(lines) + "\n"
+      report_path.write_text(report)
+      print(f"Report saved: {report_path}")
+      print(f"Changed: {diff['changed']} | Unchanged: {diff['unchanged']} | Missing sources: {diff['missing_sources']}")
+      EOF
     output: "freshness_analysis"
-    timeout: 300
+    timeout: 60
 
   - id: "final-summary"
     type: "bash"
-    command: "echo '=== DOCS SYNC COMPLETE ===' && echo 'Reports: {{output_dir}}/reports/' && ls -la {{output_dir}}/reports/ 2>/dev/null || echo 'No reports yet'"
+    command: |
+      echo "=== DOCS SYNC COMPLETE ==="
+      echo ""
+      echo "Hash diff: {{hash_diff_result}}"
+      echo ""
+      echo "Reports: {{output_dir}}/reports/"
+      ls -la {{output_dir}}/reports/ 2>/dev/null || echo "No reports yet"
     output: "final_result"
     timeout: 30
