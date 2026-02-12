@@ -38,11 +38,6 @@ This guide covers everything you need to know to use **amplifier-app-cli**, the 
 <p>Session management, persistence, and resumption.</p>
 </div>
 
-<div class="card">
-<h3><a href="collections/">Collections</a></h3>
-<p>Shareable bundles of profiles, agents, and context.</p>
-</div>
-
 </div>
 
 ## Quick Reference

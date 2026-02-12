@@ -14,7 +14,7 @@ This guide is for you if you want to:
 - ✅ **Build applications** using amplifier-core (like building your own CLI, web UI, or automation tool)
 - ✅ **Contribute** to amplifier-core, amplifier-profiles, or other foundation libraries
 - ✅ **Understand** the kernel internals and how the foundation works
-- ✅ **Use libraries** (profiles, collections, config, module-resolution) in your applications
+- ✅ **Use libraries** (profiles, config, module-resolution) in your applications
 
 ## Not What You're Looking For?
 
@@ -41,7 +41,7 @@ Amplifier is built in layers, inspired by the Linux kernel model:
 ┌──────────────────────────────────────────────┐
 │        Libraries Layer                       │
 │  (amplifier-foundation, amplifier-profiles,  │
-│   amplifier-collections, amplifier-config,   │
+│   amplifier-config,                          │
 │   amplifier-module-resolution)               │
 │                                              │
 │  • Bundle composition                        │
@@ -136,20 +136,6 @@ Profile and agent loading, inheritance, and Mount Plan compilation.
 **Used by:** Applications (not modules)
 
 **Repository:** [microsoft/amplifier-profiles](https://github.com/microsoft/amplifier-profiles)
-
-### amplifier-collections
-
-Convention-based collection discovery and management.
-
-**What it does:**
-- Discover collection resources by convention from search paths
-- Resolve collection names to filesystem paths
-- Install and uninstall collections with lock file tracking
-- Load profiles, agents, and context from collections
-
-**Used by:** Applications (not modules)
-
-**Repository:** [microsoft/amplifier-collections](https://github.com/microsoft/amplifier-collections)
 
 ### amplifier-config
 
@@ -262,7 +248,7 @@ That's it! The kernel handles:
 
 <div class="card">
 <h3><a href="using_libraries/">Using Libraries</a></h3>
-<p>How to integrate amplifier-profiles, amplifier-collections, and other libraries in your application.</p>
+<p>How to integrate amplifier-profiles, amplifier-config, and other libraries in your application.</p>
 </div>
 
 <div class="card">

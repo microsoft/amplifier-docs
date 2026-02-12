@@ -12,7 +12,6 @@ Amplifier's supporting libraries provide higher-level functionality on top of th
 | Library | Purpose | Repository |
 |---------|---------|------------|
 | **amplifier-profiles** | Profile loading and inheritance | [GitHub](https://github.com/microsoft/amplifier-profiles) |
-| **amplifier-collections** | Collection discovery and management | [GitHub](https://github.com/microsoft/amplifier-collections) |
 | **amplifier-config** | Three-scope configuration | [GitHub](https://github.com/microsoft/amplifier-config) |
 | **amplifier-module-resolution** | Module source resolution | [GitHub](https://github.com/microsoft/amplifier-module-resolution) |
 
@@ -27,16 +26,18 @@ Amplifier's supporting libraries provide higher-level functionality on top of th
        ▼                                ▼
 ┌──────────────────┐          ┌──────────────────┐
 │ amplifier-       │          │ amplifier-       │
-│ profiles         │◄────────►│ collections      │
-└──────────────────┘          └──────────────────┘
-       │                                │
-       ▼                                ▼
-┌──────────────────┐          ┌──────────────────┐
-│ amplifier-       │          │ amplifier-       │
-│ config           │          │ module-resolution│
+│ profiles         │          │ config           │
 └──────────────────┘          └──────────────────┘
        │                                │
        └────────────────┬───────────────┘
+                        │
+                        ▼
+               ┌──────────────────┐
+               │ amplifier-       │
+               │ module-resolution│
+               └──────────────────┘
+                        │
+                        └───────────────┐
                         │
                         ▼
                ┌──────────────────┐
@@ -59,11 +60,6 @@ Libraries are **not part of the kernel**. They implement application-layer polic
 <div class="card">
 <h3><a href="profiles/">Profiles Library</a></h3>
 <p>Load and compile profiles to Mount Plans. Handles inheritance, overlays, and @mentions.</p>
-</div>
-
-<div class="card">
-<h3><a href="collections/">Collections Library</a></h3>
-<p>Discover and manage collections. Convention-based resource discovery.</p>
 </div>
 
 <div class="card">
