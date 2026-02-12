@@ -11,10 +11,10 @@ description: Bundle composition and utilities for building Amplifier application
 
 While **amplifier-core** provides the kernel (session lifecycle, module loading, coordination), **amplifier-foundation** provides the **application-layer tooling** to make working with Amplifier easier:
 
-- **Bundle System**: Load, compose, and validate configuration bundles
-- **@Mention System**: Parse and resolve `@namespace:path` references
-- **Utilities**: YAML I/O, dict merging, path handling, caching
-- **Reference Content**: Pre-configured providers, agents, behaviors, and context files
+- **Bundle System**: Load, compose, validate, and resolve bundles from local and remote sources
+- **@Mention System**: Parse and resolve `@namespace:path` references in instructions
+- **Utilities**: YAML/frontmatter I/O, dict merging, path handling, caching
+- **Reference Content**: Reusable providers, agents, behaviors, and context files
 
 ## Why Use amplifier-foundation?
 
@@ -51,7 +51,7 @@ session = await prepared.create_session()
 ## Quick Start
 
 ```bash
-uv add amplifier-foundation
+pip install git+https://github.com/microsoft/amplifier-foundation
 ```
 
 ```python
@@ -62,13 +62,13 @@ async def main():
     # Load foundation bundle and a provider
     foundation = await load_bundle("git+https://github.com/microsoft/amplifier-foundation@main")
     provider = await load_bundle("./providers/anthropic.yaml")
-    
+
     # Compose bundles (later overrides earlier)
     composed = foundation.compose(provider)
-    
+
     # Prepare: resolves module sources, downloads if needed
     prepared = await composed.prepare()
-    
+
     # Create session and execute
     async with await prepared.create_session() as session:
         response = await session.execute("Hello! What can you help me with?")
@@ -129,9 +129,9 @@ asyncio.run(main())
 
 | Export | Purpose |
 |--------|---------|
-| `Bundle` | Core class for bundles |
-| `load_bundle(uri)` | Load from local path or git URL |
-| `BundleRegistry` | Track loaded bundles |
+| `Bundle` | Core class - load, compose, validate bundles |
+| `load_bundle(uri)` | Load bundle from local path or git URL |
+| `BundleRegistry` | Track loaded bundles, check for updates |
 | `validate_bundle()` | Validate bundle structure |
 
 ### @Mention System
@@ -141,6 +141,7 @@ asyncio.run(main())
 | `parse_mentions(text)` | Extract `@namespace:path` references |
 | `load_mentions(text, resolver)` | Resolve and load mentioned files |
 | `BaseMentionResolver` | Base class for custom resolvers |
+| `ContentDeduplicator` | Prevent duplicate content loading |
 
 ### Utilities
 
@@ -149,19 +150,22 @@ asyncio.run(main())
 | `io/` | YAML/frontmatter I/O, retry logic |
 | `dicts/` | Deep merge, nested get/set |
 | `paths/` | URI parsing, path normalization |
-| `cache/` | SimpleCache, DiskCache with TTL |
+| `cache/` | SimpleCache, DiskCache |
+| `session/` | Session capabilities (working directory) |
+| `spawn_utils` | Provider preferences for sub-sessions |
 
 ### Reference Content
 
 The amplifier-foundation repository also includes reference content:
 
 | Path | Content |
-|------|---------|
+|------|---------| 
 | `bundle.md` | Main foundation bundle (provider-agnostic) |
-| `providers/` | Provider configurations (Anthropic, OpenAI, Azure, Ollama) |
+| `providers/` | Provider configurations (Anthropic, OpenAI, Azure OpenAI, Gemini, Ollama) |
 | `agents/` | Reusable agent definitions |
-| `behaviors/` | Behavioral configurations |
+| `behaviors/` | Behavioral configurations (logging, redaction, status, etc.) |
 | `context/` | Shared context files |
+| `bundles/` | Complete bundle examples |
 
 ## Architecture Position
 
@@ -269,7 +273,7 @@ The amplifier-foundation repository also includes reference content:
 amplifier-foundation follows Amplifier's core principles:
 
 - **Mechanism, not policy**: Provides loading/composition mechanisms. Apps decide which bundles to use.
-- **Ruthless simplicity**: One concept (bundle), one mechanism (`compose()`).
+- **Ruthless simplicity**: One concept (bundle), one mechanism (`includes:` + `compose()`).
 - **Text-first**: YAML/Markdown formats are human-readable, diffable, versionable.
 - **Composable**: Small bundles compose into larger configurations.
 

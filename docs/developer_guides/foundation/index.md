@@ -40,9 +40,11 @@ Amplifier is built in layers, inspired by the Linux kernel model:
                ▼
 ┌──────────────────────────────────────────────┐
 │        Libraries Layer                       │
-│  (amplifier-profiles, amplifier-collections, │
-│   amplifier-config, amplifier-module-resolution) │
+│  (amplifier-foundation, amplifier-profiles,  │
+│   amplifier-collections, amplifier-config,   │
+│   amplifier-module-resolution)               │
 │                                              │
+│  • Bundle composition                        │
 │  • Profile loading & inheritance            │
 │  • Configuration management                 │
 │  • Module resolution strategies             │
@@ -85,13 +87,13 @@ Amplifier is built in layers, inspired by the Linux kernel model:
 
 ### amplifier-foundation (Bundle Composition Library)
 
-High-level library for building Amplifier applications with bundle composition.
+Foundational library for the Amplifier ecosystem: bundle composition, utilities, and reference content.
 
 **What it does:**
-- Load and compose configuration bundles
-- Automatic module downloading from git sources
-- @Mention resolution for context files
-- Utilities for I/O, dict merging, path handling, caching
+- Load, compose, validate, and resolve bundles from local and remote sources
+- @Mention system: parse and resolve `@namespace:path` references in instructions
+- Utilities: YAML/frontmatter I/O, dict merging, path handling, caching
+- Reference content: reusable providers, agents, behaviors, and context files
 
 **When to use:**
 - Building applications with reusable configurations
@@ -123,10 +125,10 @@ The heart of Amplifier. ~2,600 lines of mechanism-only code.
 
 ### amplifier-profiles
 
-Profile loading with inheritance and @mention support.
+Profile and agent loading, inheritance, and Mount Plan compilation.
 
 **What it does:**
-- Load profiles from multiple sources
+- Load profiles and agents from multiple sources
 - Handle profile inheritance and overlays
 - Compile profiles to Mount Plans
 - Resolve @mentions in configuration
@@ -137,12 +139,13 @@ Profile loading with inheritance and @mention support.
 
 ### amplifier-collections
 
-Collection discovery and management.
+Convention-based collection discovery and management.
 
 **What it does:**
-- Discover collections from conventional locations
+- Discover collection resources by convention from search paths
+- Resolve collection names to filesystem paths
+- Install and uninstall collections with lock file tracking
 - Load profiles, agents, and context from collections
-- @mention resolution for collection resources
 
 **Used by:** Applications (not modules)
 
@@ -157,7 +160,7 @@ Three-scope configuration management.
 - Project scope: `.amplifier/settings.yaml`
 - Local scope: `.amplifier/settings.local.yaml`
 - Deep merge semantics
-- Environment variable resolution
+- Module source overrides
 
 **Used by:** Applications (not modules)
 
@@ -165,7 +168,7 @@ Three-scope configuration management.
 
 ### amplifier-module-resolution
 
-Module source resolution strategies.
+Module source resolution with pluggable strategies.
 
 **What it does:**
 - Resolve module IDs to sources
@@ -301,11 +304,11 @@ Runtime modules never import libraries. Only applications use libraries. This ke
 
 ```python
 # ✅ In your application
-from amplifier_profiles import load_profile
+from amplifier_profiles import ProfileLoader
 from amplifier_config import ConfigManager
 
 # ❌ In a module (provider, tool, etc.)
-from amplifier_profiles import load_profile  # Never do this!
+from amplifier_profiles import ProfileLoader  # Never do this!
 ```
 
 ## Resources
