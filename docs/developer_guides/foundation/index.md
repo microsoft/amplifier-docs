@@ -12,9 +12,9 @@ This guide is for developers who want to **work with the Amplifier foundation** 
 This guide is for you if you want to:
 
 - ✅ **Build applications** using amplifier-core (like building your own CLI, web UI, or automation tool)
-- ✅ **Contribute** to amplifier-core, amplifier-profiles, or other foundation libraries
+- ✅ **Contribute** to amplifier-core or other foundation libraries
 - ✅ **Understand** the kernel internals and how the foundation works
-- ✅ **Use libraries** (profiles, config, module-resolution) in your applications
+- ✅ **Use libraries** (config, module-resolution) in your applications
 
 ## Not What You're Looking For?
 
@@ -40,12 +40,10 @@ Amplifier is built in layers, inspired by the Linux kernel model:
                ▼
 ┌──────────────────────────────────────────────┐
 │        Libraries Layer                       │
-│  (amplifier-foundation, amplifier-profiles,  │
-│   amplifier-config,                          │
+│  (amplifier-foundation, amplifier-config,    │
 │   amplifier-module-resolution)               │
 │                                              │
 │  • Bundle composition                        │
-│  • Profile loading & inheritance            │
 │  • Configuration management                 │
 │  • Module resolution strategies             │
 │  • NOT used by runtime modules              │
@@ -122,20 +120,6 @@ The heart of Amplifier. ~2,600 lines of mechanism-only code.
 - Store configuration (libraries do this)
 
 **Repository:** [microsoft/amplifier-core](https://github.com/microsoft/amplifier-core)
-
-### amplifier-profiles
-
-Profile and agent loading, inheritance, and Mount Plan compilation.
-
-**What it does:**
-- Load profiles and agents from multiple sources
-- Handle profile inheritance and overlays
-- Compile profiles to Mount Plans
-- Resolve @mentions in configuration
-
-**Used by:** Applications (not modules)
-
-**Repository:** [microsoft/amplifier-profiles](https://github.com/microsoft/amplifier-profiles)
 
 ### amplifier-config
 
@@ -248,7 +232,7 @@ That's it! The kernel handles:
 
 <div class="card">
 <h3><a href="using_libraries/">Using Libraries</a></h3>
-<p>How to integrate amplifier-profiles, amplifier-config, and other libraries in your application.</p>
+<p>How to integrate amplifier-config, amplifier-module-resolution, and other libraries in your application.</p>
 </div>
 
 <div class="card">
@@ -290,11 +274,11 @@ Runtime modules never import libraries. Only applications use libraries. This ke
 
 ```python
 # ✅ In your application
-from amplifier_profiles import ProfileLoader
+from amplifier_foundation import load_bundle
 from amplifier_config import ConfigManager
 
 # ❌ In a module (provider, tool, etc.)
-from amplifier_profiles import ProfileLoader  # Never do this!
+from amplifier_foundation import load_bundle  # Never do this!
 ```
 
 ## Resources
