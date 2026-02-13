@@ -362,4 +362,4 @@ amplifier profile show --resolved
 
 - [Profiles](profiles.md) - Profile configuration
 - [CLI Reference](cli.md) - Agent commands
-- **→ [Agent Authoring Guide](https://github.com/microsoft/amplifier-profiles/blob/main/docs/AGENT_AUTHORING.md)** - Complete reference
+- **→ [Agent Authoring Guide](https://github.com/microsoft/amplifier-foundation/blob/main/docs/AGENT_AUTHORING.md)** - Complete reference

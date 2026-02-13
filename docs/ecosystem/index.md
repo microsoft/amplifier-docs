@@ -49,16 +49,13 @@ Modules are loaded dynamically at runtime based on your profile configuration. T
 
 ---
 
-## Libraries
+## Foundation Library
 
-Libraries are used by applications (like the CLI) to provide higher-level functionality. They are **not** used by runtime modules.
+The **amplifier-foundation** library provides higher-level functionality for applications (like the CLI). It is **not** used by runtime modules.
 
 | Library | Description | Repository |
 |---------|-------------|------------|
-| **[amplifier-profiles](../libraries/profiles.md)** | Profile and agent loading with inheritance | [GitHub](https://github.com/microsoft/amplifier-profiles) |
-| **[amplifier-collections](../libraries/collections.md)** | Collection discovery and management | [GitHub](https://github.com/microsoft/amplifier-collections) |
-| **[amplifier-config](../libraries/config.md)** | Three-scope configuration management | [GitHub](https://github.com/microsoft/amplifier-config) |
-| **[amplifier-module-resolution](../libraries/module_resolution.md)** | Module source resolution | [GitHub](https://github.com/microsoft/amplifier-module-resolution) |
+| **[amplifier-foundation](../developer_guides/foundation/amplifier_foundation/index.md)** | Bundle composition, profiles, config, module resolution, and utilities | [GitHub](https://github.com/microsoft/amplifier-foundation) |
 
 !!! info "Architectural Boundary"
     Libraries are consumed by applications. Runtime modules only depend on `amplifier-core` and never use libraries directly.
@@ -76,7 +73,7 @@ Libraries are used by applications (like the CLI) to provide higher-level functi
 | Orchestrators | 3 | Basic, Streaming, Events |
 | Contexts | 2 | Simple, Persistent |
 | Hooks | 9 | Logging, Approval, Redaction, Backup, Streaming UI, Schedulers, etc. |
-| Libraries | 4 | Profiles, Collections, Config, Module Resolution |
+| Libraries | 1 | amplifier-foundation |
 | Collections | 4 | Toolkit, Design Intelligence, Recipes, Issues |
 
 ---

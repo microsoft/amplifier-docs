@@ -45,9 +45,7 @@ An **application** in the Amplifier ecosystem is any program that uses amplifier
                            │
                            ▼
               ┌────────────────────────┐
-              │  amplifier-profiles    │ (Optional)
-              │  amplifier-collections │ (Optional)
-              │  amplifier-config      │ (Optional)
+              │  amplifier-foundation  │ (Optional)
               └────────────┬───────────┘
                            │
                            ▼
@@ -152,22 +150,17 @@ def on_submit(prompt):
 Libraries are **application concerns**, not kernel concerns. Use them to simplify your application.
 
 ```python
-# Use amplifier-profiles for profile management
-from amplifier_profiles import load_profile, compile_profile_to_mount_plan
+# Use amplifier-foundation for profile management
+from amplifier_foundation import load_profile, compile_profile_to_mount_plan
 
 profile = load_profile("dev")
 mount_plan = compile_profile_to_mount_plan(profile)
 
-# Use amplifier-config for configuration
-from amplifier_config import ConfigManager
+# Use amplifier-foundation for configuration
+from amplifier_foundation import ConfigManager
 
 config = ConfigManager()
 api_key = config.get("anthropic.api_key")
-
-# Use amplifier-collections for resource discovery
-from amplifier_collections import discover_collections
-
-collections = discover_collections()
 ```
 
 **Important:** Runtime modules (providers, tools, etc.) never use libraries. Only applications do.
@@ -256,12 +249,12 @@ Congratulations! You've built an application on amplifier-core.
 
 ## Advanced Topics
 
-### Using amplifier-profiles
+### Using amplifier-foundation
 
 Instead of hardcoding the mount plan, use profiles:
 
 ```python
-from amplifier_profiles import load_profile, compile_profile_to_mount_plan
+from amplifier_foundation import load_profile, compile_profile_to_mount_plan
 
 # Load a profile
 profile = load_profile("dev")  # Looks in standard locations

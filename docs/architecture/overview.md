@@ -247,9 +247,7 @@ Supporting libraries provide higher-level functionality:
 
 | Library | Purpose |
 |---------|---------|
-| `amplifier-foundation` | Bundle loading, composition, and session management |
-| `amplifier-config` | Three-scope configuration (local/project/global) |
-| `amplifier-module-resolution` | Module source resolution |
+| `amplifier-foundation` | Bundle loading, composition, configuration, module resolution, and session management |
 
 These libraries are **not part of the kernel**—they're application-layer concerns.
 

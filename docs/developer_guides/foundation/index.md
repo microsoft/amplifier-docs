@@ -14,7 +14,7 @@ This guide is for you if you want to:
 - ✅ **Build applications** using amplifier-core (like building your own CLI, web UI, or automation tool)
 - ✅ **Contribute** to amplifier-core or other foundation libraries
 - ✅ **Understand** the kernel internals and how the foundation works
-- ✅ **Use libraries** (config, module-resolution) in your applications
+- ✅ **Use amplifier-foundation** in your applications
 
 ## Not What You're Looking For?
 
@@ -40,8 +40,7 @@ Amplifier is built in layers, inspired by the Linux kernel model:
                ▼
 ┌──────────────────────────────────────────────┐
 │        Libraries Layer                       │
-│  (amplifier-foundation, amplifier-config,    │
-│   amplifier-module-resolution)               │
+│  (amplifier-foundation)                      │
 │                                              │
 │  • Bundle composition                        │
 │  • Configuration management                 │
@@ -120,36 +119,6 @@ The heart of Amplifier. ~2,600 lines of mechanism-only code.
 - Store configuration (libraries do this)
 
 **Repository:** [microsoft/amplifier-core](https://github.com/microsoft/amplifier-core)
-
-### amplifier-config
-
-Three-scope configuration management.
-
-**What it does:**
-- User scope: `~/.amplifier/settings.yaml`
-- Project scope: `.amplifier/settings.yaml`
-- Local scope: `.amplifier/settings.local.yaml`
-- Deep merge semantics
-- Module source overrides
-
-**Used by:** Applications (not modules)
-
-**Repository:** [microsoft/amplifier-config](https://github.com/microsoft/amplifier-config)
-
-### amplifier-module-resolution
-
-Module source resolution with pluggable strategies.
-
-**What it does:**
-- Resolve module IDs to sources
-- Git repository resolution
-- File path resolution
-- Package resolution
-- Source override management
-
-**Used by:** Applications (not modules)
-
-**Repository:** [microsoft/amplifier-module-resolution](https://github.com/microsoft/amplifier-module-resolution)
 
 ## Quick Start Options
 
@@ -232,7 +201,7 @@ That's it! The kernel handles:
 
 <div class="card">
 <h3><a href="using_libraries/">Using Libraries</a></h3>
-<p>How to integrate amplifier-config, amplifier-module-resolution, and other libraries in your application.</p>
+<p>How to integrate amplifier-foundation in your application.</p>
 </div>
 
 <div class="card">
@@ -274,8 +243,7 @@ Runtime modules never import libraries. Only applications use libraries. This ke
 
 ```python
 # ✅ In your application
-from amplifier_foundation import load_bundle
-from amplifier_config import ConfigManager
+from amplifier_foundation import load_bundle, ConfigManager
 
 # ❌ In a module (provider, tool, etc.)
 from amplifier_foundation import load_bundle  # Never do this!

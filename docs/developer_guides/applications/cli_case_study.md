@@ -30,13 +30,11 @@ amplifier-app-cli/
 │
 ├── Application Layer
 │   ├── Configuration resolution
-│   │   └── Uses: amplifier-config
+│   │   └── Uses: amplifier-foundation
 │   ├── Profile loading
-│   │   └── Uses: amplifier-profiles
-│   ├── Collection discovery
-│   │   └── Uses: amplifier-collections
+│   │   └── Uses: amplifier-foundation
 │   ├── Module resolution
-│   │   └── Uses: amplifier-module-resolution
+│   │   └── Uses: amplifier-foundation
 │   └── Mount Plan creation
 │
 ├── Display Layer
@@ -61,10 +59,10 @@ amplifier-app-cli/
 - Project scope: `.amplifier/settings.yaml`
 - Local scope: `.amplifier/settings.local.yaml`
 
-**Solution:** Use amplifier-config for three-scope configuration.
+**Solution:** Use amplifier-foundation for three-scope configuration.
 
 ```python
-from amplifier_config import ConfigManager
+from amplifier_foundation import ConfigManager
 
 config = ConfigManager()
 
@@ -73,16 +71,16 @@ provider = config.get("provider")  # User can override at any level
 api_key = config.get("anthropic.api_key")
 ```
 
-**Why this works:** amplifier-config implements the deep merge semantics, so the CLI doesn't have to.
+**Why this works:** amplifier-foundation implements the deep merge semantics, so the CLI doesn't have to.
 
 ### 2. Profile System
 
 **Challenge:** Users want pre-configured capability sets (foundation, base, dev) without manually specifying every module.
 
-**Solution:** Use amplifier-profiles for profile loading and compilation.
+**Solution:** Use amplifier-foundation for profile loading and compilation.
 
 ```python
-from amplifier_profiles import load_profile, compile_profile_to_mount_plan
+from amplifier_foundation import load_profile, compile_profile_to_mount_plan
 
 # Load profile (handles inheritance, overlays, @mentions)
 profile = load_profile("dev")
@@ -291,13 +289,12 @@ except Exception as e:
 
 ### 1. Libraries Simplify Application Development
 
-Without libraries, amplifier-app-cli would need to implement:
+Without amplifier-foundation, amplifier-app-cli would need to implement:
 - Profile loading and inheritance
 - Three-scope configuration merging
 - Module resolution strategies
-- Collection discovery
 
-With libraries, this is ~20 lines of code.
+With amplifier-foundation, this is ~20 lines of code.
 
 ### 2. Kernel is Just Session Management
 
@@ -360,8 +357,8 @@ def interactive(profile: str = "dev"):
 
 # app.py - Application logic
 from amplifier_core import AmplifierSession
-from amplifier_profiles import load_profile, compile_profile_to_mount_plan
-from amplifier_config import ConfigManager
+from amplifier_foundation import load_profile, compile_profile_to_mount_plan
+from amplifier_foundation import ConfigManager
 
 class Application:
     def __init__(self, profile_name: str):
@@ -435,8 +432,8 @@ async def test_end_to_end():
 
 | Aspect | Application (amplifier-app-cli) | Module (e.g., tool-bash) |
 |--------|--------------------------------|-------------------------|
-| **Depends on** | amplifier-core + libraries | Only amplifier-core |
-| **Uses libraries?** | ✅ Yes (profiles, config, etc.) | ❌ No |
+| **Depends on** | amplifier-core + amplifier-foundation | Only amplifier-core |
+| **Uses libraries?** | ✅ Yes (amplifier-foundation) | ❌ No |
 | **Creates mount plans?** | ✅ Yes | ❌ No |
 | **User interaction?** | ✅ Yes (CLI) | ❌ No |
 | **Display formatting?** | ✅ Yes (Rich) | ❌ No |

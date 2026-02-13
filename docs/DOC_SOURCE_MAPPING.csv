@@ -7,7 +7,7 @@ docs/user_guide/index.md,amplifier-app-cli/README.md,DERIVED,CLI user guide over
 docs/user_guide/cli.md,amplifier-app-cli/amplifier_app_cli/main.py|amplifier-app-cli/amplifier_app_cli/commands/*.py,DERIVED,Complete CLI command reference
 docs/user_guide/agents.md,amplifier-foundation/agents/*|amplifier-app-cli/docs/AGENT_DELEGATION_IMPLEMENTATION.md,DERIVED,Agent delegation and usage - built-in agents now in amplifier-foundation
 docs/user_guide/sessions.md,amplifier-core/amplifier_core/session.py|amplifier-app-cli/amplifier_app_cli/session_spawner.py,DERIVED,Session management and persistence
-docs/developer_guides/foundation/index.md,amplifier-core/README.md|amplifier-core/docs/DESIGN_PHILOSOPHY.md|amplifier-foundation/README.md|amplifier-config/README.md|amplifier-module-resolution/README.md,DERIVED,Foundation developer guide overview - covers kernel and all foundation libraries including amplifier-foundation
+docs/developer_guides/foundation/index.md,amplifier-core/README.md|amplifier-core/docs/DESIGN_PHILOSOPHY.md|amplifier-foundation/README.md,DERIVED,Foundation developer guide overview - covers kernel and amplifier-foundation
 docs/developer_guides/foundation/amplifier_foundation/index.md,amplifier-foundation/README.md|amplifier-foundation/docs/CONCEPTS.md|amplifier-foundation/docs/API_REFERENCE.md,DERIVED,amplifier-foundation library overview - bundle composition and utilities
 docs/developer_guides/foundation/amplifier_foundation/getting_started.md,amplifier-foundation/README.md|amplifier-foundation/examples/01_hello_world.py|amplifier-foundation/docs/CONCEPTS.md,DERIVED,Getting started with amplifier-foundation - installation and hello world
 docs/developer_guides/foundation/amplifier_foundation/concepts.md,amplifier-foundation/docs/CONCEPTS.md,DIRECT,Core concepts - bundles composition mount plans (placeholder currently links to GitHub)
@@ -45,9 +45,6 @@ docs/api/core/hooks.md,amplifier-core/amplifier_core/hooks.py|amplifier-core/doc
 docs/api/core/models.md,amplifier-core/amplifier_core/models.py|amplifier-core/amplifier_core/message_models.py,DERIVED,Data models reference
 docs/api/core/events.md,amplifier-core/amplifier_core/events.py,DERIVED,Events API reference
 docs/api/cli/index.md,amplifier-app-cli/amplifier_app_cli/main.py,REFERENCE,CLI API reference
-docs/libraries/index.md,amplifier-config/README.md|amplifier-module-resolution/README.md,DERIVED,Libraries overview
-docs/libraries/config.md,amplifier-config/src/amplifier_config/*.py|amplifier-config/README.md,DERIVED,Config library documentation
-docs/libraries/module_resolution.md,amplifier-module-resolution/src/amplifier_module_resolution/*.py|amplifier-module-resolution/README.md,DERIVED,Module resolution library documentation
 docs/modules/index.md,amplifier-core/docs/contracts/README.md,DERIVED,Modules catalog overview
 docs/modules/providers/index.md,amplifier-module-provider-*/README.md,DERIVED,Providers catalog
 docs/modules/providers/anthropic.md,amplifier-module-provider-anthropic/amplifier_module_provider_anthropic/__init__.py|amplifier-module-provider-anthropic/README.md,DERIVED,Anthropic provider documentation
