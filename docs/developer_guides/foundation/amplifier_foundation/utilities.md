@@ -26,6 +26,7 @@ YAML reading/writing, frontmatter parsing, and file I/O with cloud-sync retry lo
 | `parse_frontmatter` | `io/frontmatter.py` | Parse YAML frontmatter from markdown |
 | `read_with_retry` | `io/files.py` | Read with cloud sync retry (async) |
 | `write_with_retry` | `io/files.py` | Write with cloud sync retry (async) |
+| `write_with_backup` | `io/files.py` | Write with backup of previous version |
 
 ## Dict Utilities
 
@@ -105,6 +106,8 @@ URI resolution and source handling for loading bundles from git URLs and local p
 |--------|--------|---------|
 | `SourceResolverProtocol` | `sources/protocol.py` | URI resolution contract |
 | `SourceHandlerProtocol` | `sources/protocol.py` | Source type handler contract |
+| `SourceHandlerWithStatusProtocol` | `sources/protocol.py` | Extended handler with status checking contract |
+| `SourceStatus` | `sources/protocol.py` | Source status for update detection |
 | `SimpleSourceResolver` | `sources/resolver.py` | Git/file source resolver |
 
 ## Session Capabilities
@@ -131,9 +134,38 @@ Utilities for spawning sub-sessions with provider/model preferences.
 | Export | Source | Purpose |
 |--------|--------|---------|
 | `ProviderPreference` | `spawn_utils.py` | Dataclass for provider/model preference (supports glob patterns) |
+| `ModelResolutionResult` | `spawn_utils.py` | Model pattern resolution result |
 | `apply_provider_preferences` | `spawn_utils.py` | Apply ordered preferences to mount plan |
+| `apply_provider_preferences_with_resolution` | `spawn_utils.py` | Apply preferences with model pattern resolution (async) |
 | `resolve_model_pattern` | `spawn_utils.py` | Resolve glob patterns (e.g., `claude-haiku-*`) to concrete model names |
 | `is_glob_pattern` | `spawn_utils.py` | Check if model string contains glob characters |
+
+## Serialization
+
+Sanitization utilities for safely persisting data that may contain non-serializable objects.
+
+| Export | Source | Purpose |
+|--------|--------|---------|
+| `sanitize_for_json` | `serialization.py` | Recursively sanitize value for JSON serialization |
+| `sanitize_message` | `serialization.py` | Sanitize chat message for persistence |
+
+## Tracing
+
+W3C-compatible trace context ID generation for sub-agent tracing.
+
+| Export | Source | Purpose |
+|--------|--------|---------|
+| `generate_sub_session_id` | `tracing.py` | Generate sub-session ID with W3C trace lineage |
+
+## Updates
+
+Bundle update checking and source update utilities.
+
+| Export | Source | Purpose |
+|--------|--------|---------|
+| `BundleStatus` | `updates/__init__.py` | Aggregate bundle update status |
+| `check_bundle_status` | `updates/__init__.py` | Check update status of bundle sources (async) |
+| `update_bundle` | `updates/__init__.py` | Update bundle sources from remote (async) |
 
 ## Exceptions
 

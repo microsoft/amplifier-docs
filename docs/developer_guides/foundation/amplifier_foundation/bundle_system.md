@@ -237,6 +237,27 @@ These two patterns have **different composition behavior** and are **NOT interch
 
 If you use `context.include` in a root bundle.md, that context will propagate to any bundle that includes yours. If you use `@mentions` in a behavior, the instruction (containing the @mention) **replaces** during composition and your @mention may get overwritten.
 
+### Load-on-Demand Pattern (Soft References)
+
+Not all context needs to load at session start. Use **soft references** (text without `@`) to make content available without consuming tokens until needed.
+
+Every `@mention` loads content eagerly at session creation, consuming tokens immediately. Reference files by path WITHOUT the `@` prefix to let the AI load them on-demand via `read_file`:
+
+```markdown
+**Documentation (load on demand):**
+- Schema: recipes:docs/RECIPE_SCHEMA.md
+- Examples: recipes:examples/code-review-recipe.yaml
+- Guide: foundation:docs/BUNDLE_GUIDE.md
+```
+
+| Pattern | Syntax | Loads | Use When |
+|---------|--------|-------|----------|
+| **@mention** | `@bundle:path` | Immediately | Content is ALWAYS needed |
+| **Soft reference** | `bundle:path` (no @) | On-demand | Content is SOMETIMES needed |
+| **Agent delegation** | Delegate to expert agent | When spawned | Content belongs to a specialist |
+
+For heavy documentation, create specialized "context sink" agents that @mention the docs. The root session stays light; heavy context loads only when that agent is spawned.
+
 ### App-Level Runtime Injection
 
 Bundles define **what** capabilities exist. Apps inject **how** they run at runtime:
@@ -246,6 +267,22 @@ Bundles define **what** capabilities exist. Apps inject **how** they run at runt
 | Provider configs | `settings.yaml` providers | API keys, model selection |
 | Tool configs | `settings.yaml` modules.tools | `allowed_write_paths` for filesystem |
 | Session overrides | Session-scoped settings | Temporary path permissions |
+
+```yaml
+# ~/.amplifier/settings.yaml
+providers:
+  - module: provider-anthropic
+    config:
+      api_key: ${ANTHROPIC_API_KEY}
+
+modules:
+  tools:
+    - module: tool-filesystem
+      config:
+        allowed_write_paths:
+          - /home/user/projects
+          - ~/.amplifier
+```
 
 Tool configs are **deep-merged by module ID** — your settings extend the bundle's config, not replace it.
 
@@ -258,6 +295,27 @@ Foundation → Your bundle → App settings → Session overrides
     ↓            ↓              ↓               ↓
  (tools)     (agents)     (providers,      (temporary
                           tool configs)     permissions)
+```
+
+### Policy Behaviors
+
+Some behaviors are **app-level policies** that should:
+
+- Only apply to root/interactive sessions (not sub-agents or recipe steps)
+- Be added by the app, not baked into bundles
+- Be configurable per-app context
+
+**Examples of policy behaviors:** notifications (don't notify for every sub-agent), cost tracking alerts, session duration limits.
+
+**Pattern for bundle authors:** If your behavior should be a policy (root-only, app-controlled), don't include it in your bundle.md — provide it as a separate behavior. Check `parent_id` in hooks to skip sub-sessions by default:
+
+```python
+# In your hook
+async def handle_event(self, event: str, data: dict) -> HookResult:
+    # Policy behavior: skip sub-sessions
+    if data.get("parent_id"):
+        return HookResult(action="continue")
+    # ... root session logic
 ```
 
 ## Validation
@@ -345,6 +403,28 @@ Key methods:
 - `create_session()` — Creates an initialized `AmplifierSession` with resolver mounted, working directory capability registered, and system prompt factory configured
 - `spawn()` — Spawns a sub-session with a child bundle, handling composition, module mounting, provider preferences, context inheritance, and working directory propagation
 
+### create_session()
+
+```python
+session = await prepared.create_session(
+    session_id=None,          # Resume existing session
+    parent_id=None,           # Parent session for lineage tracking
+    approval_system=None,     # Approval system for hooks
+    display_system=None,      # Display system for hooks
+    session_cwd=None,         # Working directory for local @-mentions
+    is_resumed=False,         # Whether this is a resumed session
+)
+```
+
+| Parameter | Purpose |
+|-----------|---------|
+| `session_id` | Optional session ID for resuming an existing session |
+| `parent_id` | Optional parent session ID for lineage tracking |
+| `approval_system` | Optional approval system for hooks |
+| `display_system` | Optional display system for hooks |
+| `session_cwd` | Working directory for resolving local @-mentions like `@AGENTS.md`. Apps should pass their project/workspace directory. Defaults to `bundle.base_path` if not provided. |
+| `is_resumed` | Whether this session is being resumed (vs newly created). Controls whether `session:start` or `session:resume` events are emitted. |
+
 ### Spawning Sub-Sessions
 
 ```python
@@ -370,6 +450,7 @@ The `spawn()` method supports:
 - `parent_messages` — Inject parent's conversation history into child context
 - `session_cwd` — Override working directory for the spawned session
 - `provider_preferences` — Ordered list of provider/model preferences with glob pattern support
+- `self_delegation_depth` — Current delegation depth for depth limiting. When > 0, registered as a coordinator capability so depth-limiting tools can read it via `get_capability()`.
 
 ## BundleRegistry
 
@@ -473,7 +554,7 @@ On startup, the registry loads persisted state and validates cached paths (clear
 Bundle repos follow **conventions** that enable maximum reusability and composition. These are patterns, not code-enforced rules.
 
 | Directory | Convention Name | Purpose |
-|-----------|-----------------|---------| 
+|-----------|-----------------|---------|
 | `/bundle.md` | **Root bundle** | Repo's primary entry point, establishes namespace |
 | `/bundles/*.yaml` | **Standalone bundles** | Pre-composed, ready-to-use variants (e.g., "with-anthropic") |
 | `/behaviors/*.yaml` | **Behavior bundles** | "The value this repo provides" — compose onto YOUR bundle |
@@ -538,6 +619,25 @@ agents:
   include:
     - recipes:recipe-author                    # bundle.name value
 ```
+
+### Including Subdirectory in Paths
+
+```yaml
+# If loading: git+https://...@main#subdirectory=bundles/foo
+# And bundle.name is: "foo"
+
+# WRONG
+context:
+  include:
+    - foo:bundles/foo/context/instructions.md   # Redundant path
+
+# CORRECT
+context:
+  include:
+    - foo:context/instructions.md               # Relative to bundle location
+```
+
+When loaded via `#subdirectory=X`, the bundle root IS `X/`. Paths are relative to that root, so including the subdirectory in the path duplicates it.
 
 ### Declaring amplifier-core as Runtime Dependency
 

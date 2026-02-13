@@ -24,8 +24,8 @@ This guide covers everything you need to know to use **amplifier-app-cli**, the 
 </div>
 
 <div class="card">
-<h3><a href="profiles/">Profiles</a></h3>
-<p>Pre-configured capability sets for different use cases.</p>
+<h3><a href="bundles/">Bundles</a></h3>
+<p>Composable configuration packages for different use cases.</p>
 </div>
 
 <div class="card">
@@ -48,11 +48,17 @@ This guide covers everything you need to know to use **amplifier-app-cli**, the 
 # Run a single command
 amplifier run "Your prompt"
 
+# Single command via stdin (useful for scripts/pipelines)
+echo "Summarize this spec" | amplifier run
+
 # Interactive mode
 amplifier
 
 # Resume last session
 amplifier continue
+
+# Use specific bundle
+amplifier run --bundle my-bundle "Your prompt"
 
 # List sessions
 amplifier session list
@@ -61,17 +67,20 @@ amplifier session list
 ### Configuration Commands
 
 ```bash
-# Profiles
-amplifier profile list
-amplifier profile use dev
+# Bundles
+amplifier bundle list
+amplifier bundle use my-bundle
+amplifier bundle current
 
 # Providers
 amplifier provider list
 amplifier provider use anthropic
+amplifier provider current
 
 # Modules
 amplifier module list
 amplifier module add tool-web
+amplifier module show tool-web
 ```
 
 ### Getting Help

@@ -10,7 +10,7 @@ Get your first bundle-based Amplifier application running in minutes.
 ## Installation
 
 ```bash
-uv add amplifier-foundation
+pip install git+https://github.com/microsoft/amplifier-foundation
 ```
 
 ## Hello World
@@ -19,54 +19,52 @@ The simplest possible amplifier-foundation application:
 
 ```python
 import asyncio
+import os
 from pathlib import Path
+
 from amplifier_foundation import load_bundle
 
 async def main():
-    # Load the foundation bundle from the repo
-    foundation = await load_bundle("git+https://github.com/microsoft/amplifier-foundation@main")
-    print(f"✓ Loaded: {foundation.name} v{foundation.version}")
-    
-    # Load a provider bundle
-    provider = await load_bundle("git+https://github.com/microsoft/amplifier-foundation@main#subdirectory=providers/anthropic-sonnet.yaml")
+    # Step 1: Load the foundation bundle
+    foundation_path = Path(__file__).parent.parent  # -> amplifier-foundation/
+    foundation = await load_bundle(str(foundation_path))
+    print(f"✓ Loaded foundation: {foundation.name} v{foundation.version}")
+
+    # Step 2: Load a provider bundle
+    provider_path = foundation_path / "providers" / "anthropic-sonnet.yaml"
+    provider = await load_bundle(str(provider_path))
     print(f"✓ Loaded provider: {provider.name}")
-    
-    # Compose them
+
+    # Step 3: Compose foundation + provider
     composed = foundation.compose(provider)
     print("✓ Composed bundles")
-    
-    # Prepare (download modules if needed)
-    print("⏳ Preparing...")
+
+    # Step 4: Prepare (resolves and downloads modules if needed)
+    print("⏳ Preparing (downloading modules if needed, this may take 30s first time)...")
     prepared = await composed.prepare()
     print("✓ Modules prepared")
-    
-    # Create session and execute
-    async with await prepared.create_session() as session:
-        response = await session.execute("Write a haiku about Python programming")
+
+    # Step 5: Create session
+    session = await prepared.create_session(session_cwd=Path.cwd())
+    print("✓ Session ready")
+
+    # Step 6: Execute a prompt
+    async with session:
+        response = await session.execute(
+            "Write a Python function to check if a number is prime. Include docstring and type hints."
+        )
         print(f"\nResponse:\n{response}")
 
 if __name__ == "__main__":
-    import os
     if not os.getenv("ANTHROPIC_API_KEY"):
         print("❌ Set ANTHROPIC_API_KEY environment variable")
         exit(1)
-    
+
     asyncio.run(main())
 ```
 
-**Output:**
-```
-✓ Loaded: foundation v1.0.0
-✓ Loaded provider: anthropic-sonnet
-✓ Composed bundles
-⏳ Preparing...
-✓ Modules prepared
-
-Response:
-Code flows like water
-Functions branch and merge as trees
-Python's grace in code
-```
+!!! note
+    This example assumes you have the amplifier-foundation repo cloned locally. For loading from git URLs instead, see [Bundle System](bundle_system.md).
 
 ## The Core Workflow
 
@@ -114,7 +112,7 @@ prepared = await composed.prepare()
 
 Downloads and activates modules:
 - Resolves git sources
-- Downloads to `~/.amplifier/modules/`
+- Downloads to `~/.amplifier/cache/modules/`
 - First run: 30s+ (downloading)
 - Subsequent: instant (cached)
 
@@ -235,7 +233,7 @@ async with await prepared.create_session() as session:
 
 Check cache:
 ```bash
-ls -la ~/.amplifier/modules/
+ls -la ~/.amplifier/cache/modules/
 ```
 
 ### Module not found

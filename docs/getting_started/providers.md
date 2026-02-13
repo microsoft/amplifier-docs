@@ -12,7 +12,7 @@ Amplifier supports multiple LLM providers. This guide covers setting up each one
 | Provider | Models | Best For |
 |----------|--------|----------|
 | **Anthropic** | Claude 4 Sonnet, Opus, Haiku | General purpose, coding, analysis |
-| **OpenAI** | GPT-5.1, GPT-5-mini | Broad capabilities, function calling |
+| **OpenAI** | GPT-5.1-codex, GPT-5.1, GPT-5-mini, GPT-5-nano | Broad capabilities, function calling |
 | **Azure OpenAI** | GPT-5.1 via Azure | Enterprise, compliance requirements |
 | **Ollama** | Llama, Mistral, etc. | Local/offline, privacy, experimentation |
 | **vLLM** | Any vLLM-compatible | Self-hosted inference, high throughput |
@@ -45,13 +45,13 @@ amplifier provider use anthropic
 
 | Model | Description |
 |-------|-------------|
-| `claude-sonnet-4-5` | Latest, balanced performance (default) |
+| `claude-sonnet-4-5` | Recommended, balanced performance (default) |
 | `claude-opus-4-6` | Most capable, best for complex tasks |
-| `claude-haiku-4-5` | Fastest, good for simple tasks |
+| `claude-haiku-4-5` | Fastest, cheapest |
 
 ```bash
 # Use a specific model
-amplifier run --model claude-opus-4-1 "Complex analysis task"
+amplifier run --model claude-opus-4-6 "Complex analysis task"
 ```
 
 ## OpenAI
@@ -77,6 +77,7 @@ amplifier provider use openai
 | `gpt-5.1-codex` | GPT-5 optimized for code (default) |
 | `gpt-5.1` | Latest GPT-5 model |
 | `gpt-5-mini` | Smaller, faster GPT-5 |
+| `gpt-5-nano` | Smallest GPT-5 variant |
 
 ## Azure OpenAI
 
@@ -91,7 +92,6 @@ amplifier provider use openai
 ```bash
 export AZURE_OPENAI_API_KEY="your-key"
 export AZURE_OPENAI_ENDPOINT="https://your-resource.openai.azure.com"
-export AZURE_OPENAI_DEPLOYMENT="your-deployment-name"
 
 amplifier provider use azure
 ```
@@ -104,9 +104,9 @@ Create `~/.amplifier/settings.yaml`:
 providers:
   azure:
     api_key: ${AZURE_OPENAI_API_KEY}
-    endpoint: https://your-resource.openai.azure.com
-    deployment: gpt-4
-    api_version: "2024-02-01"
+    azure_endpoint: https://your-resource.openai.azure.com
+    default_model: gpt-5.1
+    api_version: "2024-10-01-preview"
 ```
 
 ## Ollama (Local)
@@ -167,20 +167,18 @@ For high-throughput self-hosted inference with your own GPU servers.
 
 ### Configure
 
-```bash
-# Set your vLLM server URL
-export VLLM_BASE_URL="http://your-server:8000/v1"
-
-amplifier provider use vllm
-```
-
-### Configuration File
+vLLM is configured via settings file only (no environment variable for the server URL):
 
 ```yaml
+# ~/.amplifier/settings.yaml
 providers:
   vllm:
-    base_url: http://192.168.128.5:8000/v1
+    base_url: http://your-server:8000/v1
     default_model: openai/gpt-oss-20b
+```
+
+```bash
+amplifier provider use vllm
 ```
 
 For vLLM server setup and advanced options, see [vLLM Provider](../modules/providers/vllm.md).
@@ -213,9 +211,9 @@ amplifier provider current
 |----------|-----------|
 | Anthropic | `ANTHROPIC_API_KEY` |
 | OpenAI | `OPENAI_API_KEY` |
-| Azure | `AZURE_OPENAI_API_KEY`, `AZURE_OPENAI_ENDPOINT`, `AZURE_OPENAI_DEPLOYMENT` |
-| Ollama | None required (local) |
-| vLLM | `VLLM_BASE_URL` |
+| Azure | `AZURE_OPENAI_API_KEY`, `AZURE_OPENAI_ENDPOINT` |
+| Ollama | `OLLAMA_HOST` (optional) |
+| vLLM | *(config file only — see settings.yaml)* |
 
 ### Via Settings File
 
@@ -231,11 +229,11 @@ providers:
 
   openai:
     api_key: ${OPENAI_API_KEY}
-    default_model: gpt-4o
+    default_model: gpt-5.1-codex
 
   ollama:
-    base_url: http://localhost:11434
-    default_model: llama3.2
+    host: http://localhost:11434
+    default_model: llama3.2:3b
 
   vllm:
     base_url: http://your-server:8000/v1
