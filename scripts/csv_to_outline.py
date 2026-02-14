@@ -201,12 +201,7 @@ def transform_csv_to_outline(csv_path: Path, output_path: Path):
                     "amplifier-foundation",
                     "amplifier-app-cli",
                 ],
-                "libraries": [
-                    "amplifier-profiles",
-                    "amplifier-collections",
-                    "amplifier-config",
-                    "amplifier-module-resolution",
-                ],
+                "libraries": [],
                 "providers": [
                     "amplifier-module-provider-anthropic",
                     "amplifier-module-provider-openai",
@@ -345,7 +340,6 @@ def transform_csv_to_outline(csv_path: Path, output_path: Path):
                 "architecture",
                 "api",
                 "modules",
-                "libraries",
                 "ecosystem",
                 "showcase",
                 "community",
