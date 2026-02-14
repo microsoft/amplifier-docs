@@ -157,29 +157,8 @@ providers:
   - module: provider-openai
     source: git+...
     config:
-      default_model: gpt-4o
+      default_model: gpt-5.2
       priority: 2
-```
-
-### Provider Preferences with Glob Matching
-
-Use `provider_preferences` for ordered fallback chains:
-
-```python
-from amplifier_foundation import ProviderPreference
-
-# Spawn with provider preference chain (tries in order)
-result = await prepared.spawn(
-    child_bundle=agent_bundle,
-    instruction="Quick analysis task",
-    provider_preferences=[
-        ProviderPreference(provider="anthropic", model="claude-haiku-*"),
-        ProviderPreference(provider="openai", model="gpt-4o-mini"),
-    ],
-)
-
-# Model patterns use glob matching (fnmatch)
-# "claude-haiku-*" resolves to latest matching model (e.g., "claude-haiku-20250110")
 ```
 
 ### Mock Provider for Testing
@@ -239,15 +218,6 @@ async with prepared.create_session(session_id=session_id) as session:
     # Knows X=42
 ```
 
-### Streaming Sessions
-
-Use streaming orchestrator for real-time output:
-
-```yaml
-session:
-  orchestrator: {module: loop-streaming}
-```
-
 ## Agent Patterns
 
 ### Defining Agents
@@ -256,7 +226,7 @@ In `agents/bug-hunter.md`:
 
 ```markdown
 ---
-agent:
+meta:
   name: bug-hunter
   description: Finds and fixes bugs
 
@@ -289,9 +259,31 @@ result = await prepared.spawn(
 print(result["output"])
 ```
 
+### Spawning with Provider Preferences
+
+Use `provider_preferences` for ordered fallback chains when spawning agents:
+
+```python
+from amplifier_foundation import ProviderPreference
+
+# Spawn with provider preference chain (tries in order)
+result = await prepared.spawn(
+    child_bundle=agent_bundle,
+    instruction="Quick analysis task",
+    provider_preferences=[
+        ProviderPreference(provider="anthropic", model="claude-haiku-*"),
+        ProviderPreference(provider="openai", model="gpt-4o-mini"),
+    ],
+)
+
+# Model patterns use glob matching (fnmatch)
+# "claude-haiku-*" resolves to latest matching model (e.g., "claude-haiku-20250110")
+```
+
 ### Controlling Agent Tool Inheritance
 
-By default, spawned agents inherit all tools from their parent. Configure tool inheritance in the task tool's config section:
+By default, spawned agents inherit all tools from their parent. Configure tool inheritance
+in the task tool's config section:
 
 ```yaml
 # In your bundle.md
@@ -322,6 +314,14 @@ tools:
     config:
       exclude_tools: [tool-task]  # Spawned agents can't delegate
 ```
+
+This ensures agents do the work themselves rather than trying to spawn sub-agents.
+
+**Design rationale**: Tool inheritance config belongs in tool-task's config section because:
+- The task tool is the module that consumes this config
+- Follows the pattern of all other tool configs
+- Without tool-task mounted, this config is meaningless
+- Standard module-config merge rules apply during bundle composition
 
 ### Agent Resolution Pattern
 
@@ -402,8 +402,8 @@ Register commonly-used bundles:
 
 ```python
 registry = BundleRegistry()
-registry.register("foundation", "git+https://github.com/microsoft/amplifier-foundation-bundle@main")
-registry.register("dev", "./bundles/dev.md")
+registry.register({"foundation": "git+https://github.com/microsoft/amplifier-foundation-bundle@main"})
+registry.register({"dev": "./bundles/dev.md"})
 
 # Load by name
 bundle = await registry.load("foundation")
@@ -419,7 +419,7 @@ from pathlib import Path
 def register_bundles(registry: BundleRegistry, directory: Path):
     for path in directory.glob("*.md"):
         name = path.stem  # filename without extension
-        registry.register(name, str(path))
+        registry.register({name: str(path)})
 
 # Register all bundles in directory
 register_bundles(registry, Path("./bundles"))
@@ -490,30 +490,6 @@ prepared = await bundle.prepare()
 for prompt in prompts:
     async with prepared.create_session() as session:
         response = await session.execute(prompt)
-```
-
-## Debugging Patterns
-
-### Enable Debug Logging
-
-```yaml
-providers:
-  - module: provider-anthropic
-    config:
-      debug: true  # Enable provider-level debug
-```
-
-### Debug Events
-
-Hook into debug events:
-
-```python
-async def debug_hook(event: str, data: dict) -> HookResult:
-    if event.endswith(":debug"):
-        print(f"DEBUG {event}: {data}")
-    return HookResult(action="continue")
-
-coordinator.hooks.register("*:debug", debug_hook)
 ```
 
 ## References

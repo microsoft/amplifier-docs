@@ -76,7 +76,7 @@ Amplifier is built in layers, inspired by the Linux kernel model:
 ### Key Principle: Separation of Concerns
 
 - **Kernel (amplifier-core)**: Provides mechanisms, not policy. Small, stable, boring.
-- **Libraries**: Application-layer concerns. Profile loading, config resolution, etc.
+- **Libraries**: Application-layer concerns. Bundle composition, config resolution, etc.
 - **Applications**: Build on kernel + libraries. Decide what gets loaded and when.
 - **Modules**: Extend capabilities. No dependencies on libraries.
 
@@ -106,11 +106,12 @@ Foundational library for the Amplifier ecosystem: bundle composition, utilities,
 The heart of Amplifier. ~2,600 lines of mechanism-only code.
 
 **What it does:**
+- Discovers and loads modules
 - Validates and loads Mount Plans
 - Manages session lifecycle
-- Emits canonical events
+- Hook system and event emission
 - Provides coordinator infrastructure
-- Enforces contracts
+- Enforces stable contracts and APIs
 
 **What it doesn't do:**
 - Choose which modules to load (applications do this)
@@ -243,11 +244,23 @@ Runtime modules never import libraries. Only applications use libraries. This ke
 
 ```python
 # ✅ In your application
-from amplifier_foundation import load_bundle, ConfigManager
+from amplifier_foundation import load_bundle, BundleRegistry
 
 # ❌ In a module (provider, tool, etc.)
 from amplifier_foundation import load_bundle  # Never do this!
 ```
+
+### 6. Ruthless Simplicity
+
+As simple as possible, but no simpler. Minimize abstractions - every layer must justify its existence. Start minimal, grow as needed. Code you don't write has no bugs.
+
+### 7. Event-First Observability
+
+If it's important, emit a canonical event. If it's not observable, it didn't happen. One JSONL stream is the single source of truth. Hooks observe without blocking.
+
+### 8. Text-First, Inspectable
+
+Human-readable, diffable, versionable representations. JSON schemas for validation. No hidden state, no magic globals. Explicit over implicit.
 
 ## Resources
 

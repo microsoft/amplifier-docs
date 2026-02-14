@@ -35,7 +35,7 @@
           "repo": "amplifier-app-cli",
           "path": "amplifier_app_cli/main.py",
           "exists": true,
-          "hash": "d02ae56cd35e7435"
+          "hash": "5282577419297c4c"
         },
         {
           "repo": "amplifier-app-cli",
@@ -341,7 +341,311 @@
           "hash": "edb61bd2bbadcee7"
         }
       ]
+    },
+    "getting_started-providers": {
+      "doc_path": "docs/getting_started/providers.md",
+      "sources": [
+        {
+          "repo": "amplifier-module-provider-anthropic",
+          "path": "README.md",
+          "exists": true,
+          "hash": "b242c750111b0ac3"
+        },
+        {
+          "repo": "amplifier-module-provider-azure-openai",
+          "path": "README.md",
+          "exists": true,
+          "hash": "2c0daa41d6927cc7"
+        },
+        {
+          "repo": "amplifier-module-provider-mock",
+          "path": "README.md",
+          "exists": true,
+          "hash": "f31148626066ae76"
+        },
+        {
+          "repo": "amplifier-module-provider-ollama",
+          "path": "README.md",
+          "exists": true,
+          "hash": "0344355c9b2b1584"
+        },
+        {
+          "repo": "amplifier-module-provider-openai",
+          "path": "README.md",
+          "exists": true,
+          "hash": "bb6e08b84fa67b9b"
+        },
+        {
+          "repo": "amplifier-module-provider-vllm",
+          "path": "README.md",
+          "exists": true,
+          "hash": "d87b8c5c11ac3420"
+        }
+      ]
+    },
+    "user_guide": {
+      "doc_path": "docs/user_guide/index.md",
+      "sources": [
+        {
+          "repo": "amplifier-app-cli",
+          "path": "README.md",
+          "exists": true,
+          "hash": "effca9d1f5714459"
+        }
+      ]
+    },
+    "developer_guides-foundation": {
+      "doc_path": "docs/developer_guides/foundation/index.md",
+      "sources": [
+        {
+          "repo": "amplifier-core",
+          "path": "README.md",
+          "exists": true,
+          "hash": "78e3ab20b0604c49"
+        },
+        {
+          "repo": "amplifier-core",
+          "path": "docs/DESIGN_PHILOSOPHY.md",
+          "exists": true,
+          "hash": "09f95174e27a37fc"
+        },
+        {
+          "repo": "amplifier-foundation",
+          "path": "README.md",
+          "exists": true,
+          "hash": "aa7f91d9177985fa"
+        }
+      ]
+    },
+    "developer_guides-foundation-amplifier_foundation": {
+      "doc_path": "docs/developer_guides/foundation/amplifier_foundation/index.md",
+      "sources": [
+        {
+          "repo": "amplifier-foundation",
+          "path": "README.md",
+          "exists": true,
+          "hash": "aa7f91d9177985fa"
+        },
+        {
+          "repo": "amplifier-foundation",
+          "path": "docs/CONCEPTS.md",
+          "exists": true,
+          "hash": "a2c28773a50062ab"
+        },
+        {
+          "repo": "amplifier-foundation",
+          "path": "docs/API_REFERENCE.md",
+          "exists": true,
+          "hash": "d2560018bed6b4f1"
+        }
+      ]
+    },
+    "developer_guides-foundation-amplifier_foundation-getting_started": {
+      "doc_path": "docs/developer_guides/foundation/amplifier_foundation/getting_started.md",
+      "sources": [
+        {
+          "repo": "amplifier-foundation",
+          "path": "README.md",
+          "exists": true,
+          "hash": "aa7f91d9177985fa"
+        },
+        {
+          "repo": "amplifier-foundation",
+          "path": "examples/01_hello_world.py",
+          "exists": true,
+          "hash": "d746d04b5ae2762e"
+        },
+        {
+          "repo": "amplifier-foundation",
+          "path": "docs/CONCEPTS.md",
+          "exists": true,
+          "hash": "a2c28773a50062ab"
+        }
+      ]
+    },
+    "developer_guides-foundation-amplifier_foundation-bundle_system": {
+      "doc_path": "docs/developer_guides/foundation/amplifier_foundation/bundle_system.md",
+      "sources": [
+        {
+          "repo": "amplifier-foundation",
+          "path": "docs/BUNDLE_GUIDE.md",
+          "exists": true,
+          "hash": "a8b6b3c6edb476d2"
+        },
+        {
+          "repo": "amplifier-foundation",
+          "path": "amplifier_foundation/bundle.py",
+          "exists": true,
+          "hash": "ff9854dfd43a1a4e"
+        },
+        {
+          "repo": "amplifier-foundation",
+          "path": "amplifier_foundation/registry.py",
+          "exists": true,
+          "hash": "1cd6e62d182da094"
+        }
+      ]
+    },
+    "developer_guides-foundation-amplifier_foundation-utilities": {
+      "doc_path": "docs/developer_guides/foundation/amplifier_foundation/utilities.md",
+      "sources": [
+        {
+          "repo": "amplifier-foundation",
+          "path": "docs/API_REFERENCE.md",
+          "exists": true,
+          "hash": "d2560018bed6b4f1"
+        },
+        {
+          "repo": "amplifier-foundation",
+          "path": "amplifier_foundation/io/__init__.py",
+          "exists": true,
+          "hash": "fe46cd940d85aaa1"
+        },
+        {
+          "repo": "amplifier-foundation",
+          "path": "amplifier_foundation/io/files.py",
+          "exists": true,
+          "hash": "ec144088a5bc1db4"
+        },
+        {
+          "repo": "amplifier-foundation",
+          "path": "amplifier_foundation/io/frontmatter.py",
+          "exists": true,
+          "hash": "1e4837ca733c00e4"
+        },
+        {
+          "repo": "amplifier-foundation",
+          "path": "amplifier_foundation/io/yaml.py",
+          "exists": true,
+          "hash": "c94d827ba0cb4d7c"
+        },
+        {
+          "repo": "amplifier-foundation",
+          "path": "amplifier_foundation/dicts/__init__.py",
+          "exists": true,
+          "hash": "2f138e945aa5596e"
+        },
+        {
+          "repo": "amplifier-foundation",
+          "path": "amplifier_foundation/dicts/merge.py",
+          "exists": true,
+          "hash": "caffe4676b644ca2"
+        },
+        {
+          "repo": "amplifier-foundation",
+          "path": "amplifier_foundation/dicts/navigation.py",
+          "exists": true,
+          "hash": "00609ee77b9514a8"
+        },
+        {
+          "repo": "amplifier-foundation",
+          "path": "amplifier_foundation/paths/__init__.py",
+          "exists": true,
+          "hash": "f9357d3ce407daa8"
+        },
+        {
+          "repo": "amplifier-foundation",
+          "path": "amplifier_foundation/paths/construction.py",
+          "exists": true,
+          "hash": "fd263eee46577877"
+        },
+        {
+          "repo": "amplifier-foundation",
+          "path": "amplifier_foundation/paths/discovery.py",
+          "exists": true,
+          "hash": "ff19772576df5d0d"
+        },
+        {
+          "repo": "amplifier-foundation",
+          "path": "amplifier_foundation/paths/resolution.py",
+          "exists": true,
+          "hash": "4d45fca24184a15c"
+        },
+        {
+          "repo": "amplifier-foundation",
+          "path": "amplifier_foundation/cache/__init__.py",
+          "exists": true,
+          "hash": "69efc537f3650f61"
+        },
+        {
+          "repo": "amplifier-foundation",
+          "path": "amplifier_foundation/cache/disk.py",
+          "exists": true,
+          "hash": "5d6a3cc24928653c"
+        },
+        {
+          "repo": "amplifier-foundation",
+          "path": "amplifier_foundation/cache/protocol.py",
+          "exists": true,
+          "hash": "77fa042ae1e9afc2"
+        },
+        {
+          "repo": "amplifier-foundation",
+          "path": "amplifier_foundation/cache/simple.py",
+          "exists": true,
+          "hash": "2a967f8af86715a0"
+        },
+        {
+          "repo": "amplifier-foundation",
+          "path": "amplifier_foundation/mentions/__init__.py",
+          "exists": true,
+          "hash": "70950db544eecd52"
+        },
+        {
+          "repo": "amplifier-foundation",
+          "path": "amplifier_foundation/mentions/deduplicator.py",
+          "exists": true,
+          "hash": "20231f4d4ee47b94"
+        },
+        {
+          "repo": "amplifier-foundation",
+          "path": "amplifier_foundation/mentions/loader.py",
+          "exists": true,
+          "hash": "736796ddf84ec135"
+        },
+        {
+          "repo": "amplifier-foundation",
+          "path": "amplifier_foundation/mentions/models.py",
+          "exists": true,
+          "hash": "b1cfe209a329ddbb"
+        },
+        {
+          "repo": "amplifier-foundation",
+          "path": "amplifier_foundation/mentions/parser.py",
+          "exists": true,
+          "hash": "306ad4ec6be1ee25"
+        },
+        {
+          "repo": "amplifier-foundation",
+          "path": "amplifier_foundation/mentions/protocol.py",
+          "exists": true,
+          "hash": "f6fbc23ccfe6520e"
+        },
+        {
+          "repo": "amplifier-foundation",
+          "path": "amplifier_foundation/mentions/resolver.py",
+          "exists": true,
+          "hash": "c7add0fa5941a338"
+        },
+        {
+          "repo": "amplifier-foundation",
+          "path": "amplifier_foundation/mentions/utils.py",
+          "exists": true,
+          "hash": "98ca88ac02be2f64"
+        }
+      ]
+    },
+    "developer_guides-foundation-amplifier_foundation-patterns": {
+      "doc_path": "docs/developer_guides/foundation/amplifier_foundation/patterns.md",
+      "sources": [
+        {
+          "repo": "amplifier-foundation",
+          "path": "docs/PATTERNS.md",
+          "exists": true,
+          "hash": "bd48db55ee02541a"
+        }
+      ]
     }
   },
-  "last_updated": "2026-02-11T19:25:53.686784+00:00"
+  "last_updated": "2026-02-14T04:01:35.817576+00:00"
 }
