@@ -185,6 +185,14 @@ def transform_csv_to_outline(csv_path: Path, output_path: Path):
             }
             sections.append(section)
 
+    # Derive allowed_repos from CSV source data
+    all_repos: set[str] = set()
+    for section in sections:
+        for source in section.get("sources", []):
+            repo = source.get("repo", "")
+            if repo and "*" not in repo:  # Exclude glob patterns
+                all_repos.add(repo)
+
     # Build full outline
     outline = {
         "_meta": {
@@ -195,49 +203,7 @@ def transform_csv_to_outline(csv_path: Path, output_path: Path):
             "generated_from": "docs/DOC_SOURCE_MAPPING.csv",
             "generated_at": datetime.now(timezone.utc).isoformat(),
             "allowed_repos": {
-                "core": [
-                    "amplifier",
-                    "amplifier-core",
-                    "amplifier-foundation",
-                    "amplifier-app-cli",
-                ],
-                "libraries": [],
-                "providers": [
-                    "amplifier-module-provider-anthropic",
-                    "amplifier-module-provider-openai",
-                    "amplifier-module-provider-azure-openai",
-                    "amplifier-module-provider-ollama",
-                    "amplifier-module-provider-vllm",
-                    "amplifier-module-provider-mock",
-                ],
-                "tools": [
-                    "amplifier-module-tool-filesystem",
-                    "amplifier-module-tool-bash",
-                    "amplifier-module-tool-web",
-                    "amplifier-module-tool-search",
-                    "amplifier-module-tool-task",
-                    "amplifier-module-tool-todo",
-                ],
-                "hooks": [
-                    "amplifier-module-hooks-logging",
-                    "amplifier-module-hooks-approval",
-                    "amplifier-module-hooks-redaction",
-                    "amplifier-module-hooks-backup",
-                    "amplifier-module-hooks-scheduler-cost-aware",
-                    "amplifier-module-hooks-scheduler-heuristic",
-                    "amplifier-module-hooks-status-context",
-                    "amplifier-module-hooks-streaming-ui",
-                    "amplifier-module-hooks-todo-reminder",
-                ],
-                "orchestrators": [
-                    "amplifier-module-loop-basic",
-                    "amplifier-module-loop-streaming",
-                    "amplifier-module-loop-events",
-                ],
-                "contexts": [
-                    "amplifier-module-context-simple",
-                    "amplifier-module-context-persistent",
-                ],
+                "all": sorted(list(all_repos)),
             },
             "github_org": "microsoft",
             "github_base_url": "https://github.com/microsoft",

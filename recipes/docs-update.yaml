@@ -100,6 +100,82 @@ stages:
         output: "sync_result"
         timeout: 1200
 
+      - id: "drift-check"
+        type: "bash"
+        command: |
+          python3 << 'EOF'
+          import json
+          import re
+          import sys
+          from pathlib import Path
+
+          repos_dir = Path("{{repos_dir}}").expanduser()
+          outline_path = Path("{{outline_path}}")
+
+          # 1. Read MODULES.md from the synced amplifier repo
+          modules_md_path = repos_dir / "amplifier" / "docs" / "MODULES.md"
+          if not modules_md_path.exists():
+              print(json.dumps({
+                  "status": "skipped",
+                  "reason": f"MODULES.md not found at {modules_md_path}",
+                  "stale": [],
+                  "missing": []
+              }))
+              sys.exit(0)
+
+          modules_text = modules_md_path.read_text()
+
+          # 2. Extract Microsoft repo names from github.com/microsoft/amplifier-* URLs
+          #    This excludes community repos (robotdad/, colombod/, etc.)
+          modules_repos = set()
+          for match in re.finditer(r'github\.com/microsoft/(amplifier-[a-zA-Z0-9_-]+)', modules_text):
+              repo_name = match.group(1)
+              modules_repos.add(repo_name)
+
+          # 3. Read the outline JSON
+          with open(outline_path) as f:
+              outline = json.load(f)
+
+          # 4. Extract the pipeline's repo list from _meta.allowed_repos
+          pipeline_repos = set()
+          for repo_list in outline.get("_meta", {}).get("allowed_repos", {}).values():
+              pipeline_repos.update(repo_list)
+
+          # 5. Compute drift
+          #    Exclude 'amplifier' itself — it's the entry-point repo, not a documented component
+          pipeline_for_comparison = pipeline_repos - {"amplifier"}
+          modules_for_comparison = modules_repos - {"amplifier"}
+
+          stale = sorted(pipeline_for_comparison - modules_for_comparison)
+          missing = sorted(modules_for_comparison - pipeline_for_comparison)
+
+          result = {
+              "status": "checked",
+              "modules_md_repos": len(modules_repos),
+              "pipeline_repos": len(pipeline_repos),
+              "stale": stale,
+              "missing": missing
+          }
+          print(json.dumps(result))
+
+          # 6. Print human-readable warnings to stderr (don't fail the pipeline)
+          if stale:
+              print(f"\nWARNING: {len(stale)} repo(s) in pipeline but NOT in MODULES.md (potential dead repos):", file=sys.stderr)
+              for r in stale:
+                  print(f"  - {r}", file=sys.stderr)
+
+          if missing:
+              print(f"\nINFO: {len(missing)} repo(s) in MODULES.md but NOT in pipeline (potential coverage gaps):", file=sys.stderr)
+              for r in missing:
+                  print(f"  - {r}", file=sys.stderr)
+
+          if not stale and not missing:
+              print("Drift check: pipeline and MODULES.md are in sync.", file=sys.stderr)
+          EOF
+        output: "drift_check_result"
+        parse_json: true
+        timeout: 60
+
       - id: "compute-hashes"
         agent: "foundation:file-ops"
         prompt: |
@@ -729,6 +805,24 @@ stages:
               print(f"  Rejected: {df.get('rejected', 0)} files (cosmetic only)")
           except Exception:
               print("  (see diff_filter_result for details)")
+
+          # Drift check
+          try:
+              dc = json.loads('''{{drift_check_result}}''')
+              if dc.get("status") == "checked" and (dc.get("stale") or dc.get("missing")):
+                  print("\nDrift check:")
+                  print(f"  MODULES.md repos: {dc.get('modules_md_repos', 'N/A')}")
+                  print(f"  Pipeline repos: {dc.get('pipeline_repos', 'N/A')}")
+                  if dc.get("stale"):
+                      print(f"  WARNING - Stale repos (in pipeline, not in MODULES.md):")
+                      for r in dc["stale"]:
+                          print(f"    - {r}")
+                  if dc.get("missing"):
+                      print(f"  INFO - Missing repos (in MODULES.md, not in pipeline):")
+                      for r in dc["missing"]:
+                          print(f"    - {r}")
+          except Exception:
+              pass
 
           # Applied files
           print("\nApplied to docs/:")
