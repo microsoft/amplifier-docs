@@ -1,5 +1,10 @@
 {
+  "last_updated": "2026-02-17T16:56:09.345902+00:00",
   "sections": {
+    "index": {
+      "doc_path": "docs/index.md",
+      "sources": []
+    },
     "getting_started": {
       "doc_path": "docs/getting_started/index.md",
       "sources": [
@@ -25,6 +30,58 @@
           "path": "pyproject.toml",
           "exists": true,
           "hash": "a8fbf4132a86c17c"
+        }
+      ]
+    },
+    "getting_started-providers": {
+      "doc_path": "docs/getting_started/providers.md",
+      "sources": [
+        {
+          "repo": "amplifier-module-provider-anthropic",
+          "path": "README.md",
+          "exists": true,
+          "hash": "b242c750111b0ac3"
+        },
+        {
+          "repo": "amplifier-module-provider-azure-openai",
+          "path": "README.md",
+          "exists": true,
+          "hash": "2c0daa41d6927cc7"
+        },
+        {
+          "repo": "amplifier-module-provider-mock",
+          "path": "README.md",
+          "exists": true,
+          "hash": "f31148626066ae76"
+        },
+        {
+          "repo": "amplifier-module-provider-ollama",
+          "path": "README.md",
+          "exists": true,
+          "hash": "0344355c9b2b1584"
+        },
+        {
+          "repo": "amplifier-module-provider-openai",
+          "path": "README.md",
+          "exists": true,
+          "hash": "bb6e08b84fa67b9b"
+        },
+        {
+          "repo": "amplifier-module-provider-vllm",
+          "path": "README.md",
+          "exists": true,
+          "hash": "d87b8c5c11ac3420"
+        }
+      ]
+    },
+    "user_guide": {
+      "doc_path": "docs/user_guide/index.md",
+      "sources": [
+        {
+          "repo": "amplifier-app-cli",
+          "path": "README.md",
+          "exists": true,
+          "hash": "effca9d1f5714459"
         }
       ]
     },
@@ -141,83 +198,6 @@
         }
       ]
     },
-    "user_guide-profiles": {
-      "doc_path": "docs/user_guide/profiles.md",
-      "sources": [
-        {
-          "repo": "amplifier-profiles",
-          "path": "src/amplifier_profiles/__init__.py",
-          "exists": true,
-          "hash": "80ec672336312e88"
-        },
-        {
-          "repo": "amplifier-profiles",
-          "path": "src/amplifier_profiles/agent_loader.py",
-          "exists": true,
-          "hash": "dfad0cdee2278327"
-        },
-        {
-          "repo": "amplifier-profiles",
-          "path": "src/amplifier_profiles/agent_resolver.py",
-          "exists": true,
-          "hash": "75ff5e912b6a2019"
-        },
-        {
-          "repo": "amplifier-profiles",
-          "path": "src/amplifier_profiles/agent_schema.py",
-          "exists": true,
-          "hash": "69d5f5a45391ea32"
-        },
-        {
-          "repo": "amplifier-profiles",
-          "path": "src/amplifier_profiles/compiler.py",
-          "exists": true,
-          "hash": "12cd7168010e230d"
-        },
-        {
-          "repo": "amplifier-profiles",
-          "path": "src/amplifier_profiles/exceptions.py",
-          "exists": true,
-          "hash": "5ba92284f7c2b1e0"
-        },
-        {
-          "repo": "amplifier-profiles",
-          "path": "src/amplifier_profiles/loader.py",
-          "exists": true,
-          "hash": "670e52115cf0d25c"
-        },
-        {
-          "repo": "amplifier-profiles",
-          "path": "src/amplifier_profiles/merger.py",
-          "exists": true,
-          "hash": "bd6cd1012b895bea"
-        },
-        {
-          "repo": "amplifier-profiles",
-          "path": "src/amplifier_profiles/protocols.py",
-          "exists": true,
-          "hash": "69fba5b380804ba2"
-        },
-        {
-          "repo": "amplifier-profiles",
-          "path": "src/amplifier_profiles/schema.py",
-          "exists": true,
-          "hash": "92b926c81506a06c"
-        },
-        {
-          "repo": "amplifier-profiles",
-          "path": "src/amplifier_profiles/utils.py",
-          "exists": true,
-          "hash": "b70445fe844be0b5"
-        },
-        {
-          "repo": "amplifier-profiles",
-          "path": "README.md",
-          "exists": true,
-          "hash": "82016c8289853a9c"
-        }
-      ]
-    },
     "user_guide-agents": {
       "doc_path": "docs/user_guide/agents.md",
       "sources": [
@@ -231,7 +211,7 @@
           "repo": "amplifier-foundation",
           "path": "agents/bug-hunter.md",
           "exists": true,
-          "hash": "79c4382a6ba6d5bf"
+          "hash": "7ea5d1c69534fd7e"
         },
         {
           "repo": "amplifier-foundation",
@@ -243,7 +223,7 @@
           "repo": "amplifier-foundation",
           "path": "agents/explorer.md",
           "exists": true,
-          "hash": "b898af6b21aa2a93"
+          "hash": "19d43722aaf17bbf"
         },
         {
           "repo": "amplifier-foundation",
@@ -273,7 +253,7 @@
           "repo": "amplifier-foundation",
           "path": "agents/modular-builder.md",
           "exists": true,
-          "hash": "b7011a08768cfe13"
+          "hash": "add600a2a7d999bf"
         },
         {
           "repo": "amplifier-foundation",
@@ -315,7 +295,7 @@
           "repo": "amplifier-foundation",
           "path": "agents/zen-architect.md",
           "exists": true,
-          "hash": "305dd80f5eb500e9"
+          "hash": "451d743d1b142985"
         },
         {
           "repo": "amplifier-app-cli",
@@ -339,58 +319,6 @@
           "path": "amplifier_app_cli/session_spawner.py",
           "exists": true,
           "hash": "edb61bd2bbadcee7"
-        }
-      ]
-    },
-    "getting_started-providers": {
-      "doc_path": "docs/getting_started/providers.md",
-      "sources": [
-        {
-          "repo": "amplifier-module-provider-anthropic",
-          "path": "README.md",
-          "exists": true,
-          "hash": "b242c750111b0ac3"
-        },
-        {
-          "repo": "amplifier-module-provider-azure-openai",
-          "path": "README.md",
-          "exists": true,
-          "hash": "2c0daa41d6927cc7"
-        },
-        {
-          "repo": "amplifier-module-provider-mock",
-          "path": "README.md",
-          "exists": true,
-          "hash": "f31148626066ae76"
-        },
-        {
-          "repo": "amplifier-module-provider-ollama",
-          "path": "README.md",
-          "exists": true,
-          "hash": "0344355c9b2b1584"
-        },
-        {
-          "repo": "amplifier-module-provider-openai",
-          "path": "README.md",
-          "exists": true,
-          "hash": "bb6e08b84fa67b9b"
-        },
-        {
-          "repo": "amplifier-module-provider-vllm",
-          "path": "README.md",
-          "exists": true,
-          "hash": "d87b8c5c11ac3420"
-        }
-      ]
-    },
-    "user_guide": {
-      "doc_path": "docs/user_guide/index.md",
-      "sources": [
-        {
-          "repo": "amplifier-app-cli",
-          "path": "README.md",
-          "exists": true,
-          "hash": "effca9d1f5714459"
         }
       ]
     },
@@ -463,6 +391,17 @@
         }
       ]
     },
+    "developer_guides-foundation-amplifier_foundation-concepts": {
+      "doc_path": "docs/developer_guides/foundation/amplifier_foundation/concepts.md",
+      "sources": [
+        {
+          "repo": "amplifier-foundation",
+          "path": "docs/CONCEPTS.md",
+          "exists": true,
+          "hash": "a2c28773a50062ab"
+        }
+      ]
+    },
     "developer_guides-foundation-amplifier_foundation-bundle_system": {
       "doc_path": "docs/developer_guides/foundation/amplifier_foundation/bundle_system.md",
       "sources": [
@@ -476,7 +415,7 @@
           "repo": "amplifier-foundation",
           "path": "amplifier_foundation/bundle.py",
           "exists": true,
-          "hash": "ff9854dfd43a1a4e"
+          "hash": "c59a5dceb3efe921"
         },
         {
           "repo": "amplifier-foundation",
@@ -559,7 +498,7 @@
           "repo": "amplifier-foundation",
           "path": "amplifier_foundation/paths/resolution.py",
           "exists": true,
-          "hash": "4d45fca24184a15c"
+          "hash": "8a7212b3e0056c71"
         },
         {
           "repo": "amplifier-foundation",
@@ -645,7 +584,1753 @@
           "hash": "bd48db55ee02541a"
         }
       ]
+    },
+    "developer_guides-foundation-amplifier_foundation-api_reference": {
+      "doc_path": "docs/developer_guides/foundation/amplifier_foundation/api_reference.md",
+      "sources": [
+        {
+          "repo": "amplifier-foundation",
+          "path": "docs/API_REFERENCE.md",
+          "exists": true,
+          "hash": "d2560018bed6b4f1"
+        },
+        {
+          "repo": "amplifier-foundation",
+          "path": "amplifier_foundation/__init__.py",
+          "exists": true,
+          "hash": "dae4c6c772f585aa"
+        },
+        {
+          "repo": "amplifier-foundation",
+          "path": "amplifier_foundation/bundle.py",
+          "exists": true,
+          "hash": "c59a5dceb3efe921"
+        },
+        {
+          "repo": "amplifier-foundation",
+          "path": "amplifier_foundation/exceptions.py",
+          "exists": true,
+          "hash": "7d781250a264d2ca"
+        },
+        {
+          "repo": "amplifier-foundation",
+          "path": "amplifier_foundation/registry.py",
+          "exists": true,
+          "hash": "1cd6e62d182da094"
+        },
+        {
+          "repo": "amplifier-foundation",
+          "path": "amplifier_foundation/serialization.py",
+          "exists": true,
+          "hash": "c2740085a1c3fa03"
+        },
+        {
+          "repo": "amplifier-foundation",
+          "path": "amplifier_foundation/spawn_utils.py",
+          "exists": true,
+          "hash": "1424b653f545ba94"
+        },
+        {
+          "repo": "amplifier-foundation",
+          "path": "amplifier_foundation/tracing.py",
+          "exists": true,
+          "hash": "f7c21da801717503"
+        },
+        {
+          "repo": "amplifier-foundation",
+          "path": "amplifier_foundation/validator.py",
+          "exists": true,
+          "hash": "77f9dcfe8e624b67"
+        }
+      ]
+    },
+    "developer_guides-foundation-amplifier_foundation-examples": {
+      "doc_path": "docs/developer_guides/foundation/amplifier_foundation/examples/index.md",
+      "sources": [
+        {
+          "repo": "amplifier-foundation",
+          "path": "examples/README.md",
+          "exists": true,
+          "hash": "5c8fda5e1e9da7a5"
+        },
+        {
+          "repo": "amplifier-foundation",
+          "path": "examples/01_hello_world.py",
+          "exists": true,
+          "hash": "d746d04b5ae2762e"
+        },
+        {
+          "repo": "amplifier-foundation",
+          "path": "examples/02_custom_configuration.py",
+          "exists": true,
+          "hash": "8e3827ee15442f4e"
+        },
+        {
+          "repo": "amplifier-foundation",
+          "path": "examples/03_custom_tool.py",
+          "exists": true,
+          "hash": "b45bbd8a807aacc8"
+        },
+        {
+          "repo": "amplifier-foundation",
+          "path": "examples/04_load_and_inspect.py",
+          "exists": true,
+          "hash": "b179a11e861d3955"
+        },
+        {
+          "repo": "amplifier-foundation",
+          "path": "examples/05_composition.py",
+          "exists": true,
+          "hash": "f9cec7b60614dbfe"
+        },
+        {
+          "repo": "amplifier-foundation",
+          "path": "examples/06_sources_and_registry.py",
+          "exists": true,
+          "hash": "ed98f29b8c9d7455"
+        },
+        {
+          "repo": "amplifier-foundation",
+          "path": "examples/07_full_workflow.py",
+          "exists": true,
+          "hash": "5c3c8575f73365c8"
+        },
+        {
+          "repo": "amplifier-foundation",
+          "path": "examples/08_cli_application.py",
+          "exists": true,
+          "hash": "1494c16e0d692726"
+        },
+        {
+          "repo": "amplifier-foundation",
+          "path": "examples/09_multi_agent_system.py",
+          "exists": true,
+          "hash": "c534df55997f6406"
+        },
+        {
+          "repo": "amplifier-foundation",
+          "path": "examples/10_meeting_notes_to_actions.py",
+          "exists": true,
+          "hash": "26d2e7e1cccb50db"
+        },
+        {
+          "repo": "amplifier-foundation",
+          "path": "examples/11_provider_comparison.py",
+          "exists": true,
+          "hash": "10a8d1fb06df65fc"
+        },
+        {
+          "repo": "amplifier-foundation",
+          "path": "examples/12_approval_gates.py",
+          "exists": true,
+          "hash": "b8a42fd56d1aea82"
+        },
+        {
+          "repo": "amplifier-foundation",
+          "path": "examples/13_event_debugging.py",
+          "exists": true,
+          "hash": "0e56c3f07eaff772"
+        },
+        {
+          "repo": "amplifier-foundation",
+          "path": "examples/14_session_persistence.py",
+          "exists": true,
+          "hash": "da69f79243a8e4de"
+        },
+        {
+          "repo": "amplifier-foundation",
+          "path": "examples/17_multi_model_ensemble.py",
+          "exists": true,
+          "hash": "6779e59b2735a876"
+        },
+        {
+          "repo": "amplifier-foundation",
+          "path": "examples/18_custom_hooks.py",
+          "exists": true,
+          "hash": "78a009bbc231008e"
+        },
+        {
+          "repo": "amplifier-foundation",
+          "path": "examples/19_github_actions_ci.py",
+          "exists": true,
+          "hash": "47d0d0da925f2bab"
+        },
+        {
+          "repo": "amplifier-foundation",
+          "path": "examples/20_calendar_assistant.py",
+          "exists": true,
+          "hash": "77d819dd41f4f613"
+        },
+        {
+          "repo": "amplifier-foundation",
+          "path": "examples/21_bundle_updates.py",
+          "exists": true,
+          "hash": "9139df9fa7e911f5"
+        },
+        {
+          "repo": "amplifier-foundation",
+          "path": "examples/22_custom_orchestrator_routing.py",
+          "exists": true,
+          "hash": "3552974b52a10e38"
+        }
+      ]
+    },
+    "developer_guides-foundation-amplifier_foundation-examples-hello_world": {
+      "doc_path": "docs/developer_guides/foundation/amplifier_foundation/examples/hello_world.md",
+      "sources": [
+        {
+          "repo": "amplifier-foundation",
+          "path": "examples/01_hello_world.py",
+          "exists": true,
+          "hash": "d746d04b5ae2762e"
+        },
+        {
+          "repo": "amplifier-foundation",
+          "path": "docs/CONCEPTS.md",
+          "exists": true,
+          "hash": "a2c28773a50062ab"
+        }
+      ]
+    },
+    "developer_guides-foundation-amplifier_foundation-examples-custom_configuration": {
+      "doc_path": "docs/developer_guides/foundation/amplifier_foundation/examples/custom_configuration.md",
+      "sources": [
+        {
+          "repo": "amplifier-foundation",
+          "path": "examples/02_custom_configuration.py",
+          "exists": true,
+          "hash": "8e3827ee15442f4e"
+        },
+        {
+          "repo": "amplifier-foundation",
+          "path": "docs/PATTERNS.md",
+          "exists": true,
+          "hash": "bd48db55ee02541a"
+        }
+      ]
+    },
+    "developer_guides-foundation-amplifier_foundation-examples-custom_tool": {
+      "doc_path": "docs/developer_guides/foundation/amplifier_foundation/examples/custom_tool.md",
+      "sources": [
+        {
+          "repo": "amplifier-foundation",
+          "path": "examples/03_custom_tool.py",
+          "exists": true,
+          "hash": "b45bbd8a807aacc8"
+        },
+        {
+          "repo": "amplifier-core",
+          "path": "docs/contracts/TOOL_CONTRACT.md",
+          "exists": true,
+          "hash": "6427f074050d6cbb"
+        }
+      ]
+    },
+    "developer_guides-foundation-amplifier_foundation-examples-cli_application": {
+      "doc_path": "docs/developer_guides/foundation/amplifier_foundation/examples/cli_application.md",
+      "sources": [
+        {
+          "repo": "amplifier-foundation",
+          "path": "examples/08_cli_application.py",
+          "exists": true,
+          "hash": "1494c16e0d692726"
+        }
+      ]
+    },
+    "developer_guides-foundation-amplifier_foundation-examples-multi_agent_system": {
+      "doc_path": "docs/developer_guides/foundation/amplifier_foundation/examples/multi_agent_system.md",
+      "sources": [
+        {
+          "repo": "amplifier-foundation",
+          "path": "examples/09_multi_agent_system.py",
+          "exists": true,
+          "hash": "c534df55997f6406"
+        },
+        {
+          "repo": "amplifier-foundation",
+          "path": "docs/PATTERNS.md",
+          "exists": true,
+          "hash": "bd48db55ee02541a"
+        }
+      ]
+    },
+    "developer_guides-applications": {
+      "doc_path": "docs/developer_guides/applications/index.md",
+      "sources": [
+        {
+          "repo": "amplifier-core",
+          "path": "amplifier_core/session.py",
+          "exists": true,
+          "hash": "9e710f5777a37c47"
+        },
+        {
+          "repo": "amplifier-app-cli",
+          "path": "amplifier_app_cli/__init__.py",
+          "exists": true,
+          "hash": "aacc89826cf3bdfa"
+        }
+      ]
+    },
+    "developer_guides-applications-cli_case_study": {
+      "doc_path": "docs/developer_guides/applications/cli_case_study.md",
+      "sources": [
+        {
+          "repo": "amplifier-app-cli",
+          "path": "amplifier_app_cli/__init__.py",
+          "exists": true,
+          "hash": "aacc89826cf3bdfa"
+        },
+        {
+          "repo": "amplifier-app-cli",
+          "path": "amplifier_app_cli/__main__.py",
+          "exists": true,
+          "hash": "ba54c51394757463"
+        },
+        {
+          "repo": "amplifier-app-cli",
+          "path": "amplifier_app_cli/agent_config.py",
+          "exists": true,
+          "hash": "391f0ee54f980c15"
+        },
+        {
+          "repo": "amplifier-app-cli",
+          "path": "amplifier_app_cli/approval_provider.py",
+          "exists": true,
+          "hash": "d14cb005cfa36cc8"
+        },
+        {
+          "repo": "amplifier-app-cli",
+          "path": "amplifier_app_cli/console.py",
+          "exists": true,
+          "hash": "016c2b4fd962f140"
+        },
+        {
+          "repo": "amplifier-app-cli",
+          "path": "amplifier_app_cli/effective_config.py",
+          "exists": true,
+          "hash": "04fdbb00785a0ed4"
+        },
+        {
+          "repo": "amplifier-app-cli",
+          "path": "amplifier_app_cli/incremental_save.py",
+          "exists": true,
+          "hash": "446c22fed24b2dcc"
+        },
+        {
+          "repo": "amplifier-app-cli",
+          "path": "amplifier_app_cli/key_manager.py",
+          "exists": true,
+          "hash": "54bafad3bcc874a0"
+        },
+        {
+          "repo": "amplifier-app-cli",
+          "path": "amplifier_app_cli/main.py",
+          "exists": true,
+          "hash": "5282577419297c4c"
+        },
+        {
+          "repo": "amplifier-app-cli",
+          "path": "amplifier_app_cli/module_manager.py",
+          "exists": true,
+          "hash": "16689cb9c1d2202c"
+        },
+        {
+          "repo": "amplifier-app-cli",
+          "path": "amplifier_app_cli/paths.py",
+          "exists": true,
+          "hash": "55dea393282324b5"
+        },
+        {
+          "repo": "amplifier-app-cli",
+          "path": "amplifier_app_cli/project_utils.py",
+          "exists": true,
+          "hash": "464c1fa9495cc434"
+        },
+        {
+          "repo": "amplifier-app-cli",
+          "path": "amplifier_app_cli/provider_config_utils.py",
+          "exists": true,
+          "hash": "f78b8412cf35b041"
+        },
+        {
+          "repo": "amplifier-app-cli",
+          "path": "amplifier_app_cli/provider_env_detect.py",
+          "exists": true,
+          "hash": "90ff505077360ec0"
+        },
+        {
+          "repo": "amplifier-app-cli",
+          "path": "amplifier_app_cli/provider_loader.py",
+          "exists": true,
+          "hash": "19389debaa4dd4a3"
+        },
+        {
+          "repo": "amplifier-app-cli",
+          "path": "amplifier_app_cli/provider_manager.py",
+          "exists": true,
+          "hash": "f7161f142f39e44d"
+        },
+        {
+          "repo": "amplifier-app-cli",
+          "path": "amplifier_app_cli/provider_sources.py",
+          "exists": true,
+          "hash": "87956695254982f0"
+        },
+        {
+          "repo": "amplifier-app-cli",
+          "path": "amplifier_app_cli/session_runner.py",
+          "exists": true,
+          "hash": "e67966db0434ba82"
+        },
+        {
+          "repo": "amplifier-app-cli",
+          "path": "amplifier_app_cli/session_spawner.py",
+          "exists": true,
+          "hash": "edb61bd2bbadcee7"
+        },
+        {
+          "repo": "amplifier-app-cli",
+          "path": "amplifier_app_cli/session_store.py",
+          "exists": true,
+          "hash": "7036b8e754446e7c"
+        },
+        {
+          "repo": "amplifier-app-cli",
+          "path": "amplifier_app_cli/trace_collector.py",
+          "exists": true,
+          "hash": "8daf453f11657200"
+        },
+        {
+          "repo": "amplifier-app-cli",
+          "path": "amplifier_app_cli/types.py",
+          "exists": true,
+          "hash": "548b6c3948d8b453"
+        },
+        {
+          "repo": "amplifier-app-cli",
+          "path": "docs/AGENT_DELEGATION_IMPLEMENTATION.md",
+          "exists": true,
+          "hash": "1c260e8c9d78126d"
+        },
+        {
+          "repo": "amplifier-app-cli",
+          "path": "docs/CONTEXT_LOADING.md",
+          "exists": true,
+          "hash": "5e212dd7ecc8a254"
+        },
+        {
+          "repo": "amplifier-app-cli",
+          "path": "docs/INTERACTIVE_MODE.md",
+          "exists": true,
+          "hash": "9ab23cbcfee76287"
+        },
+        {
+          "repo": "amplifier-app-cli",
+          "path": "docs/OUTPUT_FORMATS.md",
+          "exists": true,
+          "hash": "75b1f8042861d158"
+        }
+      ]
+    },
+    "developer": {
+      "doc_path": "docs/developer/index.md",
+      "sources": [
+        {
+          "repo": "amplifier-core",
+          "path": "docs/contracts/README.md",
+          "exists": true,
+          "hash": "e3719194c6408d79"
+        }
+      ]
+    },
+    "developer-module_development": {
+      "doc_path": "docs/developer/module_development.md",
+      "sources": [
+        {
+          "repo": "amplifier-core",
+          "path": "docs/contracts/CONTEXT_CONTRACT.md",
+          "exists": true,
+          "hash": "ed938138444061cb"
+        },
+        {
+          "repo": "amplifier-core",
+          "path": "docs/contracts/HOOK_CONTRACT.md",
+          "exists": true,
+          "hash": "dadff5a067eaa063"
+        },
+        {
+          "repo": "amplifier-core",
+          "path": "docs/contracts/ORCHESTRATOR_CONTRACT.md",
+          "exists": true,
+          "hash": "a41467f5484a93e9"
+        },
+        {
+          "repo": "amplifier-core",
+          "path": "docs/contracts/PROVIDER_CONTRACT.md",
+          "exists": true,
+          "hash": "f165c47d92e29305"
+        },
+        {
+          "repo": "amplifier-core",
+          "path": "docs/contracts/README.md",
+          "exists": true,
+          "hash": "e3719194c6408d79"
+        },
+        {
+          "repo": "amplifier-core",
+          "path": "docs/contracts/TOOL_CONTRACT.md",
+          "exists": true,
+          "hash": "6427f074050d6cbb"
+        },
+        {
+          "repo": "amplifier-module-context-persistent",
+          "path": "README.md",
+          "exists": true,
+          "hash": "484df58a3412b239"
+        },
+        {
+          "repo": "amplifier-module-context-simple",
+          "path": "README.md",
+          "exists": true,
+          "hash": "c283a74c4f449fac"
+        },
+        {
+          "repo": "amplifier-module-hooks-approval",
+          "path": "README.md",
+          "exists": true,
+          "hash": "83c41ad4a86cc235"
+        },
+        {
+          "repo": "amplifier-module-hooks-backup",
+          "path": "README.md",
+          "exists": true,
+          "hash": "c8cf08212d0d2f77"
+        },
+        {
+          "repo": "amplifier-module-hooks-logging",
+          "path": "README.md",
+          "exists": true,
+          "hash": "4de9f77054c39ea9"
+        },
+        {
+          "repo": "amplifier-module-hooks-redaction",
+          "path": "README.md",
+          "exists": true,
+          "hash": "ef231434c07dd338"
+        },
+        {
+          "repo": "amplifier-module-hooks-scheduler-cost-aware",
+          "path": "README.md",
+          "exists": true,
+          "hash": "4fab5032e18042ff"
+        },
+        {
+          "repo": "amplifier-module-hooks-scheduler-heuristic",
+          "path": "README.md",
+          "exists": true,
+          "hash": "c85baadc2c612c4a"
+        },
+        {
+          "repo": "amplifier-module-hooks-status-context",
+          "path": "README.md",
+          "exists": true,
+          "hash": "392b4e01398d4b4c"
+        },
+        {
+          "repo": "amplifier-module-hooks-streaming-ui",
+          "path": "README.md",
+          "exists": true,
+          "hash": "15d57ffaa32fe493"
+        },
+        {
+          "repo": "amplifier-module-hooks-todo-reminder",
+          "path": "README.md",
+          "exists": true,
+          "hash": "00c5f1cf919cdd08"
+        },
+        {
+          "repo": "amplifier-module-loop-basic",
+          "path": "README.md",
+          "exists": true,
+          "hash": "99677e77304d47f2"
+        },
+        {
+          "repo": "amplifier-module-loop-events",
+          "path": "README.md",
+          "exists": true,
+          "hash": "b7f4e6425089d88e"
+        },
+        {
+          "repo": "amplifier-module-loop-streaming",
+          "path": "README.md",
+          "exists": true,
+          "hash": "f29fceacb3586a7d"
+        },
+        {
+          "repo": "amplifier-module-provider-anthropic",
+          "path": "README.md",
+          "exists": true,
+          "hash": "b242c750111b0ac3"
+        },
+        {
+          "repo": "amplifier-module-provider-azure-openai",
+          "path": "README.md",
+          "exists": true,
+          "hash": "2c0daa41d6927cc7"
+        },
+        {
+          "repo": "amplifier-module-provider-mock",
+          "path": "README.md",
+          "exists": true,
+          "hash": "f31148626066ae76"
+        },
+        {
+          "repo": "amplifier-module-provider-ollama",
+          "path": "README.md",
+          "exists": true,
+          "hash": "0344355c9b2b1584"
+        },
+        {
+          "repo": "amplifier-module-provider-openai",
+          "path": "README.md",
+          "exists": true,
+          "hash": "bb6e08b84fa67b9b"
+        },
+        {
+          "repo": "amplifier-module-provider-vllm",
+          "path": "README.md",
+          "exists": true,
+          "hash": "d87b8c5c11ac3420"
+        },
+        {
+          "repo": "amplifier-module-tool-bash",
+          "path": "README.md",
+          "exists": true,
+          "hash": "c295f40ee07ea73c"
+        },
+        {
+          "repo": "amplifier-module-tool-filesystem",
+          "path": "README.md",
+          "exists": true,
+          "hash": "8b3777ec256498f5"
+        },
+        {
+          "repo": "amplifier-module-tool-search",
+          "path": "README.md",
+          "exists": true,
+          "hash": "0743af1d1c7312da"
+        },
+        {
+          "repo": "amplifier-module-tool-task",
+          "path": "README.md",
+          "exists": true,
+          "hash": "4b38970dc621eb97"
+        },
+        {
+          "repo": "amplifier-module-tool-todo",
+          "path": "README.md",
+          "exists": true,
+          "hash": "7ee055a0d528a88a"
+        },
+        {
+          "repo": "amplifier-module-tool-web",
+          "path": "README.md",
+          "exists": true,
+          "hash": "1181ec2c696cd001"
+        }
+      ]
+    },
+    "developer-contracts": {
+      "doc_path": "docs/developer/contracts/index.md",
+      "sources": [
+        {
+          "repo": "amplifier-core",
+          "path": "docs/contracts/README.md",
+          "exists": true,
+          "hash": "e3719194c6408d79"
+        }
+      ]
+    },
+    "developer-contracts-provider": {
+      "doc_path": "docs/developer/contracts/provider.md",
+      "sources": [
+        {
+          "repo": "amplifier-core",
+          "path": "docs/contracts/PROVIDER_CONTRACT.md",
+          "exists": true,
+          "hash": "f165c47d92e29305"
+        },
+        {
+          "repo": "amplifier-core",
+          "path": "amplifier_core/interfaces.py",
+          "exists": true,
+          "hash": "b777f19669e2a60c"
+        }
+      ]
+    },
+    "developer-contracts-tool": {
+      "doc_path": "docs/developer/contracts/tool.md",
+      "sources": [
+        {
+          "repo": "amplifier-core",
+          "path": "docs/contracts/TOOL_CONTRACT.md",
+          "exists": true,
+          "hash": "6427f074050d6cbb"
+        },
+        {
+          "repo": "amplifier-core",
+          "path": "amplifier_core/interfaces.py",
+          "exists": true,
+          "hash": "b777f19669e2a60c"
+        }
+      ]
+    },
+    "developer-contracts-hook": {
+      "doc_path": "docs/developer/contracts/hook.md",
+      "sources": [
+        {
+          "repo": "amplifier-core",
+          "path": "docs/contracts/HOOK_CONTRACT.md",
+          "exists": true,
+          "hash": "dadff5a067eaa063"
+        },
+        {
+          "repo": "amplifier-core",
+          "path": "amplifier_core/hooks.py",
+          "exists": true,
+          "hash": "9ef23c3cceb33413"
+        }
+      ]
+    },
+    "developer-contracts-orchestrator": {
+      "doc_path": "docs/developer/contracts/orchestrator.md",
+      "sources": [
+        {
+          "repo": "amplifier-core",
+          "path": "docs/contracts/ORCHESTRATOR_CONTRACT.md",
+          "exists": true,
+          "hash": "a41467f5484a93e9"
+        },
+        {
+          "repo": "amplifier-core",
+          "path": "amplifier_core/interfaces.py",
+          "exists": true,
+          "hash": "b777f19669e2a60c"
+        }
+      ]
+    },
+    "developer-contracts-context": {
+      "doc_path": "docs/developer/contracts/context.md",
+      "sources": [
+        {
+          "repo": "amplifier-core",
+          "path": "docs/contracts/CONTEXT_CONTRACT.md",
+          "exists": true,
+          "hash": "ed938138444061cb"
+        },
+        {
+          "repo": "amplifier-core",
+          "path": "amplifier_core/interfaces.py",
+          "exists": true,
+          "hash": "b777f19669e2a60c"
+        }
+      ]
+    },
+    "architecture": {
+      "doc_path": "docs/architecture/index.md",
+      "sources": [
+        {
+          "repo": "amplifier-core",
+          "path": "docs/DESIGN_PHILOSOPHY.md",
+          "exists": true,
+          "hash": "09f95174e27a37fc"
+        }
+      ]
+    },
+    "architecture-overview": {
+      "doc_path": "docs/architecture/overview.md",
+      "sources": [
+        {
+          "repo": "amplifier-core",
+          "path": "docs/DESIGN_PHILOSOPHY.md",
+          "exists": true,
+          "hash": "09f95174e27a37fc"
+        },
+        {
+          "repo": "amplifier-core",
+          "path": "README.md",
+          "exists": true,
+          "hash": "78e3ab20b0604c49"
+        }
+      ]
+    },
+    "architecture-kernel": {
+      "doc_path": "docs/architecture/kernel.md",
+      "sources": [
+        {
+          "repo": "amplifier-core",
+          "path": "docs/DESIGN_PHILOSOPHY.md",
+          "exists": true,
+          "hash": "09f95174e27a37fc"
+        },
+        {
+          "repo": "amplifier-core",
+          "path": "amplifier_core/__init__.py",
+          "exists": true,
+          "hash": "d2c5c204517fd5f8"
+        },
+        {
+          "repo": "amplifier-core",
+          "path": "amplifier_core/approval.py",
+          "exists": true,
+          "hash": "ec1b35d12bc2e698"
+        },
+        {
+          "repo": "amplifier-core",
+          "path": "amplifier_core/cancellation.py",
+          "exists": true,
+          "hash": "061aa8a4d9cea2b2"
+        },
+        {
+          "repo": "amplifier-core",
+          "path": "amplifier_core/cli.py",
+          "exists": true,
+          "hash": "83a3503f61a36453"
+        },
+        {
+          "repo": "amplifier-core",
+          "path": "amplifier_core/content_models.py",
+          "exists": true,
+          "hash": "379489cffa8cfefc"
+        },
+        {
+          "repo": "amplifier-core",
+          "path": "amplifier_core/coordinator.py",
+          "exists": true,
+          "hash": "ddead941b88aace6"
+        },
+        {
+          "repo": "amplifier-core",
+          "path": "amplifier_core/display.py",
+          "exists": true,
+          "hash": "273b356163bde84f"
+        },
+        {
+          "repo": "amplifier-core",
+          "path": "amplifier_core/events.py",
+          "exists": true,
+          "hash": "fae85103b83dfd25"
+        },
+        {
+          "repo": "amplifier-core",
+          "path": "amplifier_core/hooks.py",
+          "exists": true,
+          "hash": "9ef23c3cceb33413"
+        },
+        {
+          "repo": "amplifier-core",
+          "path": "amplifier_core/interfaces.py",
+          "exists": true,
+          "hash": "b777f19669e2a60c"
+        },
+        {
+          "repo": "amplifier-core",
+          "path": "amplifier_core/llm_errors.py",
+          "exists": true,
+          "hash": "2123a419c622d82c"
+        },
+        {
+          "repo": "amplifier-core",
+          "path": "amplifier_core/loader.py",
+          "exists": true,
+          "hash": "9f88cfdc971c5f52"
+        },
+        {
+          "repo": "amplifier-core",
+          "path": "amplifier_core/message_models.py",
+          "exists": true,
+          "hash": "cd7bc5ad2cd1dda2"
+        },
+        {
+          "repo": "amplifier-core",
+          "path": "amplifier_core/models.py",
+          "exists": true,
+          "hash": "55168832a62ecc9a"
+        },
+        {
+          "repo": "amplifier-core",
+          "path": "amplifier_core/module_sources.py",
+          "exists": true,
+          "hash": "4f50cf6c98dc283e"
+        },
+        {
+          "repo": "amplifier-core",
+          "path": "amplifier_core/pytest_plugin.py",
+          "exists": true,
+          "hash": "cb98b927c1040671"
+        },
+        {
+          "repo": "amplifier-core",
+          "path": "amplifier_core/session.py",
+          "exists": true,
+          "hash": "9e710f5777a37c47"
+        },
+        {
+          "repo": "amplifier-core",
+          "path": "amplifier_core/testing.py",
+          "exists": true,
+          "hash": "2ddd10b4340e0379"
+        }
+      ]
+    },
+    "architecture-modules": {
+      "doc_path": "docs/architecture/modules.md",
+      "sources": [
+        {
+          "repo": "amplifier-core",
+          "path": "docs/contracts/README.md",
+          "exists": true,
+          "hash": "e3719194c6408d79"
+        },
+        {
+          "repo": "amplifier-core",
+          "path": "amplifier_core/loader.py",
+          "exists": true,
+          "hash": "9f88cfdc971c5f52"
+        }
+      ]
+    },
+    "architecture-mount_plans": {
+      "doc_path": "docs/architecture/mount_plans.md",
+      "sources": [
+        {
+          "repo": "amplifier-core",
+          "path": "docs/specs/MOUNT_PLAN_SPECIFICATION.md",
+          "exists": true,
+          "hash": "82418e8d321ffc61"
+        },
+        {
+          "repo": "amplifier-core",
+          "path": "amplifier_core/models.py",
+          "exists": true,
+          "hash": "55168832a62ecc9a"
+        }
+      ]
+    },
+    "architecture-events": {
+      "doc_path": "docs/architecture/events.md",
+      "sources": [
+        {
+          "repo": "amplifier-core",
+          "path": "docs/specs/CONTRIBUTION_CHANNELS.md",
+          "exists": true,
+          "hash": "734ccfa08db6b318"
+        },
+        {
+          "repo": "amplifier-core",
+          "path": "amplifier_core/events.py",
+          "exists": true,
+          "hash": "fae85103b83dfd25"
+        }
+      ]
+    },
+    "api": {
+      "doc_path": "docs/api/index.md",
+      "sources": []
+    },
+    "api-core": {
+      "doc_path": "docs/api/core/index.md",
+      "sources": [
+        {
+          "repo": "amplifier-core",
+          "path": "amplifier_core/__init__.py",
+          "exists": true,
+          "hash": "d2c5c204517fd5f8"
+        }
+      ]
+    },
+    "api-core-session": {
+      "doc_path": "docs/api/core/session.md",
+      "sources": [
+        {
+          "repo": "amplifier-core",
+          "path": "amplifier_core/session.py",
+          "exists": true,
+          "hash": "9e710f5777a37c47"
+        }
+      ]
+    },
+    "api-core-coordinator": {
+      "doc_path": "docs/api/core/coordinator.md",
+      "sources": [
+        {
+          "repo": "amplifier-core",
+          "path": "amplifier_core/coordinator.py",
+          "exists": true,
+          "hash": "ddead941b88aace6"
+        }
+      ]
+    },
+    "api-core-hooks": {
+      "doc_path": "docs/api/core/hooks.md",
+      "sources": [
+        {
+          "repo": "amplifier-core",
+          "path": "amplifier_core/hooks.py",
+          "exists": true,
+          "hash": "9ef23c3cceb33413"
+        },
+        {
+          "repo": "amplifier-core",
+          "path": "docs/HOOKS_API.md",
+          "exists": true,
+          "hash": "dfd18e677b713322"
+        }
+      ]
+    },
+    "api-core-models": {
+      "doc_path": "docs/api/core/models.md",
+      "sources": [
+        {
+          "repo": "amplifier-core",
+          "path": "amplifier_core/models.py",
+          "exists": true,
+          "hash": "55168832a62ecc9a"
+        },
+        {
+          "repo": "amplifier-core",
+          "path": "amplifier_core/message_models.py",
+          "exists": true,
+          "hash": "cd7bc5ad2cd1dda2"
+        }
+      ]
+    },
+    "api-core-events": {
+      "doc_path": "docs/api/core/events.md",
+      "sources": [
+        {
+          "repo": "amplifier-core",
+          "path": "amplifier_core/events.py",
+          "exists": true,
+          "hash": "fae85103b83dfd25"
+        }
+      ]
+    },
+    "api-cli": {
+      "doc_path": "docs/api/cli/index.md",
+      "sources": [
+        {
+          "repo": "amplifier-app-cli",
+          "path": "amplifier_app_cli/main.py",
+          "exists": true,
+          "hash": "5282577419297c4c"
+        }
+      ]
+    },
+    "modules": {
+      "doc_path": "docs/modules/index.md",
+      "sources": [
+        {
+          "repo": "amplifier-core",
+          "path": "docs/contracts/README.md",
+          "exists": true,
+          "hash": "e3719194c6408d79"
+        }
+      ]
+    },
+    "modules-providers": {
+      "doc_path": "docs/modules/providers/index.md",
+      "sources": [
+        {
+          "repo": "amplifier-module-provider-anthropic",
+          "path": "README.md",
+          "exists": true,
+          "hash": "b242c750111b0ac3"
+        },
+        {
+          "repo": "amplifier-module-provider-azure-openai",
+          "path": "README.md",
+          "exists": true,
+          "hash": "2c0daa41d6927cc7"
+        },
+        {
+          "repo": "amplifier-module-provider-mock",
+          "path": "README.md",
+          "exists": true,
+          "hash": "f31148626066ae76"
+        },
+        {
+          "repo": "amplifier-module-provider-ollama",
+          "path": "README.md",
+          "exists": true,
+          "hash": "0344355c9b2b1584"
+        },
+        {
+          "repo": "amplifier-module-provider-openai",
+          "path": "README.md",
+          "exists": true,
+          "hash": "bb6e08b84fa67b9b"
+        },
+        {
+          "repo": "amplifier-module-provider-vllm",
+          "path": "README.md",
+          "exists": true,
+          "hash": "d87b8c5c11ac3420"
+        }
+      ]
+    },
+    "modules-providers-anthropic": {
+      "doc_path": "docs/modules/providers/anthropic.md",
+      "sources": [
+        {
+          "repo": "amplifier-module-provider-anthropic",
+          "path": "amplifier_module_provider_anthropic/__init__.py",
+          "exists": true,
+          "hash": "bb889deeb75a4018"
+        },
+        {
+          "repo": "amplifier-module-provider-anthropic",
+          "path": "README.md",
+          "exists": true,
+          "hash": "b242c750111b0ac3"
+        }
+      ]
+    },
+    "modules-providers-openai": {
+      "doc_path": "docs/modules/providers/openai.md",
+      "sources": [
+        {
+          "repo": "amplifier-module-provider-openai",
+          "path": "amplifier_module_provider_openai/__init__.py",
+          "exists": true,
+          "hash": "22aa1e726002e0fd"
+        },
+        {
+          "repo": "amplifier-module-provider-openai",
+          "path": "README.md",
+          "exists": true,
+          "hash": "bb6e08b84fa67b9b"
+        }
+      ]
+    },
+    "modules-providers-azure": {
+      "doc_path": "docs/modules/providers/azure.md",
+      "sources": [
+        {
+          "repo": "amplifier-module-provider-azure-openai",
+          "path": "amplifier_module_provider_azure_openai/__init__.py",
+          "exists": true,
+          "hash": "0ef684fbb6a452d4"
+        },
+        {
+          "repo": "amplifier-module-provider-azure-openai",
+          "path": "README.md",
+          "exists": true,
+          "hash": "2c0daa41d6927cc7"
+        }
+      ]
+    },
+    "modules-providers-ollama": {
+      "doc_path": "docs/modules/providers/ollama.md",
+      "sources": [
+        {
+          "repo": "amplifier-module-provider-ollama",
+          "path": "amplifier_module_provider_ollama/__init__.py",
+          "exists": true,
+          "hash": "162353368c59912b"
+        },
+        {
+          "repo": "amplifier-module-provider-ollama",
+          "path": "README.md",
+          "exists": true,
+          "hash": "0344355c9b2b1584"
+        }
+      ]
+    },
+    "modules-providers-vllm": {
+      "doc_path": "docs/modules/providers/vllm.md",
+      "sources": [
+        {
+          "repo": "amplifier-module-provider-vllm",
+          "path": "amplifier_module_provider_vllm/__init__.py",
+          "exists": true,
+          "hash": "ae7e0d21580860cc"
+        },
+        {
+          "repo": "amplifier-module-provider-vllm",
+          "path": "README.md",
+          "exists": true,
+          "hash": "d87b8c5c11ac3420"
+        }
+      ]
+    },
+    "modules-providers-mock": {
+      "doc_path": "docs/modules/providers/mock.md",
+      "sources": [
+        {
+          "repo": "amplifier-module-provider-mock",
+          "path": "amplifier_module_provider_mock/__init__.py",
+          "exists": true,
+          "hash": "9b57a49419f2124a"
+        },
+        {
+          "repo": "amplifier-module-provider-mock",
+          "path": "README.md",
+          "exists": true,
+          "hash": "f31148626066ae76"
+        }
+      ]
+    },
+    "modules-tools": {
+      "doc_path": "docs/modules/tools/index.md",
+      "sources": [
+        {
+          "repo": "amplifier-module-tool-bash",
+          "path": "README.md",
+          "exists": true,
+          "hash": "c295f40ee07ea73c"
+        },
+        {
+          "repo": "amplifier-module-tool-filesystem",
+          "path": "README.md",
+          "exists": true,
+          "hash": "8b3777ec256498f5"
+        },
+        {
+          "repo": "amplifier-module-tool-search",
+          "path": "README.md",
+          "exists": true,
+          "hash": "0743af1d1c7312da"
+        },
+        {
+          "repo": "amplifier-module-tool-task",
+          "path": "README.md",
+          "exists": true,
+          "hash": "4b38970dc621eb97"
+        },
+        {
+          "repo": "amplifier-module-tool-todo",
+          "path": "README.md",
+          "exists": true,
+          "hash": "7ee055a0d528a88a"
+        },
+        {
+          "repo": "amplifier-module-tool-web",
+          "path": "README.md",
+          "exists": true,
+          "hash": "1181ec2c696cd001"
+        }
+      ]
+    },
+    "modules-tools-filesystem": {
+      "doc_path": "docs/modules/tools/filesystem.md",
+      "sources": [
+        {
+          "repo": "amplifier-module-tool-filesystem",
+          "path": "amplifier_module_tool_filesystem/__init__.py",
+          "exists": true,
+          "hash": "b541d2c7d0577777"
+        },
+        {
+          "repo": "amplifier-module-tool-filesystem",
+          "path": "amplifier_module_tool_filesystem/edit.py",
+          "exists": true,
+          "hash": "575b2587a8aa1d97"
+        },
+        {
+          "repo": "amplifier-module-tool-filesystem",
+          "path": "amplifier_module_tool_filesystem/path_validation.py",
+          "exists": true,
+          "hash": "637cb57420fd1ea9"
+        },
+        {
+          "repo": "amplifier-module-tool-filesystem",
+          "path": "amplifier_module_tool_filesystem/read.py",
+          "exists": true,
+          "hash": "a96df4ff9f33fa64"
+        },
+        {
+          "repo": "amplifier-module-tool-filesystem",
+          "path": "amplifier_module_tool_filesystem/write.py",
+          "exists": true,
+          "hash": "edccf1395beafea4"
+        },
+        {
+          "repo": "amplifier-module-tool-filesystem",
+          "path": "README.md",
+          "exists": true,
+          "hash": "8b3777ec256498f5"
+        }
+      ]
+    },
+    "modules-tools-bash": {
+      "doc_path": "docs/modules/tools/bash.md",
+      "sources": [
+        {
+          "repo": "amplifier-module-tool-bash",
+          "path": "amplifier_module_tool_bash/__init__.py",
+          "exists": true,
+          "hash": "99dcc5a10a3280b1"
+        },
+        {
+          "repo": "amplifier-module-tool-bash",
+          "path": "README.md",
+          "exists": true,
+          "hash": "c295f40ee07ea73c"
+        }
+      ]
+    },
+    "modules-tools-web": {
+      "doc_path": "docs/modules/tools/web.md",
+      "sources": [
+        {
+          "repo": "amplifier-module-tool-web",
+          "path": "amplifier_module_tool_web/__init__.py",
+          "exists": true,
+          "hash": "32a229bf7df5cf3b"
+        },
+        {
+          "repo": "amplifier-module-tool-web",
+          "path": "README.md",
+          "exists": true,
+          "hash": "1181ec2c696cd001"
+        }
+      ]
+    },
+    "modules-tools-search": {
+      "doc_path": "docs/modules/tools/search.md",
+      "sources": [
+        {
+          "repo": "amplifier-module-tool-search",
+          "path": "amplifier_module_tool_search/__init__.py",
+          "exists": true,
+          "hash": "660a295700e64d35"
+        },
+        {
+          "repo": "amplifier-module-tool-search",
+          "path": "README.md",
+          "exists": true,
+          "hash": "0743af1d1c7312da"
+        }
+      ]
+    },
+    "modules-tools-task": {
+      "doc_path": "docs/modules/tools/task.md",
+      "sources": [
+        {
+          "repo": "amplifier-module-tool-task",
+          "path": "amplifier_module_tool_task/__init__.py",
+          "exists": true,
+          "hash": "9c531e9759a62307"
+        },
+        {
+          "repo": "amplifier-module-tool-task",
+          "path": "README.md",
+          "exists": true,
+          "hash": "4b38970dc621eb97"
+        }
+      ]
+    },
+    "modules-tools-todo": {
+      "doc_path": "docs/modules/tools/todo.md",
+      "sources": [
+        {
+          "repo": "amplifier-module-tool-todo",
+          "path": "amplifier_module_tool_todo/__init__.py",
+          "exists": true,
+          "hash": "a5e5b1979fe9db69"
+        },
+        {
+          "repo": "amplifier-module-tool-todo",
+          "path": "README.md",
+          "exists": true,
+          "hash": "7ee055a0d528a88a"
+        }
+      ]
+    },
+    "modules-orchestrators": {
+      "doc_path": "docs/modules/orchestrators/index.md",
+      "sources": [
+        {
+          "repo": "amplifier-module-loop-basic",
+          "path": "README.md",
+          "exists": true,
+          "hash": "99677e77304d47f2"
+        },
+        {
+          "repo": "amplifier-module-loop-events",
+          "path": "README.md",
+          "exists": true,
+          "hash": "b7f4e6425089d88e"
+        },
+        {
+          "repo": "amplifier-module-loop-streaming",
+          "path": "README.md",
+          "exists": true,
+          "hash": "f29fceacb3586a7d"
+        }
+      ]
+    },
+    "modules-orchestrators-loop_basic": {
+      "doc_path": "docs/modules/orchestrators/loop_basic.md",
+      "sources": [
+        {
+          "repo": "amplifier-module-loop-basic",
+          "path": "amplifier_module_loop_basic/__init__.py",
+          "exists": true,
+          "hash": "e2373a7a72d9c420"
+        },
+        {
+          "repo": "amplifier-module-loop-basic",
+          "path": "README.md",
+          "exists": true,
+          "hash": "99677e77304d47f2"
+        }
+      ]
+    },
+    "modules-orchestrators-loop_streaming": {
+      "doc_path": "docs/modules/orchestrators/loop_streaming.md",
+      "sources": [
+        {
+          "repo": "amplifier-module-loop-streaming",
+          "path": "amplifier_module_loop_streaming/__init__.py",
+          "exists": true,
+          "hash": "10dd62f31ec512b0"
+        },
+        {
+          "repo": "amplifier-module-loop-streaming",
+          "path": "README.md",
+          "exists": true,
+          "hash": "f29fceacb3586a7d"
+        }
+      ]
+    },
+    "modules-orchestrators-loop_events": {
+      "doc_path": "docs/modules/orchestrators/loop_events.md",
+      "sources": [
+        {
+          "repo": "amplifier-module-loop-events",
+          "path": "amplifier_module_loop_events/__init__.py",
+          "exists": true,
+          "hash": "0afe2b7184f04455"
+        },
+        {
+          "repo": "amplifier-module-loop-events",
+          "path": "README.md",
+          "exists": true,
+          "hash": "b7f4e6425089d88e"
+        }
+      ]
+    },
+    "modules-contexts": {
+      "doc_path": "docs/modules/contexts/index.md",
+      "sources": [
+        {
+          "repo": "amplifier-module-context-persistent",
+          "path": "README.md",
+          "exists": true,
+          "hash": "484df58a3412b239"
+        },
+        {
+          "repo": "amplifier-module-context-simple",
+          "path": "README.md",
+          "exists": true,
+          "hash": "c283a74c4f449fac"
+        }
+      ]
+    },
+    "modules-contexts-simple": {
+      "doc_path": "docs/modules/contexts/simple.md",
+      "sources": [
+        {
+          "repo": "amplifier-module-context-simple",
+          "path": "amplifier_module_context_simple/__init__.py",
+          "exists": true,
+          "hash": "6a5c81e9a75cd1d6"
+        },
+        {
+          "repo": "amplifier-module-context-simple",
+          "path": "README.md",
+          "exists": true,
+          "hash": "c283a74c4f449fac"
+        }
+      ]
+    },
+    "modules-contexts-persistent": {
+      "doc_path": "docs/modules/contexts/persistent.md",
+      "sources": [
+        {
+          "repo": "amplifier-module-context-persistent",
+          "path": "amplifier_module_context_persistent/__init__.py",
+          "exists": true,
+          "hash": "2b47229f41ef8be8"
+        },
+        {
+          "repo": "amplifier-module-context-persistent",
+          "path": "README.md",
+          "exists": true,
+          "hash": "484df58a3412b239"
+        }
+      ]
+    },
+    "modules-hooks": {
+      "doc_path": "docs/modules/hooks/index.md",
+      "sources": [
+        {
+          "repo": "amplifier-module-hooks-approval",
+          "path": "README.md",
+          "exists": true,
+          "hash": "83c41ad4a86cc235"
+        },
+        {
+          "repo": "amplifier-module-hooks-backup",
+          "path": "README.md",
+          "exists": true,
+          "hash": "c8cf08212d0d2f77"
+        },
+        {
+          "repo": "amplifier-module-hooks-logging",
+          "path": "README.md",
+          "exists": true,
+          "hash": "4de9f77054c39ea9"
+        },
+        {
+          "repo": "amplifier-module-hooks-redaction",
+          "path": "README.md",
+          "exists": true,
+          "hash": "ef231434c07dd338"
+        },
+        {
+          "repo": "amplifier-module-hooks-scheduler-cost-aware",
+          "path": "README.md",
+          "exists": true,
+          "hash": "4fab5032e18042ff"
+        },
+        {
+          "repo": "amplifier-module-hooks-scheduler-heuristic",
+          "path": "README.md",
+          "exists": true,
+          "hash": "c85baadc2c612c4a"
+        },
+        {
+          "repo": "amplifier-module-hooks-status-context",
+          "path": "README.md",
+          "exists": true,
+          "hash": "392b4e01398d4b4c"
+        },
+        {
+          "repo": "amplifier-module-hooks-streaming-ui",
+          "path": "README.md",
+          "exists": true,
+          "hash": "15d57ffaa32fe493"
+        },
+        {
+          "repo": "amplifier-module-hooks-todo-reminder",
+          "path": "README.md",
+          "exists": true,
+          "hash": "00c5f1cf919cdd08"
+        }
+      ]
+    },
+    "modules-hooks-logging": {
+      "doc_path": "docs/modules/hooks/logging.md",
+      "sources": [
+        {
+          "repo": "amplifier-module-hooks-logging",
+          "path": "amplifier_module_hooks_logging/__init__.py",
+          "exists": true,
+          "hash": "071023377dc2bde3"
+        },
+        {
+          "repo": "amplifier-module-hooks-logging",
+          "path": "README.md",
+          "exists": true,
+          "hash": "4de9f77054c39ea9"
+        }
+      ]
+    },
+    "modules-hooks-approval": {
+      "doc_path": "docs/modules/hooks/approval.md",
+      "sources": [
+        {
+          "repo": "amplifier-module-hooks-approval",
+          "path": "amplifier_module_hooks_approval/__init__.py",
+          "exists": true,
+          "hash": "5ed96acb19df94ec"
+        },
+        {
+          "repo": "amplifier-module-hooks-approval",
+          "path": "README.md",
+          "exists": true,
+          "hash": "83c41ad4a86cc235"
+        }
+      ]
+    },
+    "modules-hooks-redaction": {
+      "doc_path": "docs/modules/hooks/redaction.md",
+      "sources": [
+        {
+          "repo": "amplifier-module-hooks-redaction",
+          "path": "amplifier_module_hooks_redaction/__init__.py",
+          "exists": true,
+          "hash": "ef7f6d61d4b8f5ba"
+        },
+        {
+          "repo": "amplifier-module-hooks-redaction",
+          "path": "README.md",
+          "exists": true,
+          "hash": "ef231434c07dd338"
+        }
+      ]
+    },
+    "modules-hooks-backup": {
+      "doc_path": "docs/modules/hooks/backup.md",
+      "sources": [
+        {
+          "repo": "amplifier-module-hooks-backup",
+          "path": "amplifier_module_hooks_backup/__init__.py",
+          "exists": true,
+          "hash": "bf2a542825636340"
+        },
+        {
+          "repo": "amplifier-module-hooks-backup",
+          "path": "README.md",
+          "exists": true,
+          "hash": "c8cf08212d0d2f77"
+        }
+      ]
+    },
+    "modules-hooks-scheduler_cost_aware": {
+      "doc_path": "docs/modules/hooks/scheduler_cost_aware.md",
+      "sources": [
+        {
+          "repo": "amplifier-module-hooks-scheduler-cost-aware",
+          "path": "amplifier_module_hooks_scheduler_cost_aware/__init__.py",
+          "exists": true,
+          "hash": "2986db542830411c"
+        },
+        {
+          "repo": "amplifier-module-hooks-scheduler-cost-aware",
+          "path": "README.md",
+          "exists": true,
+          "hash": "4fab5032e18042ff"
+        }
+      ]
+    },
+    "modules-hooks-scheduler_heuristic": {
+      "doc_path": "docs/modules/hooks/scheduler_heuristic.md",
+      "sources": [
+        {
+          "repo": "amplifier-module-hooks-scheduler-heuristic",
+          "path": "amplifier_module_hooks_scheduler_heuristic/__init__.py",
+          "exists": true,
+          "hash": "91584295c8d50e90"
+        },
+        {
+          "repo": "amplifier-module-hooks-scheduler-heuristic",
+          "path": "README.md",
+          "exists": true,
+          "hash": "c85baadc2c612c4a"
+        }
+      ]
+    },
+    "modules-hooks-status_context": {
+      "doc_path": "docs/modules/hooks/status_context.md",
+      "sources": [
+        {
+          "repo": "amplifier-module-hooks-status-context",
+          "path": "amplifier_module_hooks_status_context/__init__.py",
+          "exists": true,
+          "hash": "f8895946162a4aa9"
+        },
+        {
+          "repo": "amplifier-module-hooks-status-context",
+          "path": "README.md",
+          "exists": true,
+          "hash": "392b4e01398d4b4c"
+        }
+      ]
+    },
+    "modules-hooks-streaming_ui": {
+      "doc_path": "docs/modules/hooks/streaming_ui.md",
+      "sources": [
+        {
+          "repo": "amplifier-module-hooks-streaming-ui",
+          "path": "amplifier_module_hooks_streaming_ui/__init__.py",
+          "exists": true,
+          "hash": "f7305e0289bc523f"
+        },
+        {
+          "repo": "amplifier-module-hooks-streaming-ui",
+          "path": "README.md",
+          "exists": true,
+          "hash": "15d57ffaa32fe493"
+        }
+      ]
+    },
+    "modules-hooks-todo_reminder": {
+      "doc_path": "docs/modules/hooks/todo_reminder.md",
+      "sources": [
+        {
+          "repo": "amplifier-module-hooks-todo-reminder",
+          "path": "amplifier_module_hooks_todo_reminder/__init__.py",
+          "exists": true,
+          "hash": "b5cb55c0fa409920"
+        },
+        {
+          "repo": "amplifier-module-hooks-todo-reminder",
+          "path": "README.md",
+          "exists": true,
+          "hash": "00c5f1cf919cdd08"
+        }
+      ]
+    },
+    "ecosystem": {
+      "doc_path": "docs/ecosystem/index.md",
+      "sources": [
+        {
+          "repo": "amplifier",
+          "path": "docs/MODULES.md",
+          "exists": true,
+          "hash": "6313cff027898ea2"
+        },
+        {
+          "repo": "amplifier-core",
+          "path": "docs/contracts/README.md",
+          "exists": true,
+          "hash": "e3719194c6408d79"
+        }
+      ]
+    },
+    "showcase": {
+      "doc_path": "docs/showcase/index.md",
+      "sources": []
+    },
+    "community": {
+      "doc_path": "docs/community/index.md",
+      "sources": []
+    },
+    "community-contributing": {
+      "doc_path": "docs/community/contributing.md",
+      "sources": [
+        {
+          "repo": "amplifier-core",
+          "path": "README.md",
+          "exists": true,
+          "hash": "78e3ab20b0604c49"
+        }
+      ]
+    },
+    "community-roadmap": {
+      "doc_path": "docs/community/roadmap.md",
+      "sources": [
+        {
+          "repo": "amplifier",
+          "path": "ROADMAP.md",
+          "exists": true,
+          "hash": "cc3d3132a44299d1"
+        }
+      ]
     }
-  },
-  "last_updated": "2026-02-14T04:01:35.817576+00:00"
+  }
 }
