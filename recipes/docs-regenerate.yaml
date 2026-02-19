@@ -1,7 +1,33 @@
 # Documentation Regeneration Recipe - v4 with Hash-Diff Selection
+#
+# =============================================================================
+# CHANGELOG
+# =============================================================================
+#
+# v4.1.0 (2026-02-19):
+#   - BUGFIX: Stale staging files from a failed/denied run contaminate next run
+#     * ROOT CAUSE: setup step only did `mkdir -p`, leaving files from previous
+#       runs in staging; the diff-filter would then process them and produce
+#       spurious "no mapping found" rejections for each stale file.
+#     * FIX: Changed setup to `rm -rf ... && mkdir -p ...` so staging is always
+#       created fresh on every run.
+#   - BUGFIX: zero-selection runs caused zen-architect to regenerate all docs
+#     * ROOT CAUSE: regenerate-docs had no guard on empty doc_paths; when
+#       selected_docs.count == 0 it treated "no input" as "do everything" and
+#       produced up to 63 files against a batch_limit of 10.
+#     * FIX: Added check-selection step after select-docs with
+#       `on_error: skip_remaining`; exits via sys.exit(1) on count == 0 so the
+#       entire stage is skipped cleanly with a clear message.
+#   - BUGFIX: baseline-hashes.json not committed atomically with doc files
+#     * ROOT CAUSE: commit-changes prompt said "also stage and include" but was
+#       not explicit enough; git-ops left baseline-hashes.json unstaged,
+#       creating a window where docs and baseline were out of sync.
+#     * FIX: Commit prompt now contains an explicit IMPORTANT block instructing
+#       git-ops to run `git add baseline-hashes.json` before committing.
+#
 name: "docs-regenerate"
 description: "Regenerate documentation using source hash diffs for incremental updates, with evidence validation and approval-gated commit"
-version: "4.0.0"
+version: "4.1.0"
 tags: ["documentation", "regeneration", "incremental", "evidence-based"]
 
 context:
@@ -33,7 +59,7 @@ stages:
       - id: "setup"
         type: "bash"
         command: |
-          mkdir -p {{output_dir}}/staging
+          rm -rf {{output_dir}}/staging && mkdir -p {{output_dir}}/staging
           echo 'Setup complete. Mode: {{mode}}'
         output: "setup_result"
         timeout: 30
@@ -126,6 +152,31 @@ stages:
         output: "selected_docs"
         parse_json: true
         timeout: 60
+
+      # Early-exit guard: halt cleanly if nothing was selected
+      - id: "check-selection"
+        type: "bash"
+        command: |
+          python3 << 'EOF'
+          import json, sys
+
+          selected = json.loads('''{{selected_docs}}''')
+          count = selected.get("count", 0)
+
+          if count == 0:
+              print(json.dumps({
+                  "status": "nothing_to_do",
+                  "message": "All docs are up to date. Nothing to regenerate.",
+                  "count": 0
+              }))
+              sys.exit(1)  # Triggers on_error: skip_remaining — halts stage cleanly
+
+          print(json.dumps({"status": "proceed", "count": count}))
+          EOF
+        output: "check_selection_result"
+        parse_json: true
+        on_error: "skip_remaining"
+        timeout: 10
 
       - id: "read-existing-docs"
         type: "bash"
@@ -583,7 +634,9 @@ stages:
           Evidence validation results: {{evidence_result}}
           Diff filter results: {{diff_filter_result}}
 
-          Also stage and include baseline-hashes.json in the commit (it was updated by the previous step).
+          IMPORTANT: You MUST stage and include `baseline-hashes.json` in this commit.
+          Run `git add baseline-hashes.json` before committing. The docs and baseline
+          must always be committed together atomically.
 
           Create a commit with:
           - Type prefix "docs:"
