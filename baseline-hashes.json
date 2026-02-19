@@ -1,5 +1,5 @@
 {
-  "last_updated": "2026-02-17T16:56:09.345902+00:00",
+  "last_updated": "",
   "sections": {
     "index": {
       "doc_path": "docs/index.md",
@@ -211,7 +211,7 @@
           "repo": "amplifier-foundation",
           "path": "agents/bug-hunter.md",
           "exists": true,
-          "hash": "7ea5d1c69534fd7e"
+          "hash": "f8f16aae459c7b7e"
         },
         {
           "repo": "amplifier-foundation",
@@ -241,7 +241,7 @@
           "repo": "amplifier-foundation",
           "path": "agents/git-ops.md",
           "exists": true,
-          "hash": "eb20d836492701fe"
+          "hash": "62e19ed3cfeb1b13"
         },
         {
           "repo": "amplifier-foundation",
@@ -628,7 +628,7 @@
           "repo": "amplifier-foundation",
           "path": "amplifier_foundation/spawn_utils.py",
           "exists": true,
-          "hash": "1424b653f545ba94"
+          "hash": "4f4bff9ee8817658"
         },
         {
           "repo": "amplifier-foundation",
@@ -980,7 +980,7 @@
           "repo": "amplifier-app-cli",
           "path": "amplifier_app_cli/session_runner.py",
           "exists": true,
-          "hash": "e67966db0434ba82"
+          "hash": "3a3858b8ac5c10fe"
         },
         {
           "repo": "amplifier-app-cli",
@@ -1206,7 +1206,7 @@
           "repo": "amplifier-module-tool-bash",
           "path": "README.md",
           "exists": true,
-          "hash": "c295f40ee07ea73c"
+          "hash": "a71cfb966d602034"
         },
         {
           "repo": "amplifier-module-tool-filesystem",
@@ -1703,7 +1703,7 @@
           "repo": "amplifier-module-provider-openai",
           "path": "amplifier_module_provider_openai/__init__.py",
           "exists": true,
-          "hash": "22aa1e726002e0fd"
+          "hash": "abd58c8e2c42dfa1"
         },
         {
           "repo": "amplifier-module-provider-openai",
@@ -1788,7 +1788,7 @@
           "repo": "amplifier-module-tool-bash",
           "path": "README.md",
           "exists": true,
-          "hash": "c295f40ee07ea73c"
+          "hash": "a71cfb966d602034"
         },
         {
           "repo": "amplifier-module-tool-filesystem",
@@ -1870,13 +1870,13 @@
           "repo": "amplifier-module-tool-bash",
           "path": "amplifier_module_tool_bash/__init__.py",
           "exists": true,
-          "hash": "99dcc5a10a3280b1"
+          "hash": "2a2e0dbf1bee8fe3"
         },
         {
           "repo": "amplifier-module-tool-bash",
           "path": "README.md",
           "exists": true,
-          "hash": "c295f40ee07ea73c"
+          "hash": "a71cfb966d602034"
         }
       ]
     },
@@ -2292,7 +2292,7 @@
           "repo": "amplifier",
           "path": "docs/MODULES.md",
           "exists": true,
-          "hash": "6313cff027898ea2"
+          "hash": "cb4719cda4df7780"
         },
         {
           "repo": "amplifier-core",
