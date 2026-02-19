@@ -31,7 +31,7 @@ from typing import Any, Callable
 
 async def mount(
     coordinator: "ModuleCoordinator",
-    config: dict[str, Any] | None = None
+    config: dict
 ) -> Callable | None:
     """
     Mount the module.
@@ -67,14 +67,40 @@ Tools provide capabilities to agents.
 ```python
 from amplifier_core.interfaces import Tool
 from amplifier_core.models import ToolResult
+from typing import runtime_checkable, Protocol, Any
 
-class Tool:
-    name: str               # Unique identifier
-    description: str        # Human-readable description
+@runtime_checkable
+class Tool(Protocol):
+    @property
+    def name(self) -> str:
+        """Unique identifier."""
+        ...
+
+    @property
+    def description(self) -> str:
+        """Human-readable description."""
+        ...
 
     async def execute(self, input: dict[str, Any]) -> ToolResult:
         """Execute the tool with given input."""
         ...
+```
+
+Tools may optionally provide a JSON schema for input validation:
+
+```python
+def get_schema(self) -> dict:
+    """Return JSON schema for tool input (optional but recommended)."""
+    return {
+        "type": "object",
+        "properties": {
+            "expression": {
+                "type": "string",
+                "description": "Mathematical expression to evaluate"
+            }
+        },
+        "required": ["expression"]
+    }
 ```
 
 ### Example: Calculator Tool
@@ -154,9 +180,12 @@ Providers integrate LLM backends.
 from amplifier_core.interfaces import Provider
 from amplifier_core.models import ProviderInfo, ModelInfo
 from amplifier_core.message_models import ChatRequest, ChatResponse, ToolCall
+from typing import runtime_checkable, Protocol
 
-class Provider:
-    name: str
+@runtime_checkable
+class Provider(Protocol):
+    @property
+    def name(self) -> str: ...
 
     def get_info(self) -> ProviderInfo: ...
     async def list_models(self) -> list[ModelInfo]: ...
@@ -245,6 +274,19 @@ async def handler(event: str, data: dict) -> HookResult:
 | `modify` | Modify event data |
 | `inject_context` | Add to conversation |
 | `ask_user` | Request approval |
+
+### Common Events
+
+| Event | Trigger | Data Includes |
+|-------|---------|---------------|
+| `execution:start` | Orchestrator execution begins | prompt |
+| `execution:end` | Orchestrator execution completes | response |
+| `prompt:submit` | User input submitted | prompt text |
+| `tool:pre` | Before tool execution | tool_name, tool_input |
+| `tool:post` | After tool execution | tool_name, tool_result |
+| `tool:error` | Tool execution failed | tool_name, error |
+| `provider:request` | LLM call starting | provider, messages |
+| `provider:response` | LLM call complete | provider, response, usage |
 
 ### Example: Timing Hook
 
@@ -383,6 +425,8 @@ class SimpleOrchestrator:
 
 For real-time output, use a streaming orchestrator (e.g., `loop-streaming`). Streaming orchestrators deliver tokens via hooks as they arrive from the provider. See [amplifier-module-loop-streaming](https://github.com/microsoft/amplifier-module-loop-streaming) for the reference implementation.
 
+For event-driven tool selection (scheduler integration), use `loop-events`. This orchestrator queries hook-registered schedulers for tool/agent decisions via a `decision:tool_resolution` event, reducing multiple scheduler responses to a single decision. See [amplifier-module-loop-events](https://github.com/microsoft/amplifier-module-loop-events) for the reference implementation.
+
 ## Creating a Context Manager
 
 Context managers handle conversation memory.
@@ -466,6 +510,35 @@ class SimpleContext:
 ```
 
 > **Critical**: Compaction must be **ephemeral** (non-destructive). `get_messages_for_request()` returns a compacted view without modifying stored history. `get_messages()` always returns the full, unmodified conversation for debugging and session resume.
+
+### File-Based Context Managers
+
+For context managers with persistent file storage (e.g., `context-persistent`), `set_messages()` behavior differs on session resume:
+
+```python
+async def set_messages(self, messages: list[dict]) -> None:
+    """
+    Set messages - behavior depends on whether we loaded from file.
+
+    If we already loaded from our own file (session resume):
+      - IGNORE this call to preserve our complete history
+      - CLI's filtered transcript would lose system/developer messages
+
+    If this is a fresh session or migration:
+      - Accept the messages and write to our file
+    """
+    if self._loaded_from_file:
+        # Already have complete history - ignore CLI's filtered transcript
+        return
+
+    # Fresh session: accept messages
+    self._messages = list(messages)
+    self._write_to_file()
+```
+
+**Why this pattern?** The CLI's `SessionStore` saves a filtered transcript (no system/developer messages). File-based context managers save the complete history. On resume, the context manager's file is authoritative — this prevents loss of system context during session resume.
+
+The reference file-based implementation is [amplifier-module-context-persistent](https://github.com/microsoft/amplifier-module-context-persistent), which loads configured context files (e.g., `AGENTS.md`, `PROJECT.md`) at session start and persists the full conversation history across sessions.
 
 ## Observability
 

@@ -64,17 +64,17 @@ The **amplifier-foundation** library provides higher-level functionality for app
 
 ## Quick Reference
 
-**Total Official Components**: 30+
+**Total Official Components**: 45+
 
 | Category | Count | Examples |
 |----------|-------|----------|
-| Providers | 6 | Anthropic, OpenAI, Azure, Ollama, vLLM, Mock |
-| Tools | 6 | Filesystem, Bash, Web, Search, Task, Todo |
+| Providers | 8 | Anthropic, OpenAI, Azure, Gemini, Ollama, GitHub Copilot, vLLM, Mock |
+| Tools | 9 | Filesystem, Bash, Web, Search, Task, Todo, Skills, MCP, Slash Command |
 | Orchestrators | 3 | Basic, Streaming, Events |
 | Contexts | 2 | Simple, Persistent |
-| Hooks | 9 | Logging, Approval, Redaction, Backup, Streaming UI, Schedulers, etc. |
+| Hooks | 11 | Logging, Approval, Redaction, Backup, Streaming UI, Schedulers, etc. |
 | Libraries | 1 | amplifier-foundation |
-| Collections | 4 | Toolkit, Design Intelligence, Recipes, Issues |
+| Bundles | 12 | Recipes, Design Intelligence, Python Dev, Stories, Superpowers, Shadow, etc. |
 
 ---
 
