@@ -9,6 +9,9 @@ theme:
   name: material
   logo: assets/logo.png
   favicon: assets/favicon.ico
+  font:
+    text: Inter
+    code: JetBrains Mono
   palette:
     - media: "(prefers-color-scheme)"
       toggle:
@@ -29,6 +32,8 @@ theme:
         icon: material/brightness-4
         name: Switch to system preference
   features:
+    - navigation.instant
+    - navigation.instant.progress
     - content.code.copy
     - content.code.annotate
     - navigation.tabs

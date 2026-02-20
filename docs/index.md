@@ -6,9 +6,7 @@ description: Amplify human capability through AI partnership
 # Amplifier
 
 <div class="hero">
-<p style="font-size: 1.4rem; opacity: 0.9;">
-Amplify human capability through AI partnership
-</p>
+<p>Amplify human capability through AI partnership</p>
 </div>
 
 **Amplifier** is an experimental platform that multiplies what you can explore and build by making AI assistants dramatically more effective through domain knowledge, context, and modular capabilities.
@@ -47,21 +45,25 @@ Amplifier creates a supercharged environment where AI assistants become dramatic
 <div class="grid">
 
 <div class="card">
+<span class="card__icon">🧠</span>
 <h3>Knowledge & Context</h3>
 <p>Provides AI with your domain knowledge, patterns, and previous work. Every interaction builds on what came before.</p>
 </div>
 
 <div class="card">
+<span class="card__icon">⚡</span>
 <h3>Parallel Exploration</h3>
 <p>Test multiple approaches simultaneously. Where you might explore 1-2 solutions, Amplifier enables exploring 20 in parallel.</p>
 </div>
 
 <div class="card">
+<span class="card__icon">🔩</span>
 <h3>Modular Capabilities</h3>
 <p>Swap providers, tools, and execution strategies. Build custom workflows that fit your needs.</p>
 </div>
 
 <div class="card">
+<span class="card__icon">📈</span>
 <h3>Compounding Progress</h3>
 <p>Each capability you add makes the system more capable of building the next. Fast iteration, learning, and evolution.</p>
 </div>
@@ -75,21 +77,25 @@ Modular architecture inspired by the Linux kernel model:
 <div class="grid">
 
 <div class="card">
+<span class="card__icon">🧩</span>
 <h3>Modular by Design</h3>
 <p>Swap providers (Anthropic, OpenAI, Azure, Ollama), tools, and orchestration strategies without changing your code.</p>
 </div>
 
 <div class="card">
+<span class="card__icon">⚙️</span>
 <h3>Kernel Philosophy</h3>
 <p>Tiny, stable core (~2,600 lines) that rarely changes. All features live at the edges as replaceable modules.</p>
 </div>
 
 <div class="card">
+<span class="card__icon">🤖</span>
 <h3>Agent Delegation</h3>
 <p>Spawn specialized sub-agents for focused tasks. Each agent has its own tools, context, and capabilities.</p>
 </div>
 
 <div class="card">
+<span class="card__icon">📋</span>
 <h3>Profile System</h3>
 <p>Pre-configured capability sets from minimal to full-featured. Create your own profiles for repeatable workflows.</p>
 </div>
@@ -153,21 +159,25 @@ This is an experimental journey. We're building Amplifier with Amplifier, progre
 <div class="grid">
 
 <div class="card">
+<span class="card__icon">🔭</span>
 <h3>Explorers</h3>
 <p>Fork and build your own amplification systems. Share discoveries and push boundaries of what's possible.</p>
 </div>
 
 <div class="card">
+<span class="card__icon">👥</span>
 <h3>Teams</h3>
 <p>Share profiles and collections across your organization. Consistent AI workflows for everyone.</p>
 </div>
 
 <div class="card">
+<span class="card__icon">💻</span>
 <h3>Developers</h3>
 <p>Build AI-powered development workflows. Code review, refactoring, debugging, and documentation assistance.</p>
 </div>
 
 <div class="card">
+<span class="card__icon">🔧</span>
 <h3>Module Authors</h3>
 <p>Create custom providers, tools, or hooks. Stable contracts make modules independently developable.</p>
 </div>
