@@ -15,7 +15,7 @@ Manages hook registration and event emission.
 
 ### Methods
 
-#### `register(event, handler)`
+#### `register(event, handler, priority=0, name=None)`
 
 Register a handler for an event.
 
@@ -26,12 +26,22 @@ async def my_handler(event: str, data: dict) -> HookResult:
 coordinator.hooks.register("tool:pre", my_handler)
 ```
 
-#### `emit(event, data) -> list[HookResult]`
+#### `emit(event, data) -> HookResult`
 
 Emit an event to all registered handlers.
 
 ```python
-results = await coordinator.hooks.emit("tool:pre", {"name": "bash"})
+result = await coordinator.hooks.emit("tool:pre", {"name": "bash"})
+```
+
+#### `emit_and_collect(event, data, timeout=1.0) -> list[Any]`
+
+Emit event and collect data from all handler responses. Unlike `emit()` which processes action semantics (deny short-circuits, modify chains data), this method collects `result.data` from all handlers for aggregation.
+
+Use for decision events where multiple hooks propose candidates (e.g., tool resolution, agent selection).
+
+```python
+responses = await coordinator.hooks.emit_and_collect("decision:tool_resolution", {"tools": [...]})
 ```
 
 ## HookResult
@@ -53,8 +63,7 @@ Returned by hook handlers to control execution flow.
 ### Fields
 
 ```python
-@dataclass
-class HookResult:
+class HookResult(BaseModel):
     action: str = "continue"
 
     # For deny/modify
@@ -64,6 +73,7 @@ class HookResult:
     # For inject_context
     context_injection: str = None
     context_injection_role: str = "system"
+    ephemeral: bool = False
 
     # For ask_user
     approval_prompt: str = None
@@ -75,6 +85,9 @@ class HookResult:
     suppress_output: bool = False
     user_message: str = None
     user_message_level: str = "info"
+
+    # Injection placement control
+    append_to_last_tool_result: bool = False
 ```
 
 ### Examples
