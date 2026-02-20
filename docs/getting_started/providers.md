@@ -79,214 +79,111 @@ amplifier provider use openai
 | `gpt-5-mini` | Smaller, faster GPT-5 |
 | `gpt-5-nano` | Smallest GPT-5 variant |
 
+```bash
+# Use a specific model
+amplifier run --model gpt-5.1 "General task"
+```
+
 ## Azure OpenAI
+
+Azure OpenAI uses your Azure-hosted deployments.
 
 ### Prerequisites
 
-1. Azure subscription
-2. Azure OpenAI resource created
-3. Model deployed in your resource
+- Azure subscription with OpenAI service enabled
+- Deployed GPT model in your Azure resource
 
 ### Configure
 
 ```bash
-export AZURE_OPENAI_API_KEY="your-key"
-export AZURE_OPENAI_ENDPOINT="https://your-resource.openai.azure.com"
+export AZURE_OPENAI_ENDPOINT="https://myresource.openai.azure.com"
+export AZURE_OPENAI_API_KEY="your-api-key"
+# OR use Azure CLI authentication
+az login
+export AZURE_USE_DEFAULT_CREDENTIAL="true"
 
-amplifier provider use azure
+amplifier provider use azure-openai
 ```
 
-### Configuration File (Alternative)
+### Deployment Mapping
 
-Create `~/.amplifier/settings.yaml`:
+Azure uses deployment names instead of model names:
 
-```yaml
-providers:
-  azure:
-    api_key: ${AZURE_OPENAI_API_KEY}
-    azure_endpoint: https://your-resource.openai.azure.com
-    default_model: gpt-5.1
-    api_version: "2024-10-01-preview"
+```toml
+[[providers]]
+name = "azure-openai"
+[providers.config]
+azure_endpoint = "https://myresource.openai.azure.com"
+default_model = "gpt-5.1"
+
+[providers.config.deployment_mapping]
+"gpt-5.1" = "my-gpt5-deployment"
 ```
 
-## Ollama (Local)
+## Ollama
+
+Run models locally with Ollama.
 
 ### Install Ollama
 
 ```bash
-# macOS
-brew install ollama
-
 # Linux
 curl -fsSL https://ollama.com/install.sh | sh
 
-# Windows
-# Download from https://ollama.com/download
-```
-
-### Start Ollama Server
-
-```bash
-ollama serve
+# macOS
+brew install ollama
 ```
 
 ### Pull a Model
 
 ```bash
-ollama pull llama3.2
-ollama pull codellama
-ollama pull mistral
+ollama pull llama3.2:3b
 ```
-
-### Configure Amplifier
-
-```bash
-amplifier provider use ollama
-```
-
-### Available Models
-
-Any model you've pulled with `ollama pull`:
-
-```bash
-# List available models
-ollama list
-
-# Use specific model
-amplifier run --model llama3.2 "Hello!"
-```
-
-## vLLM (Self-Hosted)
-
-For high-throughput self-hosted inference with your own GPU servers.
-
-### Prerequisites
-
-- Running vLLM server (v0.10.1+)
-- Model loaded in vLLM
 
 ### Configure
 
-vLLM is configured via settings file only (no environment variable for the server URL):
-
-```yaml
-# ~/.amplifier/settings.yaml
-providers:
-  vllm:
-    base_url: http://your-server:8000/v1
-    default_model: openai/gpt-oss-20b
+```bash
+# Ollama server runs on localhost:11434 by default
+amplifier provider use ollama
 ```
 
+### Popular Models
+
+- `llama3.2:3b` - Small, fast (3B parameters)
+- `llama3.2:1b` - Tiny, fastest (1B parameters)
+- `mistral` - 7B model, good quality
+- `codellama` - Code generation
+- `deepseek-r1` - Reasoning model
+
+See [ollama.ai/library](https://ollama.ai/library) for all models.
+
+## vLLM
+
+Self-hosted inference server for open-weight models.
+
+### Prerequisites
+
+- Running vLLM server (version 0.10.1+)
+- Model served via vLLM (e.g., gpt-oss-20b)
+
+### Start vLLM Server
+
 ```bash
+vllm serve openai/gpt-oss-20b \
+  --host 0.0.0.0 \
+  --port 8000 \
+  --tensor-parallel-size 2
+```
+
+### Configure
+
+```bash
+export VLLM_BASE_URL="http://192.168.128.5:8000/v1"
 amplifier provider use vllm
 ```
 
-For vLLM server setup and advanced options, see [vLLM Provider](../modules/providers/vllm.md).
-
-## Switching Providers
-
-### Temporary Switch
-
-```bash
-amplifier run --provider openai "Use OpenAI for this"
-```
-
-### Change Default
-
-```bash
-amplifier provider use anthropic
-```
-
-### Check Current Provider
-
-```bash
-amplifier provider current
-```
-
-## Provider Configuration
-
-### Via Environment Variables
-
-| Provider | Variables |
-|----------|-----------|
-| Anthropic | `ANTHROPIC_API_KEY` |
-| OpenAI | `OPENAI_API_KEY` |
-| Azure | `AZURE_OPENAI_API_KEY`, `AZURE_OPENAI_ENDPOINT` |
-| Ollama | `OLLAMA_HOST` (optional) |
-| vLLM | *(config file only — see settings.yaml)* |
-
-### Via Settings File
-
-Create `~/.amplifier/settings.yaml`:
-
-```yaml
-default_provider: anthropic
-
-providers:
-  anthropic:
-    api_key: ${ANTHROPIC_API_KEY}
-    default_model: claude-sonnet-4-5
-
-  openai:
-    api_key: ${OPENAI_API_KEY}
-    default_model: gpt-5.1-codex
-
-  ollama:
-    host: http://localhost:11434
-    default_model: llama3.2:3b
-
-  vllm:
-    base_url: http://your-server:8000/v1
-    default_model: openai/gpt-oss-20b
-```
-
-## Multiple Providers
-
-You can configure multiple providers and switch between them:
-
-```bash
-# List configured providers
-amplifier provider list
-
-# Switch provider
-amplifier provider use openai
-
-# Use specific provider for one command
-amplifier run --provider ollama "Local query"
-```
-
-## Troubleshooting
-
-### "Authentication failed"
-
-- Verify your API key is correct
-- Check the key hasn't expired
-- Ensure environment variable is exported
-
-```bash
-echo $ANTHROPIC_API_KEY  # Should show your key
-```
-
-### "Model not found"
-
-- Check the model name is correct
-- For Azure, verify deployment name matches
-
-### "Connection refused" (Ollama)
-
-- Ensure Ollama is running: `ollama serve`
-- Check it's on the default port: `http://localhost:11434`
-
-### Rate Limits
-
-If you hit rate limits:
-
-- Wait and retry
-- Use a different model
-- Consider upgrading your API plan
-
 ## Next Steps
 
-- [Getting Started](index.md) - Run your first session
-- [CLI Reference](../user_guide/cli.md) - All commands
-- [Profiles](../user_guide/profiles.md) - Configure capabilities
+- [Configure Tools](../modules/tools/index.md) - Add capabilities to your agents
+- [Provider Configuration](../modules/providers/index.md) - Advanced provider settings
+- [Bundle Configuration](../foundation/bundles.md) - Package configurations for reuse

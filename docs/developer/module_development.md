@@ -82,596 +82,322 @@ class Tool(Protocol):
         ...
 
     async def execute(self, input: dict[str, Any]) -> ToolResult:
-        """Execute the tool with given input."""
+        """Execute the tool with input data."""
         ...
 ```
 
-Tools may optionally provide a JSON schema for input validation:
+### Example Tool
 
 ```python
-def get_schema(self) -> dict:
-    """Return JSON schema for tool input (optional but recommended)."""
-    return {
-        "type": "object",
-        "properties": {
-            "expression": {
-                "type": "string",
-                "description": "Mathematical expression to evaluate"
-            }
-        },
-        "required": ["expression"]
-    }
+from amplifier_core import ToolResult
+import logging
+
+logger = logging.getLogger(__name__)
+
+class GreetTool:
+    """Simple greeting tool."""
+
+    @property
+    def name(self) -> str:
+        return "greet"
+
+    @property
+    def description(self) -> str:
+        return "Greet a person by name"
+
+    @property
+    def input_schema(self) -> dict:
+        return {
+            "type": "object",
+            "properties": {
+                "name": {
+                    "type": "string",
+                    "description": "Name to greet"
+                }
+            },
+            "required": ["name"]
+        }
+
+    async def execute(self, input_data: dict[str, Any]) -> ToolResult:
+        """Execute greeting."""
+        try:
+            name = input_data.get("name", "World")
+            message = f"Hello, {name}!"
+
+            return ToolResult(
+                success=True,
+                output={"message": message}
+            )
+        except Exception as e:
+            logger.error(f"Greeting failed: {e}")
+            return ToolResult(
+                success=False,
+                error={"message": str(e)}
+            )
 ```
 
-### Example: Calculator Tool
+### Mount Function for Tool
 
 ```python
-# amplifier_module_tool_calculator/__init__.py
+async def mount(coordinator, config: dict | None = None):
+    """Mount the greet tool."""
+    config = config or {}
+    tool = GreetTool()
+    await coordinator.mount("tools", tool, name="greet")
+    logger.info("Mounted GreetTool")
+    return None  # No cleanup needed
+```
 
-from typing import Any
-from amplifier_core.models import ToolResult
+## Creating a Provider
 
-async def mount(coordinator, config=None):
-    tool = CalculatorTool(config or {})
-    await coordinator.mount("tools", tool, name="calculator")
-    return None
+Providers integrate LLM APIs.
 
-class CalculatorTool:
-    name = "calculator"
-    description = "Perform mathematical calculations"
-    input_schema = {
-        "type": "object",
-        "properties": {
-            "expression": {
-                "type": "string",
-                "description": "Mathematical expression to evaluate"
-            }
-        },
-        "required": ["expression"]
-    }
+### Provider Contract
+
+```python
+from amplifier_core.message_models import ChatRequest, ChatResponse
+from typing import Protocol
+
+class Provider(Protocol):
+    @property
+    def name(self) -> str:
+        """Provider identifier."""
+        ...
+
+    async def complete(
+        self,
+        request: ChatRequest,
+        **kwargs
+    ) -> ChatResponse:
+        """Generate completion from ChatRequest."""
+        ...
+
+    async def list_models(self) -> list[ModelInfo]:
+        """List available models."""
+        ...
+```
+
+### Example Provider
+
+```python
+from amplifier_core.message_models import ChatRequest, ChatResponse, Message, Usage
+
+class MockProvider:
+    """Simple mock provider for testing."""
+
+    name = "mock"
 
     def __init__(self, config: dict):
         self.config = config
+        self.default_model = config.get("default_model", "mock-model")
 
-    async def execute(self, input: dict[str, Any]) -> ToolResult:
-        expression = input.get("expression", "")
-        try:
-            # Safe evaluation (in production, use proper parser)
-            result = eval(expression, {"__builtins__": {}}, {})
-            return ToolResult(
-                success=True,
-                output=str(result)
+    async def complete(
+        self,
+        request: ChatRequest,
+        **kwargs
+    ) -> ChatResponse:
+        """Return mock response."""
+        return ChatResponse(
+            content="Mock response",
+            usage=Usage(
+                input_tokens=10,
+                output_tokens=5,
+                total_tokens=15
+            ),
+            finish_reason="stop"
+        )
+
+    async def list_models(self):
+        """Return mock model list."""
+        return [
+            ModelInfo(
+                id="mock-model",
+                display_name="Mock Model",
+                context_window=8192,
+                max_output_tokens=4096
             )
-        except Exception as e:
-            return ToolResult(
-                success=False,
-                error={"message": str(e), "type": type(e).__name__}
-            )
+        ]
 ```
+
+## Creating a Hook
+
+Hooks intercept events for observability and modification.
+
+### Hook Contract
+
+```python
+from typing import Protocol, Any
+
+class Hook(Protocol):
+    async def on_event(
+        self,
+        event: str,
+        data: dict[str, Any]
+    ) -> dict[str, Any] | None:
+        """
+        Handle an event.
+
+        Args:
+            event: Event name (e.g., "tool:pre")
+            data: Event data
+
+        Returns:
+            Modified data or None to pass through unchanged
+        """
+        ...
+```
+
+### Example Hook
+
+```python
+import logging
+
+logger = logging.getLogger(__name__)
+
+class LoggingHook:
+    """Log all events."""
+
+    def __init__(self, config: dict):
+        self.config = config
+        self.verbose = config.get("verbose", False)
+
+    async def on_event(self, event: str, data: dict) -> dict | None:
+        """Log event."""
+        if self.verbose:
+            logger.info(f"Event: {event}, Data: {data}")
+        else:
+            logger.info(f"Event: {event}")
+
+        return None  # Pass through unchanged
+```
+
+## Creating an Orchestrator
+
+Orchestrators control the agent loop.
+
+### Orchestrator Contract
+
+```python
+from typing import Protocol, Any
+
+class Orchestrator(Protocol):
+    async def execute(
+        self,
+        prompt: str,
+        context: Any,
+        providers: dict[str, Any],
+        tools: dict[str, Any],
+        hooks: Any,
+        coordinator: Any | None = None
+    ) -> str:
+        """
+        Execute agent loop.
+
+        Args:
+            prompt: User input
+            context: Context manager
+            providers: Available providers
+            tools: Available tools
+            hooks: Hook registry
+            coordinator: Module coordinator
+
+        Returns:
+            Final response string
+        """
+        ...
+```
+
+## Creating a Context Manager
+
+Context managers handle conversation history.
+
+### Context Contract
+
+```python
+from typing import Protocol, Any
+
+class Context(Protocol):
+    async def add_message(self, message: dict[str, Any]) -> None:
+        """Add message to context."""
+        ...
+
+    async def get_messages(self) -> list[dict[str, Any]]:
+        """Get all messages."""
+        ...
+
+    async def get_messages_for_request(self) -> list[dict[str, Any]]:
+        """Get messages formatted for LLM request."""
+        ...
+```
+
+## Package Configuration
 
 ### pyproject.toml
 
 ```toml
 [project]
-name = "amplifier-module-tool-calculator"
-version = "1.0.0"
-description = "Calculator tool for Amplifier"
+name = "amplifier-module-tool-greet"
+version = "0.1.0"
+description = "Greeting tool for Amplifier"
 requires-python = ">=3.11"
-dependencies = []
+dependencies = [
+    "amplifier-core>=1.0.0"
+]
 
 [project.entry-points."amplifier.modules"]
-tool-calculator = "amplifier_module_tool_calculator:mount"
-
-[build-system]
-requires = ["hatchling"]
-build-backend = "hatchling.build"
-
-[tool.hatch.build.targets.wheel]
-packages = ["amplifier_module_tool_calculator"]
+tool-greet = "amplifier_module_tool_greet:mount"
 ```
 
-## Creating a Provider
-
-Providers integrate LLM backends.
-
-### Provider Contract
-
-```python
-from amplifier_core.interfaces import Provider
-from amplifier_core.models import ProviderInfo, ModelInfo
-from amplifier_core.message_models import ChatRequest, ChatResponse, ToolCall
-from typing import runtime_checkable, Protocol
-
-@runtime_checkable
-class Provider(Protocol):
-    @property
-    def name(self) -> str: ...
-
-    def get_info(self) -> ProviderInfo: ...
-    async def list_models(self) -> list[ModelInfo]: ...
-    async def complete(self, request: ChatRequest, **kwargs) -> ChatResponse: ...
-    def parse_tool_calls(self, response: ChatResponse) -> list[ToolCall]: ...
-```
-
-### Example: Mock Provider
-
-```python
-from amplifier_core.models import ProviderInfo, ModelInfo
-
-async def mount(coordinator, config=None):
-    config = config or {}
-    api_key = config.get("api_key")
-    if not api_key:
-        # Graceful degradation - return None if not configured
-        return None
-    
-    provider = MockProvider(config)
-    await coordinator.mount("providers", provider, name="mock")
-    
-    async def cleanup():
-        pass  # Close any connections
-    
-    return cleanup
-
-class MockProvider:
-    name = "mock"
-
-    def __init__(self, config):
-        self.response = config.get("response", "Mock response")
-        self.default_model = config.get("default_model", "mock-model")
-
-    def get_info(self) -> ProviderInfo:
-        return ProviderInfo(
-            id="mock",
-            display_name="Mock Provider",
-            credential_env_vars=[],
-            capabilities=["streaming"],
-            defaults={
-                "context_window": 100000,
-                "max_output_tokens": 4096
-            }
-        )
-
-    async def list_models(self) -> list[ModelInfo]:
-        return [ModelInfo(
-            id="mock-model",
-            display_name="Mock Model",
-            context_window=100000,
-            max_output_tokens=4096,
-            capabilities=["tools"]
-        )]
-
-    async def complete(self, request, **kwargs):
-        return {
-            "content": [{"type": "text", "text": self.response}],
-            "usage": {"input_tokens": 10, "output_tokens": 5, "total_tokens": 15}
-        }
-
-    def parse_tool_calls(self, response):
-        return []
-```
-
-## Creating a Hook
-
-Hooks observe and control operations.
-
-### Hook Contract
-
-```python
-from amplifier_core.models import HookResult
-
-async def handler(event: str, data: dict) -> HookResult:
-    """Handle an event."""
-    return HookResult(action="continue")
-```
-
-### HookResult Actions
-
-| Action | Effect |
-|--------|--------|
-| `continue` | Proceed normally |
-| `deny` | Block the operation |
-| `modify` | Modify event data |
-| `inject_context` | Add to conversation |
-| `ask_user` | Request approval |
-
-### Common Events
-
-| Event | Trigger | Data Includes |
-|-------|---------|---------------|
-| `execution:start` | Orchestrator execution begins | prompt |
-| `execution:end` | Orchestrator execution completes | response |
-| `prompt:submit` | User input submitted | prompt text |
-| `tool:pre` | Before tool execution | tool_name, tool_input |
-| `tool:post` | After tool execution | tool_name, tool_result |
-| `tool:error` | Tool execution failed | tool_name, error |
-| `provider:request` | LLM call starting | provider, messages |
-| `provider:response` | LLM call complete | provider, response, usage |
-
-### Example: Timing Hook
-
-```python
-import time
-from amplifier_core.models import HookResult
-
-async def mount(coordinator, config=None):
-    handler = TimingHook(config or {})
-
-    # Register for specific events
-    coordinator.hooks.register("tool:pre", handler.on_tool_pre, priority=10)
-    coordinator.hooks.register("tool:post", handler.on_tool_post, priority=10)
-
-    def cleanup():
-        # Unregister handlers if needed
-        pass
-
-    return cleanup
-
-class TimingHook:
-    def __init__(self, config):
-        self.timings = {}
-        self.debug = config.get("debug", False)
-
-    async def on_tool_pre(self, event, data) -> HookResult:
-        tool_name = data.get("tool_name")
-        self.timings[tool_name] = time.time()
-        return HookResult(action="continue")
-
-    async def on_tool_post(self, event, data) -> HookResult:
-        tool_name = data.get("tool_name")
-        if tool_name in self.timings:
-            duration = time.time() - self.timings[tool_name]
-            if self.debug:
-                return HookResult(
-                    action="continue",
-                    user_message=f"Tool {tool_name} took {duration:.2f}s",
-                    user_message_level="info"
-                )
-        return HookResult(action="continue")
-```
-
-## Creating an Orchestrator
-
-Orchestrators control execution flow.
-
-### Orchestrator Contract
-
-```python
-from amplifier_core.interfaces import Orchestrator, ContextManager, Provider, Tool
-from amplifier_core.hooks import HookRegistry
-
-class Orchestrator:
-    async def execute(
-        self,
-        prompt: str,
-        context: ContextManager,
-        providers: dict[str, Provider],
-        tools: dict[str, Tool],
-        hooks: HookRegistry,
-    ) -> str:
-        """Execute the orchestration loop."""
-        ...
-```
-
-### Example: Simple Orchestrator
-
-```python
-async def mount(coordinator, config=None):
-    orchestrator = SimpleOrchestrator(config or {})
-    await coordinator.mount("session", orchestrator, name="orchestrator")
-    return None
-
-class SimpleOrchestrator:
-    def __init__(self, config):
-        self.max_iterations = config.get("max_iterations", 10)
-
-    async def execute(self, prompt, context, providers, tools, hooks):
-        # Add user message
-        await context.add_message({"role": "user", "content": prompt})
-
-        # Get first provider
-        provider = list(providers.values())[0]
-        iteration = 0
-
-        for iteration in range(self.max_iterations):
-            # Get messages (context handles compaction internally)
-            messages = await context.get_messages_for_request(provider=provider)
-
-            # Call provider
-            await hooks.emit("provider:request", {"messages": messages})
-            response = await provider.complete({"messages": messages})
-            await hooks.emit("provider:response", {"response": response})
-
-            # Add response to context
-            await context.add_message({
-                "role": "assistant",
-                "content": response["content"]
-            })
-
-            # Check for tool calls
-            tool_calls = provider.parse_tool_calls(response)
-            if not tool_calls:
-                # Emit orchestrator:complete event (REQUIRED)
-                await hooks.emit("orchestrator:complete", {
-                    "orchestrator": "simple",
-                    "turn_count": iteration + 1,
-                    "status": "success"
-                })
-                return response["content"][0]["text"]
-
-            # Execute tools
-            for call in tool_calls:
-                tool = tools.get(call["name"])
-                if tool:
-                    await hooks.emit("tool:pre", {"tool_name": call["name"]})
-                    result = await tool.execute(call["input"])
-                    await hooks.emit("tool:post", {"result": result})
-                    await context.add_message({
-                        "role": "tool",
-                        "tool_call_id": call["id"],
-                        "content": result.get_serialized_output()
-                    })
-
-        # Emit orchestrator:complete for max iterations case
-        await hooks.emit("orchestrator:complete", {
-            "orchestrator": "simple",
-            "turn_count": iteration + 1,
-            "status": "incomplete"
-        })
-        return "Max iterations reached"
-```
-
-### Streaming Support
-
-For real-time output, use a streaming orchestrator (e.g., `loop-streaming`). Streaming orchestrators deliver tokens via hooks as they arrive from the provider. See [amplifier-module-loop-streaming](https://github.com/microsoft/amplifier-module-loop-streaming) for the reference implementation.
-
-For event-driven tool selection (scheduler integration), use `loop-events`. This orchestrator queries hook-registered schedulers for tool/agent decisions via a `decision:tool_resolution` event, reducing multiple scheduler responses to a single decision. See [amplifier-module-loop-events](https://github.com/microsoft/amplifier-module-loop-events) for the reference implementation.
-
-## Creating a Context Manager
-
-Context managers handle conversation memory.
-
-### Context Contract
-
-```python
-from amplifier_core.interfaces import ContextManager
-
-class ContextManager:
-    async def add_message(self, message: dict) -> None: ...
-    async def get_messages_for_request(
-        self, token_budget: int | None = None, provider: Any | None = None
-    ) -> list[dict]: ...
-    async def get_messages(self) -> list[dict]: ...
-    async def set_messages(self, messages: list[dict]) -> None: ...
-    async def clear(self) -> None: ...
-```
-
-### Example: Simple Context
-
-```python
-async def mount(coordinator, config=None):
-    context = SimpleContext(config or {})
-    await coordinator.mount("session", context, name="context")
-    return context
-
-class SimpleContext:
-    def __init__(self, config):
-        self.max_tokens = config.get("max_tokens", 100000)
-        self.messages = []
-
-    async def add_message(self, message):
-        self.messages.append(message)
-
-    async def get_messages_for_request(self, token_budget=None, provider=None):
-        """Return messages for LLM request, compacting internally if needed."""
-        budget = self._calculate_budget(token_budget, provider)
-        # Ephemeral compaction - don't modify stored messages
-        if self._estimate_tokens() > budget * 0.9:
-            return self._compact_messages(budget)
-        return list(self.messages)
-
-    async def get_messages(self):
-        """Return full history (no compaction)."""
-        return list(self.messages)
-
-    async def set_messages(self, messages):
-        self.messages = list(messages)
-
-    async def clear(self):
-        self.messages = []
-
-    def _calculate_budget(self, token_budget, provider):
-        if token_budget:
-            return token_budget
-        if provider:
-            info = provider.get_info()
-            defaults = info.defaults or {}
-            context_window = defaults.get("context_window", self.max_tokens)
-            max_output = defaults.get("max_output_tokens", 4096)
-            return context_window - max_output - 1000
-        return self.max_tokens
-
-    def _estimate_tokens(self):
-        total_chars = sum(len(str(m.get("content", ""))) for m in self.messages)
-        return total_chars // 4
-
-    def _compact_messages(self, budget):
-        """Return compacted view without modifying internal state."""
-        # Keep system messages and recent messages
-        system = [m for m in self.messages if m["role"] == "system"]
-        other = [m for m in self.messages if m["role"] != "system"]
-        # Simple truncation strategy
-        while self._estimate_tokens_for(system + other) > budget * 0.7 and other:
-            other.pop(0)
-        return system + other
-
-    def _estimate_tokens_for(self, messages):
-        return sum(len(str(m.get("content", ""))) for m in messages) // 4
-```
-
-> **Critical**: Compaction must be **ephemeral** (non-destructive). `get_messages_for_request()` returns a compacted view without modifying stored history. `get_messages()` always returns the full, unmodified conversation for debugging and session resume.
-
-### File-Based Context Managers
-
-For context managers with persistent file storage (e.g., `context-persistent`), `set_messages()` behavior differs on session resume:
-
-```python
-async def set_messages(self, messages: list[dict]) -> None:
-    """
-    Set messages - behavior depends on whether we loaded from file.
-
-    If we already loaded from our own file (session resume):
-      - IGNORE this call to preserve our complete history
-      - CLI's filtered transcript would lose system/developer messages
-
-    If this is a fresh session or migration:
-      - Accept the messages and write to our file
-    """
-    if self._loaded_from_file:
-        # Already have complete history - ignore CLI's filtered transcript
-        return
-
-    # Fresh session: accept messages
-    self._messages = list(messages)
-    self._write_to_file()
-```
-
-**Why this pattern?** The CLI's `SessionStore` saves a filtered transcript (no system/developer messages). File-based context managers save the complete history. On resume, the context manager's file is authoritative — this prevents loss of system context during session resume.
-
-The reference file-based implementation is [amplifier-module-context-persistent](https://github.com/microsoft/amplifier-module-context-persistent), which loads configured context files (e.g., `AGENTS.md`, `PROJECT.md`) at session start and persists the full conversation history across sessions.
-
-## Observability
-
-Modules participate in Amplifier's observation system by registering and emitting events. This enables logging, metrics, audit trails, and debugging across the system.
-
-Modules can register observable events:
-
-```python
-async def mount(coordinator, config=None):
-    # Declare events your module emits
-    coordinator.register_contributor(
-        "observability.events",
-        "my-module",
-        lambda: ["my-module:started", "my-module:completed", "my-module:error"]
-    )
-    
-    # Later, emit events
-    await coordinator.hooks.emit("my-module:started", {"version": "1.0.0"})
-```
-
-## Configuration
-
-Modules receive configuration from Mount Plans:
-
-```yaml
-tools:
-  - module: my-tool
-    source: git+https://github.com/org/my-tool@main
-    config:
-      max_size: 1048576
-      debug: true
-      allowed_paths:
-        - /home/user/projects
-```
-
-Configuration values can reference environment variables:
-
-```yaml
-config:
-  api_key: "${MY_API_KEY}"
-```
-
-Provider modules support debug configuration:
-
-```yaml
-providers:
-  - module: provider-anthropic
-    source: git+...
-    config:
-      default_model: claude-sonnet-4-5
-      debug: true
-```
-
-## Testing Modules
-
-### Unit Testing
+## Testing
 
 ```python
 import pytest
-from amplifier_module_tool_calculator import CalculatorTool
-
-@pytest.fixture
-def tool():
-    return CalculatorTool({})
+from amplifier_module_tool_greet import GreetTool
 
 @pytest.mark.asyncio
-async def test_addition(tool):
-    result = await tool.execute({"expression": "2 + 2"})
-    assert result.success is True
-    assert result.output == "4"
+async def test_greet():
+    """Test greeting tool."""
+    tool = GreetTool()
+    result = await tool.execute({"name": "Alice"})
 
-@pytest.mark.asyncio
-async def test_invalid_expression(tool):
-    result = await tool.execute({"expression": "invalid"})
-    assert result.success is False
-    assert result.error is not None
-```
-
-### Integration Testing
-
-```python
-from amplifier_core.testing import TestCoordinator, MockContextManager
-
-@pytest.mark.asyncio
-async def test_mount():
-    coordinator = TestCoordinator()
-
-    from amplifier_module_tool_calculator import mount
-    cleanup = await mount(coordinator, {})
-
-    assert "calculator" in coordinator.tools
-    assert coordinator.tools["calculator"].name == "calculator"
-```
-
-## Publishing Modules
-
-### To GitHub
-
-```bash
-# Create repository
-gh repo create amplifier-module-tool-myname --public
-
-# Push code
-git init
-git add .
-git commit -m "Initial commit"
-git push -u origin main
-```
-
-### Using Your Module
-
-```yaml
-# In bundle or mount plan
-tools:
-  - module: tool-myname
-    source: git+https://github.com/yourname/amplifier-module-tool-myname@main
+    assert result.success
+    assert result.output["message"] == "Hello, Alice!"
 ```
 
 ## Best Practices
 
-1. **Single responsibility**: One module, one purpose
-2. **Minimal dependencies**: Keep modules lightweight
-3. **Clear documentation**: Include README with examples
-4. **Comprehensive tests**: Unit and integration tests
-5. **Semantic versioning**: Use git tags for versions
-6. **Error handling**: Return errors via ToolResult, don't throw
-7. **Graceful degradation**: Return None from mount() if not configured
-8. **Emit events**: Register and emit observability events
+1. **Single Responsibility**: Each module does one thing well
+2. **Clear Contracts**: Use type hints and protocols
+3. **Fail Gracefully**: Return errors, don't crash
+4. **Async By Default**: Use async/await for I/O
+5. **Minimal Dependencies**: Depend only on amplifier-core
+6. **Test Coverage**: Unit tests for core functionality
+7. **Documentation**: Clear README with examples
 
-## References
+## Publishing
 
-- **→ [Provider Contract](https://github.com/microsoft/amplifier-core/blob/main/docs/contracts/PROVIDER_CONTRACT.md)**
-- **→ [Tool Contract](https://github.com/microsoft/amplifier-core/blob/main/docs/contracts/TOOL_CONTRACT.md)**
-- **→ [Hook Contract](https://github.com/microsoft/amplifier-core/blob/main/docs/contracts/HOOK_CONTRACT.md)**
-- **→ [Orchestrator Contract](https://github.com/microsoft/amplifier-core/blob/main/docs/contracts/ORCHESTRATOR_CONTRACT.md)**
-- **→ [Context Contract](https://github.com/microsoft/amplifier-core/blob/main/docs/contracts/CONTEXT_CONTRACT.md)**
+```bash
+# Build package
+uv build
+
+# Publish to PyPI
+uv publish
+
+# Or install from git
+uv pip install git+https://github.com/user/amplifier-module-tool-greet@main
+```
+
+## Examples
+
+See official modules for reference implementations:
+
+- **Tools**: [amplifier-module-tool-bash](https://github.com/microsoft/amplifier-module-tool-bash)
+- **Providers**: [amplifier-module-provider-anthropic](https://github.com/microsoft/amplifier-module-provider-anthropic)
+- **Hooks**: [amplifier-module-hooks-logging](https://github.com/microsoft/amplifier-module-hooks-logging)
+- **Orchestrators**: [amplifier-module-loop-events](https://github.com/microsoft/amplifier-module-loop-events)
+
+## Resources
+
+- [Module Contracts](./contracts/index.md) - Detailed contract specifications
+- [Core API Reference](./api/core.md) - amplifier-core API documentation
+- [Architecture Overview](../architecture/index.md) - System architecture

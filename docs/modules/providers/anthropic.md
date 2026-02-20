@@ -31,7 +31,7 @@ providers:
 | `default_model` | string | `claude-sonnet-4-5` | Default model |
 | `max_tokens` | int | 64000 | Maximum response tokens |
 | `temperature` | float | 0.7 | Sampling temperature |
-| `timeout` | float | 300.0 | API timeout in seconds |
+| `timeout` | float | 600.0 | API timeout in seconds |
 | `priority` | int | 100 | Provider priority for selection |
 
 ### Feature Toggles
@@ -41,7 +41,7 @@ providers:
 | `use_streaming` | bool | `true` | Use streaming API (required for large contexts) |
 | `enable_prompt_caching` | bool | `true` | Enable prompt caching (90% cost reduction on cached tokens) |
 | `enable_web_search` | bool | `false` | Enable native web search tool |
-| `enable_1m_context` | bool | `false` | Enable 1M token context window (Sonnet only) |
+| `enable_1m_context` | bool | `false` | Enable 1M token context window (Sonnet and Opus only) |
 | `filtered` | bool | `true` | Filter to curated model list |
 
 ### Rate Limit & Retry
@@ -49,7 +49,7 @@ providers:
 | Option | Type | Default | Description |
 |--------|------|---------|-------------|
 | `max_retries` | int | 5 | Total retry attempts before failing |
-| `retry_jitter` | bool | `true` | Add ±20% randomness to delays |
+| `retry_jitter` | float | 0.2 | Randomness to add to delays (0.0-1.0) |
 | `max_retry_delay` | float | 60.0 | Maximum wait between retries (seconds) |
 | `min_retry_delay` | float | 1.0 | Minimum delay if no retry-after header |
 
@@ -57,7 +57,7 @@ providers:
 
 | Option | Type | Default | Description |
 |--------|------|---------|-------------|
-| `debug` | bool | `false` | Enable request/response debug events |
+| `debug` | bool | `false` | Enable standard debug events |
 | `raw_debug` | bool | `false` | Enable ultra-verbose raw API I/O logging |
 | `debug_truncate_length` | int | 180 | Max string length in debug logs |
 
@@ -65,213 +65,202 @@ providers:
 
 | Option | Type | Default | Description |
 |--------|------|---------|-------------|
-| `base_url` | string | `https://api.anthropic.com` | API base URL (for proxies/custom endpoints) |
-| `beta_headers` | string/list | - | Beta feature headers to enable |
+| `base_url` | string | `null` | Custom API endpoint (for proxies) |
+| `beta_headers` | string or list | `null` | Beta feature headers (e.g., `context-1m-2025-08-07`) |
 
 ## Supported Models
 
-| Model | Description |
-|-------|-------------|
-| `claude-opus-4-1` | Most capable |
-| `claude-sonnet-4-5` | Balanced (recommended) |
-| `claude-haiku-4-5` | Fastest |
+| Model ID | Description | Context | Output |
+|----------|-------------|---------|--------|
+| `claude-sonnet-4-5` | Balanced performance (default) | 200K / 1M* | 64K |
+| `claude-opus-4-6` | Most capable | 200K / 1M* | 128K |
+| `claude-haiku-4-5` | Fastest, cheapest | 200K | 64K |
 
-### Model Capabilities
+\* 1M context requires `enable_1m_context: true`
 
-| Model | Tools | Thinking | Streaming | JSON Mode |
-|-------|-------|----------|-----------|-----------|
-| `claude-opus-4-1` | ✅ | ✅ | ✅ | ✅ |
-| `claude-sonnet-4-5` | ✅ | ✅ | ✅ | ✅ |
-| `claude-haiku-4-5` | ✅ | - | ✅ | ✅ |
+## Extended Thinking
 
-## Features
-
-### Extended Thinking
-
-Claude Sonnet and Opus models support extended thinking for complex reasoning:
+Claude Sonnet and Opus support extended thinking (similar to OpenAI's reasoning):
 
 ```yaml
 providers:
   - module: provider-anthropic
     config:
       default_model: claude-sonnet-4-5
-      thinking_budget_tokens: 32000  # Token budget for thinking
-      thinking_budget_buffer: 4096   # Buffer for response after thinking
+      # Extended thinking configured via ChatRequest.reasoning_effort or kwargs
 ```
 
-When thinking is enabled, the provider automatically:
-- Sets `temperature=1.0` (required by Anthropic)
-- Adjusts `max_tokens` to accommodate thinking budget
-- Enables interleaved thinking for multi-step tool use
+**Via ChatRequest (portable):**
+```python
+ChatRequest(
+    messages=[...],
+    reasoning_effort="high"  # low, medium, or high
+)
+```
 
-### 1M Token Context Window
+**Via kwargs (provider-specific):**
+```python
+provider.complete(
+    request,
+    extended_thinking=True,
+    thinking_budget_tokens=32000
+)
+```
 
-Claude Sonnet 4.5 supports extended context via beta header:
+**Thinking modes:**
+- `"enabled"`: Explicit budget (all models)
+- `"adaptive"`: Model-controlled budget (Opus 4.6+ only)
+
+**Temperature:** Automatically set to 1.0 when thinking enabled (required by API).
+
+## Interleaved Thinking
+
+When extended thinking is enabled, the provider automatically enables interleaved thinking (beta header: `interleaved-thinking-2025-05-14`). This allows Claude to think between tool calls, improving reasoning on complex multi-step tasks.
+
+## Prompt Caching
+
+Enabled by default for 90% cost reduction on cached tokens:
 
 ```yaml
-providers:
-  - module: provider-anthropic
-    config:
-      default_model: claude-sonnet-4-5
-      enable_1m_context: true  # Automatically sets beta header
+config:
+  enable_prompt_caching: true  # Default
 ```
 
-Or manually with beta headers:
+Cache breakpoints automatically placed on:
+- Last system message block
+- Last tool definition
+- Last message in conversation
+
+## Native Web Search
+
+Enable Anthropic's built-in web search tool:
 
 ```yaml
-providers:
-  - module: provider-anthropic
-    config:
-      default_model: claude-sonnet-4-5
-      beta_headers: "context-1m-2025-08-07"
+config:
+  enable_web_search: true
+  web_search_max_uses: 5  # Optional: limit searches per request
 ```
 
-With 1M context enabled:
-- **Context window**: Up to 1M tokens of input
-- **Output tokens**: Controlled separately by `max_tokens`
-- **Use case**: Large codebases, extensive documentation, long conversations
+The web search tool appears as a native capability alongside your custom tools.
 
-### Beta Headers
+## Beta Features
 
-Enable experimental Anthropic features:
+Enable experimental features via beta headers:
 
 ```yaml
-# Single header
-providers:
-  - module: provider-anthropic
-    config:
-      beta_headers: "context-1m-2025-08-07"
-
-# Multiple headers
-providers:
-  - module: provider-anthropic
-    config:
-      beta_headers:
-        - "context-1m-2025-08-07"
-        - "future-feature-header"
+config:
+  beta_headers: "context-1m-2025-08-07"  # Single header
+  # OR
+  beta_headers:
+    - "context-1m-2025-08-07"
+    - "future-feature-header"  # Multiple headers
 ```
 
-> **Note**: Beta features are experimental. Check [Anthropic's documentation](https://docs.anthropic.com) for available headers.
-
-### Prompt Caching
-
-Enabled by default. Reduces cost by up to 90% on repeated context:
-
+**1M Context Window:**
 ```yaml
-providers:
-  - module: provider-anthropic
-    config:
-      enable_prompt_caching: true  # default
+config:
+  default_model: claude-sonnet-4-5
+  enable_1m_context: true  # Automatically adds beta header
 ```
 
-The provider automatically:
-- Adds cache breakpoints to system messages
-- Caches tool definitions
-- Creates checkpoints at conversation history end
-
-### Native Web Search
-
-Enable Claude's built-in web search capability:
-
-```yaml
-providers:
-  - module: provider-anthropic
-    config:
-      enable_web_search: true
-      web_search_max_uses: 5        # Optional: limit searches per request
-      web_search_user_location: ... # Optional: location-aware results
-```
-
-### Debug Logging
-
-**Standard Debug** (`debug: true`):
-- Emits `llm:request:debug` and `llm:response:debug` events
-- Request/response summaries with message counts, model info, usage stats
-
-**Raw Debug** (`debug: true, raw_debug: true`):
-- Emits `llm:request:raw` and `llm:response:raw` events
-- Complete, unmodified request params and response objects
-- Use only for deep provider integration debugging
-
-```yaml
-providers:
-  - module: provider-anthropic
-    config:
-      debug: true
-      raw_debug: true  # Extreme verbosity
-```
-
-### Rate Limit Handling
-
-The provider handles rate limits with configurable retry behavior:
-
-```yaml
-providers:
-  - module: provider-anthropic
-    config:
-      max_retries: 5       # Retry attempts (default: 5)
-      retry_jitter: true   # Spread load with ±20% delay variance
-      max_retry_delay: 60  # Cap wait time at 60 seconds
-```
-
-**Behavior:**
-- Honors `retry-after` headers from Anthropic
-- Uses exponential backoff when header unavailable
-- Emits `anthropic:rate_limit_retry` events during retries
-- Emits `anthropic:rate_limited` when retries exhausted
-
-### Graceful Error Recovery
+## Graceful Error Recovery
 
 The provider automatically repairs incomplete tool call sequences:
 
-**Problem**: Missing tool results (from context compaction or parsing errors) cause API rejection.
+**The Problem:** If tool results are missing from conversation history (due to context compaction bugs, parsing errors, or state corruption), the API rejects the request.
 
-**Solution**: Provider detects and injects synthetic error results:
-1. Detects missing `tool_result` messages
-2. Injects synthetic results with `[SYSTEM ERROR: Tool result missing]`
-3. Maintains conversation validity
-4. Emits `provider:tool_sequence_repaired` event for observability
-
-## Observability Events
-
-| Event | Description |
-|-------|-------------|
-| `llm:request` | Request summary (model, message count, thinking enabled) |
-| `llm:response` | Response summary (usage, status, duration) |
-| `llm:request:debug` | Full request payload (when debug=true) |
-| `llm:response:debug` | Full response payload (when debug=true) |
-| `llm:request:raw` | Raw API params (when raw_debug=true) |
-| `llm:response:raw` | Raw API response (when raw_debug=true) |
-| `anthropic:rate_limit_retry` | Rate limit retry attempt |
-| `anthropic:rate_limited` | Rate limit exhausted after retries |
-| `provider:tool_sequence_repaired` | Tool result repair performed |
-
-## Usage
-
-```bash
-# Set API key
-export ANTHROPIC_API_KEY="sk-ant-..."
-
-# Use provider
-amplifier provider use anthropic
-amplifier run "Hello!"
-```
-
-## Provider Info
+**The Solution:** The provider detects missing tool results and injects synthetic error results:
 
 ```python
-# Capabilities returned by get_info()
-capabilities = ["streaming", "tools", "thinking", "batch"]
+# Broken: tool_use without matching tool_result
+messages = [
+    {"role": "assistant", "content": [{"type": "tool_use", "id": "toolu_123", ...}]},
+    # MISSING: tool_result for toolu_123
+    {"role": "user", "content": "Thanks"}
+]
 
-# Default values
-defaults = {
-    "model": "claude-sonnet-4-5-20250929",
-    "max_tokens": 4096,
-    "temperature": 0.7,
-    "timeout": 300.0,
-    "context_window": 200000,  # 1M when enable_1m_context=true
-    "max_output_tokens": 64000,
+# Provider injects:
+{
+    "role": "user",
+    "content": [{
+        "type": "tool_result",
+        "tool_use_id": "toolu_123",
+        "content": "[SYSTEM ERROR: Tool result missing]..."
+    }]
 }
+```
+
+This maintains session continuity and emits `provider:tool_sequence_repaired` events for monitoring.
+
+## Debug Logging
+
+**Standard debug** (`debug: true`):
+- Emits `llm:request:debug` and `llm:response:debug` events
+- Request/response summaries with message counts, usage stats
+- Long values truncated to `debug_truncate_length`
+
+**Raw debug** (`debug: true, raw_debug: true`):
+- Emits `llm:request:raw` and `llm:response:raw` events
+- Complete unmodified request/response objects
+- Extreme log volume - use only for deep debugging
+
+## Usage Metadata
+
+Response metadata includes:
+
+```python
+{
+    "input_tokens": 1234,
+    "output_tokens": 567,
+    "cache_read_tokens": 5000,      # Tokens read from cache
+    "cache_write_tokens": 1234      # Tokens written to cache
+}
+```
+
+## Environment Variables
+
+```bash
+export ANTHROPIC_API_KEY="sk-ant-..."
+export ANTHROPIC_BASE_URL="https://api.anthropic.com"  # Optional: custom endpoint
+```
+
+## Examples
+
+### Basic Usage
+
+```yaml
+providers:
+  - module: provider-anthropic
+    config:
+      default_model: claude-sonnet-4-5
+      max_tokens: 4096
+      temperature: 0.7
+```
+
+### High-Performance Configuration
+
+```yaml
+providers:
+  - module: provider-anthropic
+    config:
+      default_model: claude-opus-4-6
+      enable_1m_context: true
+      enable_prompt_caching: true
+      use_streaming: true
+      max_retries: 5
+      timeout: 600.0
+```
+
+### Debug Configuration
+
+```yaml
+providers:
+  - module: provider-anthropic
+    config:
+      default_model: claude-sonnet-4-5
+      debug: true
+      raw_debug: false  # Set true for raw API I/O
+      debug_truncate_length: 180
 ```
 
 ## Repository
