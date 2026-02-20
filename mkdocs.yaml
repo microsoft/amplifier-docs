@@ -34,6 +34,8 @@ theme:
   features:
     - navigation.instant
     - navigation.instant.progress
+    - navigation.indexes
+    - navigation.prune
     - content.code.copy
     - content.code.annotate
     - navigation.tabs
@@ -46,6 +48,9 @@ theme:
     - search.highlight
     - search.suggest
     - toc.follow
+
+exclude_docs: |
+  plans/
 
 plugins:
   - search
