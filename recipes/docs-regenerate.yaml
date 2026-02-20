@@ -647,6 +647,11 @@ steps:
       Run `git add baseline-hashes.json` before committing. The docs and baseline
       must always be committed together atomically.
 
+      IMPORTANT: Before pushing, run `git pull --rebase origin main` to incorporate
+      any commits that landed on main during this run (CI runs can take 30-60 minutes
+      and other commits may arrive in the meantime). If the rebase fails due to a
+      conflict, abort with `git rebase --abort` and report the error clearly.
+
       Create a commit with:
       - Type prefix "docs:"
       - Summarize which docs were regenerated

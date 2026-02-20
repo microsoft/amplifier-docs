@@ -949,6 +949,10 @@ stages:
           - The regenerated doc files (already in working tree from the apply step)
           - {{baseline_path}} (just updated with new hashes for committed sections)
 
+          IMPORTANT: Before pushing, run `git pull --rebase origin main` to incorporate
+          any commits that landed on main during this run. If the rebase fails due to a
+          conflict, abort with `git rebase --abort` and report the error clearly.
+
           Create a commit with:
           - Type prefix "docs:"
           - Summarize which docs were regenerated
