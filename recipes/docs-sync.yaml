@@ -14,7 +14,10 @@ context:
 steps:
   - id: "setup"
     type: "bash"
-    command: "mkdir -p {{output_dir}}/reports {{output_dir}}/cache && echo 'Setup complete'"
+    command: |
+      mkdir -p {{repos_dir}}
+      mkdir -p {{output_dir}}/reports {{output_dir}}/cache
+      echo 'Setup complete'
     output: "setup_result"
     timeout: 30
 
