@@ -634,36 +634,7 @@ steps:
     output: "diff_output"
     timeout: 60
 
-  - id: "commit-changes"
-    agent: "foundation:git-ops"
-    prompt: |
-      Commit the documentation changes that were regenerated and approved.
-
-      Applied files: {{apply_result}}
-      Evidence validation results: {{evidence_result}}
-      Diff filter results: {{diff_filter_result}}
-
-      IMPORTANT: You MUST stage and include `baseline-hashes.json` in this commit.
-      Run `git add baseline-hashes.json` before committing. The docs and baseline
-      must always be committed together atomically.
-
-      IMPORTANT: Follow this exact sequence:
-      1. Stage all changed files (docs + baseline-hashes.json)
-      2. Create the commit
-      3. Run `git pull --rebase origin main` to incorporate any commits that landed
-         during this run (CI runs take 30-60 minutes; other commits may have arrived)
-      4. Run `git push origin main` — this step is REQUIRED, do not stop after commit
-      If the rebase fails due to a conflict, abort with `git rebase --abort` and report.
-
-      Create a commit with:
-      - Type prefix "docs:"
-      - Summarize which docs were regenerated
-      - Note evidence validation results (claims checked/fixed/removed)
-      - Keep the message concise
-    output: "commit_result"
-    timeout: 120
-
-  # Per-section baseline update: only advance baseline for sections that were committed
+  # Update baseline FIRST so it's on disk when commit-changes stages it
   - id: "update-baseline"
     type: "bash"
     command: |
@@ -708,6 +679,36 @@ steps:
     output: "baseline_result"
     parse_json: true
     timeout: 60
+
+  - id: "commit-changes"
+    agent: "foundation:git-ops"
+    prompt: |
+      Commit the documentation changes that were regenerated and approved.
+
+      Applied files: {{apply_result}}
+      Evidence validation results: {{evidence_result}}
+      Diff filter results: {{diff_filter_result}}
+      Baseline updated: {{baseline_result}}
+
+      `baseline-hashes.json` has already been updated on disk by the previous step.
+      Stage it along with all regenerated doc files.
+
+      Follow this exact sequence:
+      1. Stage all changed files: regenerated docs + `baseline-hashes.json`
+      2. Create the commit
+      3. Run `git pull --rebase origin main` (CI runs take 30-60 min; other commits
+         may have landed in the meantime — rebase ensures a clean fast-forward push)
+      4. Run `git push origin main` — REQUIRED, do not stop after the commit
+
+      If the rebase fails due to a conflict, abort with `git rebase --abort` and report.
+
+      Create a commit with:
+      - Type prefix "docs:"
+      - Summarize which docs were regenerated
+      - Note evidence validation results (claims checked/fixed/removed)
+      - Keep the message concise
+    output: "commit_result"
+    timeout: 120
 
 
   - id: "cleanup-sources"
