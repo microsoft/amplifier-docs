@@ -622,6 +622,19 @@ stages:
 
           results = {"accepted": [], "rejected": [], "analysis": []}
 
+          # Build set of staging_names that had evidence-validated fixes or removals.
+          # These bypass the word-count threshold — factual corrections (wrong model
+          # names, stale config keys, incorrect defaults) are always accepted regardless
+          # of how many words changed. Cosmetic rewrites produce no evidence entries.
+          evidence_fixed = set()
+          try:
+              ev = json.loads('''{{evidence_result}}''')
+              for detail in ev.get("details", []):
+                  if detail.get("fixes") or detail.get("removals"):
+                      evidence_fixed.add(detail["doc"])
+          except Exception:
+              pass  # evidence_result not parseable; proceed without override
+
           def extract_meaningful_content(text):
               """Extract words, ignoring formatting and common words."""
               text = re.sub(r'^---\n.*?\n---\n', '', text, flags=re.DOTALL)
@@ -681,11 +694,19 @@ stages:
                   "new_word_sample": list(new_words)[:15]
               }
 
-              if new_ratio >= min_ratio:
+              has_evidence_fix = staging_name in evidence_fixed
+
+              if new_ratio >= min_ratio or has_evidence_fix:
+                  # Accept: meaningful word change OR evidence-validated factual fix
                   shutil.copy(staged_file, output_dir / staging_name)
-                  analysis["status"] = "ACCEPTED"
-                  results["accepted"].append({"file": staging_name, "doc_path": doc_path_str, "new_ratio": new_ratio, "new_words": len(new_words)})
+                  if has_evidence_fix and new_ratio < min_ratio:
+                      analysis["status"] = "ACCEPTED (evidence-validated fix)"
+                      results["accepted"].append({"file": staging_name, "doc_path": doc_path_str, "new_ratio": new_ratio, "new_words": len(new_words), "reason": "evidence-validated fix"})
+                  else:
+                      analysis["status"] = "ACCEPTED"
+                      results["accepted"].append({"file": staging_name, "doc_path": doc_path_str, "new_ratio": new_ratio, "new_words": len(new_words)})
               else:
+                  # Cosmetic only — no evidence-validated fixes, below word threshold
                   analysis["status"] = "REJECTED (cosmetic)"
                   results["rejected"].append({"file": staging_name, "doc_path": doc_path_str, "new_ratio": new_ratio, "reason": "below threshold"})
 
