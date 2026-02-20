@@ -25,9 +25,18 @@
 #     * FIX: Commit prompt now contains an explicit IMPORTANT block instructing
 #       git-ops to run `git add baseline-hashes.json` before committing.
 #
+# v5.0.0 (2026-02-20):
+#   - Breaking: converted from staged recipe to flat recipe
+#   - Removed: approval gate (evidence validation + semantic diff filter are
+#     the quality gates; no human approval needed for CI)
+#   - Removed: ci_mode context variable (not needed; recipe is identical locally
+#     and in CI)
+#   - Added: cleanup-sources step (unconditional; removes cloned repos +
+#     staging dir after every run, including runs with 0 changed sections)
+#
 name: "docs-regenerate"
-description: "Regenerate documentation using source hash diffs for incremental updates, with evidence validation and approval-gated commit"
-version: "4.1.0"
+description: "Regenerate documentation incrementally using source hash diffs, with evidence validation and unconditional cleanup"
+version: "5.0.0"
 tags: ["documentation", "regeneration", "incremental", "evidence-based"]
 
 context:
@@ -50,667 +59,660 @@ context:
   # Files with less than this ratio of new content are considered "cosmetic only" and skipped
   min_change_ratio: "0.05"
 
-stages:
-  # ===========================================================================
-  # STAGE 1: Regenerate, validate evidence, filter, apply, show diff
-  # ===========================================================================
-  - name: "regenerate-and-apply"
-    steps:
-      - id: "setup"
-        type: "bash"
-        command: |
-          rm -rf {{output_dir}}/staging && mkdir -p {{output_dir}}/staging
-          echo 'Setup complete. Mode: {{mode}}'
-        output: "setup_result"
-        timeout: 30
-
-      - id: "select-docs"
-        type: "bash"
-        command: |
-          python3 << 'EOF'
-          import json, sys
-
-          mode = "{{mode}}"
-          doc_path = "{{doc_path}}"
-          batch_limit = int("{{batch_limit}}")
-
-          # Load current source hashes
-          try:
-              with open("{{hashes_path}}") as f:
-                  current = json.load(f)
-          except FileNotFoundError:
-              print('{"error": "No source-hashes.json found. Run docs-sync first.", "count": 0, "docs": []}')
-              sys.exit(0)
-
-          # Load outline for source mappings
-          with open("{{outline_path}}") as f:
-              outline = json.load(f)
-
-          # Load baseline (no baseline = first run, everything is changed)
-          try:
-              with open("{{baseline_path}}") as f:
-                  baseline = json.load(f)
-          except FileNotFoundError:
-              baseline = {"sections": {}}
-
-          # Build section lookup from outline
-          section_lookup = {s["doc_path"]: s for s in outline.get("content_sections", [])}
-
-          def make_staging_name(dp):
-              """e.g. 'docs/architecture/index.md' -> 'docs__architecture__index.md'"""
-              return dp.replace("/", "__")
-
-          def section_changed(section_id):
-              """Compare source hashes: any difference means section needs regeneration."""
-              cur = current.get("sections", {}).get(section_id, {})
-              base = baseline.get("sections", {}).get(section_id, {})
-              cur_hashes = {(s.get("repo",""), s.get("path","")): s.get("hash") for s in cur.get("sources", [])}
-              base_hashes = {(s.get("repo",""), s.get("path","")): s.get("hash") for s in base.get("sources", [])}
-              return cur_hashes != base_hashes
-
-          no_baseline = len(baseline.get("sections", {})) == 0
-          selected = []
-
-          for section_id, section in current.get("sections", {}).items():
-              dp = section.get("doc_path", "")
-              if not dp:
-                  continue
-
-              # Single mode: only process the specified doc
-              if mode == "single":
-                  if doc_path and dp != doc_path:
-                      continue
-              # Incremental mode: only process sections with changed source hashes
-              elif mode == "incremental":
-                  if not section_changed(section_id):
-                      continue
-              # Full mode: process everything (no filtering)
-
-              # Look up source mappings from outline
-              outline_section = section_lookup.get(dp, {})
-              if not outline_section.get("sources"):
-                  continue
-
-              selected.append({
-                  "doc_path": dp,
-                  "staging_name": make_staging_name(dp),
-                  "sources": outline_section.get("sources", []),
-              })
-
-              if len(selected) >= batch_limit:
-                  break
-
-          result = {
-              "count": len(selected),
-              "mode": mode,
-              "no_baseline": no_baseline,
-              "total_sections": len(current.get("sections", {})),
-              "docs": selected
-          }
-          print(json.dumps(result))
-          EOF
-        output: "selected_docs"
-        parse_json: true
-        timeout: 60
-
-      # Early-exit guard: halt cleanly if nothing was selected
-      - id: "check-selection"
-        type: "bash"
-        command: |
-          python3 << 'EOF'
-          import json, sys
-
-          selected = json.loads('''{{selected_docs}}''')
-          count = selected.get("count", 0)
-
-          if count == 0:
-              print(json.dumps({
-                  "status": "nothing_to_do",
-                  "message": "All docs are up to date. Nothing to regenerate.",
-                  "count": 0
-              }))
-              sys.exit(1)  # Triggers on_error: skip_remaining — halts stage cleanly
-
-          print(json.dumps({"status": "proceed", "count": count}))
-          EOF
-        output: "check_selection_result"
-        parse_json: true
-        on_error: "skip_remaining"
-        timeout: 10
-
-      - id: "read-existing-docs"
-        type: "bash"
-        command: |
-          python3 << 'EOF'
-          import json
-          import os
-          from pathlib import Path
-
-          selected = json.loads('''{{selected_docs}}''')
-          docs_dir = "{{docs_dir}}"
-          output_dir = "{{output_dir}}"
-
-          existing = {}
-
-          for doc in selected.get("docs", []):
-              doc_path = doc["doc_path"]
-              full_path = Path(docs_dir).parent / doc_path  # doc_path includes "docs/"
-
-              if full_path.exists():
-                  with open(full_path) as f:
-                      content = f.read()
-
-                  # Extract frontmatter
-                  frontmatter = ""
-                  body = content
-                  if content.startswith("---"):
-                      parts = content.split("---", 2)
-                      if len(parts) >= 3:
-                          frontmatter = parts[1].strip()
-                          body = parts[2].strip()
-
-                  existing[doc_path] = {
-                      "full_content": content,
-                      "frontmatter": frontmatter,
-                      "body": body,
-                      "line_count": len(content.splitlines())
-                  }
-              else:
-                  existing[doc_path] = {"exists": False}
-
-          # Save for next step
-          staging_dir = Path(output_dir) / "staging"
-          with open(staging_dir / "existing-docs.json", "w") as f:
-              json.dump(existing, f, indent=2)
-
-          print(json.dumps({
-              "docs_read": len([d for d in existing.values() if d.get("full_content")]),
-              "docs_missing": len([d for d in existing.values() if not d.get("full_content")])
-          }))
-          EOF
-        output: "existing_docs_result"
-        parse_json: true
-        timeout: 60
-
-      # Surgical regeneration that preserves unchanged content
-      - id: "regenerate-docs"
-        agent: "foundation:zen-architect"
-        mode: "ARCHITECT"
-        prompt: |
-          Perform SURGICAL documentation updates. You MUST preserve existing content that doesn't need changes.
-
-          ## CRITICAL: DETERMINISM REQUIREMENTS
-
-          1. **PRESERVE unchanged sections VERBATIM** - Copy them exactly, character-for-character
-          2. **Use EXACT terminology from source code** - Don't paraphrase; use the same words
-          3. **Keep IDENTICAL structure** - Same heading hierarchy, same section order
-          4. **MINIMAL changes only** - Only update what actually differs between source and doc
-          5. **Match EXACT formatting** - Same code fence style, same list format, same spacing
-
-          ## Existing Documentation
-
-          The current docs have been saved to: {{output_dir}}/staging/existing-docs.json
-
-          Read this file FIRST to see the current content for each doc.
-
-          ## Selected Docs to Update
-          {{selected_docs}}
-
-          These docs were selected because their source files changed since the last regeneration.
-
-          ## Source Repository Location
-          All source repos are in: {{repos_dir}}
-
-          ## For EACH doc:
-
-          1. **Read the existing doc** from existing-docs.json
-             - Note the exact frontmatter (preserve it exactly)
-             - Note the structure and section headings
-             - Identify which sections DON'T need changes (keep verbatim)
-
-          2. **Read ALL source files** listed in "sources" from {{repos_dir}}/{repo}/{path}
-
-          3. **Compare source code against existing doc** to find gaps:
-             - Config keys/options in source but missing from doc
-             - API signatures that changed (parameters, return types, defaults)
-             - New features or capabilities added to source
-             - Model names or versions that are outdated in doc
-             - Environment variables documented in source but missing from doc
-
-          4. **Surgically update** the document:
-             - START with the existing doc content (copy it)
-             - KEEP all unchanged sections exactly as they are
-             - INSERT new content in the appropriate location
-             - UPDATE only the specific values/lists that differ from source
-             - PRESERVE the exact frontmatter
-
-          5. **Save to**: {{output_dir}}/staging/{staging_name}
-             - Where staging_name is provided in each doc's entry (e.g. "docs__architecture__index.md")
-             - This avoids filename collisions when multiple docs share the same basename
-
-          ## What NOT to do:
-          - Do NOT rephrase existing sentences that are still accurate
-          - Do NOT reorganize sections that don't need it
-          - Do NOT change formatting style (code fence language, list markers)
-          - Do NOT add content that isn't in the source files
-
-          Work through ALL selected docs. Be surgical - the goal is MINIMAL diff.
-        output: "regeneration_result"
-        timeout: 900
-
-      # Evidence-based validation: verify all claims against source code
-      - id: "evidence-validation"
-        agent: "foundation:zen-architect"
-        mode: "REVIEW"
-        prompt: |
-          You are a SKEPTICAL EVIDENCE REVIEWER. Your job is to verify that every
-          factual claim in the regenerated docs is grounded in actual source code.
-
-          ## Regenerated docs
-          Read .md files from: {{output_dir}}/staging/ (ignore existing-docs.json)
-          Files use collision-safe names (e.g. "docs__architecture__index.md").
-          Match them to their doc_path using the staging_name field in the selected docs below.
-
-          ## Source repos
-          All source repos are at: {{repos_dir}}
-
-          ## Doc-to-source mappings
-          {{selected_docs}}
-
-          ## Your process for EACH regenerated doc:
-
-          1. Read the regenerated .md file from staging
-          2. Read its corresponding source files from {{repos_dir}}/{repo}/{path}
-          3. Extract every factual claim in the doc:
-             - Config keys and their types/defaults
-             - API signatures (function names, parameters, return types)
-             - Feature descriptions and capabilities
-             - Model names and versions
-             - Environment variables
-             - Default values and constants
-             - CLI commands and flags
-          4. For EACH claim, search the source code for evidence:
-             - VERIFIED: Claim matches source. Keep it.
-             - NOT FOUND: Claim has no source evidence. REMOVE it from the doc.
-             - CONTRADICTED: Source says something different. FIX the doc to match source.
-             - OUTDATED: Value changed in source. UPDATE the doc with current value.
-          5. Save the corrected doc back to {{output_dir}}/staging/ (overwrite)
-
-          ## Output
-
-          After processing all docs, print a JSON validation report:
-          {
-            "docs_validated": N,
-            "total_claims": N,
-            "verified": N,
-            "fixed": N,
-            "removed": N,
-            "details": [
-              {
-                "doc": "filename.md",
-                "claims_checked": N,
-                "verified": N,
-                "fixes": [{"claim": "...", "was": "...", "now": "...", "source_file": "..."}],
-                "removals": [{"claim": "...", "reason": "no evidence in source"}]
-              }
-            ]
-          }
-
-          ## RULES
-          - If you CANNOT find evidence for a claim in the source files, REMOVE IT
-          - Do NOT invent features, config keys, or behaviors
-          - When fixing a value, use the EXACT value from source code
-          - Preserve all document structure, headings, and frontmatter
-          - Only modify factual content, not prose style or formatting
-          - Be thorough: check every config table, every feature list, every code example
-        output: "evidence_result"
-        parse_json: true
-        timeout: 900
-
-      # Semantic diff analysis - auto-filter cosmetic-only changes
-      - id: "semantic-diff-filter"
-        type: "bash"
-        command: |
-          python3 << 'EOF'
-          import json
-          import re
-          import shutil
-          from pathlib import Path
-
-          output_dir = Path("{{output_dir}}")
-          docs_dir = Path("{{docs_dir}}").parent  # Go up since doc_path includes "docs/"
-          staging_dir = output_dir / "staging"
-          min_ratio = float("{{min_change_ratio}}")
-
-          # Load selected docs to build staging_name -> doc_path mapping
-          selected = json.loads('''{{selected_docs}}''')
-          staging_to_docpath = {}
-          for doc in selected.get("docs", []):
-              staging_to_docpath[doc["staging_name"]] = doc["doc_path"]
-
-          # Load existing docs info
-          existing_path = staging_dir / "existing-docs.json"
-          if existing_path.exists():
-              with open(existing_path) as f:
-                  existing = json.load(f)
-          else:
-              existing = {}
-
-          results = {"accepted": [], "rejected": [], "analysis": []}
-
-          def extract_meaningful_content(text):
-              """Extract words, ignoring formatting and common words."""
-              # Remove frontmatter
-              text = re.sub(r'^---\n.*?\n---\n', '', text, flags=re.DOTALL)
-              # Remove code blocks (keep just the code, not fences)
-              text = re.sub(r'```\w*\n', '', text)
-              text = re.sub(r'```', '', text)
-              # Extract words
-              words = re.findall(r'\b[a-zA-Z_][a-zA-Z0-9_]*\b', text.lower())
-              # Filter out very common words
-              stopwords = {'the', 'a', 'an', 'is', 'are', 'was', 'were', 'be', 'been',
-                           'being', 'have', 'has', 'had', 'do', 'does', 'did', 'will',
-                           'would', 'could', 'should', 'may', 'might', 'must', 'shall',
-                           'can', 'to', 'of', 'in', 'for', 'on', 'with', 'at', 'by',
-                           'from', 'or', 'and', 'not', 'this', 'that', 'it', 'as', 'if'}
-              return [w for w in words if w not in stopwords and len(w) > 2]
-
-          # Process each staged file (now using collision-safe staging names)
-          for staged_file in staging_dir.glob("*.md"):
-              staging_name = staged_file.name
-
-              # Look up the original doc_path via staging_name mapping
-              doc_path_str = staging_to_docpath.get(staging_name)
-              if not doc_path_str:
-                  results["rejected"].append({"file": staging_name, "reason": "no mapping found"})
-                  continue
-
-              original_path = docs_dir / doc_path_str
-
-              if not original_path.exists():
-                  # New file - always accept
-                  shutil.copy(staged_file, output_dir / staging_name)
-                  results["accepted"].append({"file": staging_name, "doc_path": doc_path_str, "reason": "new file"})
-                  continue
-
-              # Read both versions
-              with open(original_path) as f:
-                  original_content = f.read()
-              with open(staged_file) as f:
-                  staged_content = f.read()
-
-              # If identical, skip
-              if original_content.strip() == staged_content.strip():
-                  results["rejected"].append({"file": staging_name, "doc_path": doc_path_str, "reason": "identical"})
-                  continue
-
-              # Extract meaningful words
-              orig_words = set(extract_meaningful_content(original_content))
-              staged_words = set(extract_meaningful_content(staged_content))
-
-              # Calculate change metrics
-              new_words = staged_words - orig_words
-              removed_words = orig_words - staged_words
-
-              total_original = len(orig_words) if orig_words else 1
-              new_ratio = len(new_words) / total_original
-
-              analysis = {
-                  "file": staging_name,
-                  "doc_path": doc_path_str,
-                  "original_words": len(orig_words),
-                  "staged_words": len(staged_words),
-                  "new_words": len(new_words),
-                  "removed_words": len(removed_words),
-                  "new_ratio": round(new_ratio, 4),
-                  "threshold": min_ratio,
-                  "new_word_sample": list(new_words)[:15]
-              }
-
-              if new_ratio >= min_ratio:
-                  # Meaningful change - accept
-                  shutil.copy(staged_file, output_dir / staging_name)
-                  analysis["status"] = "ACCEPTED"
-                  results["accepted"].append({"file": staging_name, "doc_path": doc_path_str, "new_ratio": new_ratio, "new_words": len(new_words)})
-              else:
-                  # Cosmetic only - reject
-                  analysis["status"] = "REJECTED (cosmetic)"
-                  results["rejected"].append({"file": staging_name, "doc_path": doc_path_str, "new_ratio": new_ratio, "reason": "below threshold"})
-
-              results["analysis"].append(analysis)
-
-          # Save detailed analysis
-          with open(output_dir / "diff-analysis.json", "w") as f:
-              json.dump(results, f, indent=2)
-
-          # Print summary
-          print(json.dumps({
-              "accepted": len(results["accepted"]),
-              "rejected": len(results["rejected"]),
-              "accepted_files": [a["file"] for a in results["accepted"]],
-              "rejected_files": [r["file"] for r in results["rejected"]]
-          }))
-          EOF
-        output: "diff_filter_result"
-        parse_json: true
-        timeout: 120
-
-      - id: "validate-output"
-        agent: "foundation:file-ops"
-        prompt: |
-          Validate the accepted regenerated documentation files.
-
-          Diff filter results:
-          {{diff_filter_result}}
-
-          1. List files directly in: {{output_dir}} (not staging subdirectory)
-             Only .md files that passed the semantic diff filter
-
-          2. For each file, check:
-             - Has valid markdown frontmatter (starts with ---)
-             - Has proper heading structure
-             - No obvious placeholder text
-
-          3. Report validation summary.
-        output: "validation_result"
-        timeout: 120
-
-      # Auto-apply accepted files to their correct doc locations
-      - id: "apply-to-docs"
-        type: "bash"
-        command: |
-          python3 << 'EOF'
-          import json
-          import shutil
-          from pathlib import Path
-
-          output_dir = Path("{{output_dir}}")
-
-          # Build staging_name -> doc_path mapping from selected docs
-          selected = json.loads('''{{selected_docs}}''')
-          staging_to_docpath = {}
-          for doc in selected.get("docs", []):
-              staging_to_docpath[doc["staging_name"]] = doc["doc_path"]
-
-          applied = []
-          skipped = []
-
-          for md_file in sorted(output_dir.glob("*.md")):
-              staging_name = md_file.name
-              if staging_name in staging_to_docpath:
-                  doc_path = staging_to_docpath[staging_name]
-                  target = Path(".") / doc_path
-                  target.parent.mkdir(parents=True, exist_ok=True)
-                  shutil.copy(md_file, target)
-                  applied.append({"file": staging_name, "doc_path": doc_path, "target": str(target)})
-              else:
-                  skipped.append(staging_name)
-
-          print(json.dumps({
-              "applied": len(applied),
-              "skipped": len(skipped),
-              "files": applied,
-              "skipped_files": skipped
-          }))
-          EOF
-        output: "apply_result"
-        parse_json: true
-        timeout: 60
-
-      # Show git diff for review
-      - id: "show-diff"
-        type: "bash"
-        command: |
-          python3 << 'PYEOF'
-          import json, os
-
-          print("=== REGENERATION SUMMARY ===\n")
-
-          # Evidence validation
-          print("Evidence validation:")
-          try:
-              ev = json.loads('''{{evidence_result}}''')
-              print(f"  Claims checked: {ev.get('total_claims', 'N/A')}")
-              print(f"  Verified: {ev.get('verified', 'N/A')}")
-              print(f"  Fixed: {ev.get('fixed', 'N/A')}")
-              print(f"  Removed: {ev.get('removed', 'N/A')}")
-              for detail in ev.get("details", []):
-                  if detail.get("fixes") or detail.get("removals"):
-                      print(f"  {detail['doc']}:")
-                      for fix in detail.get("fixes", []):
-                          print(f"    FIXED: {fix['claim'][:60]}...")
-                      for rm in detail.get("removals", []):
-                          print(f"    REMOVED: {rm['claim'][:60]}...")
-          except Exception:
-              print("  (see evidence_result for details)")
-
-          # Diff filter
-          print("\nSemantic diff filter:")
-          try:
-              df = json.loads('''{{diff_filter_result}}''')
-              print(f"  Accepted: {df.get('accepted', 0)} files")
-              print(f"  Rejected: {df.get('rejected', 0)} files (cosmetic only)")
-          except Exception:
-              print("  (see diff_filter_result for details)")
-
-          # Applied files
-          print("\nApplied to docs/:")
-          try:
-              ar = json.loads('''{{apply_result}}''')
-              for f in ar.get("files", []):
-                  print(f"  {f.get('doc_path', f.get('file','?'))} -> {f['target']}")
-          except Exception:
-              print("  (see apply_result for details)")
-          PYEOF
-
-          echo ""
-          echo "=== GIT DIFF ==="
-          git diff --stat
-          echo ""
-          git diff
-        output: "diff_output"
-        timeout: 60
-
-    # Approval gate: review the diff before committing
-    approval:
-      required: true
-      prompt: |
-        Documentation regenerated, evidence-validated, and applied.
-        Review the diff above. Approve to commit, deny to discard.
-      timeout: 0
-      default: "deny"
-
-  # ===========================================================================
-  # STAGE 2: Commit (runs only after approval)
-  # ===========================================================================
-  - name: "commit"
-    steps:
-      - id: "commit-changes"
-        agent: "foundation:git-ops"
-        prompt: |
-          Commit the documentation changes that were regenerated and approved.
-
-          Applied files: {{apply_result}}
-          Evidence validation results: {{evidence_result}}
-          Diff filter results: {{diff_filter_result}}
-
-          IMPORTANT: You MUST stage and include `baseline-hashes.json` in this commit.
-          Run `git add baseline-hashes.json` before committing. The docs and baseline
-          must always be committed together atomically.
-
-          Create a commit with:
-          - Type prefix "docs:"
-          - Summarize which docs were regenerated
-          - Note evidence validation results (claims checked/fixed/removed)
-          - Keep the message concise
-        output: "commit_result"
-        timeout: 120
-
-      # Per-section baseline update: only advance baseline for sections that were committed
-      - id: "update-baseline"
-        type: "bash"
-        command: |
-          python3 << 'EOF'
-          import json
-          from pathlib import Path
-
-          # What was actually applied (committed docs)
-          applied = json.loads('''{{apply_result}}''')
-          committed_docs = {f["doc_path"] for f in applied.get("files", [])}
-
-          if not committed_docs:
-              print(json.dumps({"sections_updated": 0, "message": "No docs committed, baseline unchanged"}))
-              exit(0)
-
-          # Current source hashes
+steps:
+  - id: "setup"
+    type: "bash"
+    command: |
+      rm -rf {{output_dir}}/staging && mkdir -p {{output_dir}}/staging
+      echo 'Setup complete. Mode: {{mode}}'
+    output: "setup_result"
+    timeout: 30
+
+  - id: "select-docs"
+    type: "bash"
+    command: |
+      python3 << 'EOF'
+      import json, sys
+
+      mode = "{{mode}}"
+      doc_path = "{{doc_path}}"
+      batch_limit = int("{{batch_limit}}")
+
+      # Load current source hashes
+      try:
           with open("{{hashes_path}}") as f:
               current = json.load(f)
+      except FileNotFoundError:
+          print('{"error": "No source-hashes.json found. Run docs-sync first.", "count": 0, "docs": []}')
+          sys.exit(0)
 
-          # Existing baseline (or empty for first run)
-          baseline_path = Path("{{baseline_path}}")
-          if baseline_path.exists():
-              with open(baseline_path) as f:
-                  baseline = json.load(f)
+      # Load outline for source mappings
+      with open("{{outline_path}}") as f:
+          outline = json.load(f)
+
+      # Load baseline (no baseline = first run, everything is changed)
+      try:
+          with open("{{baseline_path}}") as f:
+              baseline = json.load(f)
+      except FileNotFoundError:
+          baseline = {"sections": {}}
+
+      # Build section lookup from outline
+      section_lookup = {s["doc_path"]: s for s in outline.get("content_sections", [])}
+
+      def make_staging_name(dp):
+          """e.g. 'docs/architecture/index.md' -> 'docs__architecture__index.md'"""
+          return dp.replace("/", "__")
+
+      def section_changed(section_id):
+          """Compare source hashes: any difference means section needs regeneration."""
+          cur = current.get("sections", {}).get(section_id, {})
+          base = baseline.get("sections", {}).get(section_id, {})
+          cur_hashes = {(s.get("repo",""), s.get("path","")): s.get("hash") for s in cur.get("sources", [])}
+          base_hashes = {(s.get("repo",""), s.get("path","")): s.get("hash") for s in base.get("sources", [])}
+          return cur_hashes != base_hashes
+
+      no_baseline = len(baseline.get("sections", {})) == 0
+      selected = []
+
+      for section_id, section in current.get("sections", {}).items():
+          dp = section.get("doc_path", "")
+          if not dp:
+              continue
+
+          # Single mode: only process the specified doc
+          if mode == "single":
+              if doc_path and dp != doc_path:
+                  continue
+          # Incremental mode: only process sections with changed source hashes
+          elif mode == "incremental":
+              if not section_changed(section_id):
+                  continue
+          # Full mode: process everything (no filtering)
+
+          # Look up source mappings from outline
+          outline_section = section_lookup.get(dp, {})
+          if not outline_section.get("sources"):
+              continue
+
+          selected.append({
+              "doc_path": dp,
+              "staging_name": make_staging_name(dp),
+              "sources": outline_section.get("sources", []),
+          })
+
+          if len(selected) >= batch_limit:
+              break
+
+      result = {
+          "count": len(selected),
+          "mode": mode,
+          "no_baseline": no_baseline,
+          "total_sections": len(current.get("sections", {})),
+          "docs": selected
+      }
+      print(json.dumps(result))
+      EOF
+    output: "selected_docs"
+    parse_json: true
+    timeout: 60
+
+  # Early-exit guard: halt cleanly if nothing was selected
+  - id: "check-selection"
+    type: "bash"
+    command: |
+      python3 << 'EOF'
+      import json, sys
+
+      selected = json.loads('''{{selected_docs}}''')
+      count = selected.get("count", 0)
+
+      if count == 0:
+          print(json.dumps({
+              "status": "nothing_to_do",
+              "message": "All docs are up to date. Nothing to regenerate.",
+              "count": 0
+          }))
+          sys.exit(1)  # Triggers on_error: skip_remaining — halts stage cleanly
+
+      print(json.dumps({"status": "proceed", "count": count}))
+      EOF
+    output: "check_selection_result"
+    parse_json: true
+    on_error: "skip_remaining"
+    timeout: 10
+
+  - id: "read-existing-docs"
+    type: "bash"
+    command: |
+      python3 << 'EOF'
+      import json
+      import os
+      from pathlib import Path
+
+      selected = json.loads('''{{selected_docs}}''')
+      docs_dir = "{{docs_dir}}"
+      output_dir = "{{output_dir}}"
+
+      existing = {}
+
+      for doc in selected.get("docs", []):
+          doc_path = doc["doc_path"]
+          full_path = Path(docs_dir).parent / doc_path  # doc_path includes "docs/"
+
+          if full_path.exists():
+              with open(full_path) as f:
+                  content = f.read()
+
+              # Extract frontmatter
+              frontmatter = ""
+              body = content
+              if content.startswith("---"):
+                  parts = content.split("---", 2)
+                  if len(parts) >= 3:
+                      frontmatter = parts[1].strip()
+                      body = parts[2].strip()
+
+              existing[doc_path] = {
+                  "full_content": content,
+                  "frontmatter": frontmatter,
+                  "body": body,
+                  "line_count": len(content.splitlines())
+              }
           else:
-              baseline = {"sections": {}}
+              existing[doc_path] = {"exists": False}
 
-          # Merge: only update sections whose docs were actually committed
-          updated = 0
-          for section_id, section_data in current.get("sections", {}).items():
-              if section_data.get("doc_path") in committed_docs:
-                  baseline["sections"][section_id] = section_data
-                  updated += 1
+      # Save for next step
+      staging_dir = Path(output_dir) / "staging"
+      with open(staging_dir / "existing-docs.json", "w") as f:
+          json.dump(existing, f, indent=2)
 
-          baseline["last_updated"] = current.get("generated_at", "")
+      print(json.dumps({
+          "docs_read": len([d for d in existing.values() if d.get("full_content")]),
+          "docs_missing": len([d for d in existing.values() if not d.get("full_content")])
+      }))
+      EOF
+    output: "existing_docs_result"
+    parse_json: true
+    timeout: 60
 
-          with open(baseline_path, "w") as f:
-              json.dump(baseline, f, indent=2)
+  # Surgical regeneration that preserves unchanged content
+  - id: "regenerate-docs"
+    agent: "foundation:zen-architect"
+    mode: "ARCHITECT"
+    prompt: |
+      Perform SURGICAL documentation updates. You MUST preserve existing content that doesn't need changes.
 
-          print(json.dumps({"sections_updated": updated, "total_baseline": len(baseline["sections"])}))
-          EOF
-        output: "baseline_result"
-        parse_json: true
-        timeout: 60
+      ## CRITICAL: DETERMINISM REQUIREMENTS
 
-      - id: "generate-report"
-        type: "bash"
-        command: |
-          echo "=== REGENERATION COMPLETE ==="
-          echo ""
-          echo "Commit: {{commit_result}}"
-          echo ""
-          echo "Baseline: {{baseline_result}}"
-          echo ""
-          if [ -f "{{output_dir}}/diff-analysis.json" ]; then
-            echo "Change details:"
-            python3 -c "
-          import json
-          with open('{{output_dir}}/diff-analysis.json') as f:
-              d = json.load(f)
-          for a in d.get('analysis', []):
-              status = 'ACCEPTED' if a.get('status') == 'ACCEPTED' else 'SKIPPED'
-              print(f'  [{status}] {a[\"file\"]}: {a[\"new_words\"]} new words ({a[\"new_ratio\"]*100:.1f}% change)')
-          "
-          fi
-        output: "final_report"
-        timeout: 30
+      1. **PRESERVE unchanged sections VERBATIM** - Copy them exactly, character-for-character
+      2. **Use EXACT terminology from source code** - Don't paraphrase; use the same words
+      3. **Keep IDENTICAL structure** - Same heading hierarchy, same section order
+      4. **MINIMAL changes only** - Only update what actually differs between source and doc
+      5. **Match EXACT formatting** - Same code fence style, same list format, same spacing
+
+      ## Existing Documentation
+
+      The current docs have been saved to: {{output_dir}}/staging/existing-docs.json
+
+      Read this file FIRST to see the current content for each doc.
+
+      ## Selected Docs to Update
+      {{selected_docs}}
+
+      These docs were selected because their source files changed since the last regeneration.
+
+      ## Source Repository Location
+      All source repos are in: {{repos_dir}}
+
+      ## For EACH doc:
+
+      1. **Read the existing doc** from existing-docs.json
+         - Note the exact frontmatter (preserve it exactly)
+         - Note the structure and section headings
+         - Identify which sections DON'T need changes (keep verbatim)
+
+      2. **Read ALL source files** listed in "sources" from {{repos_dir}}/{repo}/{path}
+
+      3. **Compare source code against existing doc** to find gaps:
+         - Config keys/options in source but missing from doc
+         - API signatures that changed (parameters, return types, defaults)
+         - New features or capabilities added to source
+         - Model names or versions that are outdated in doc
+         - Environment variables documented in source but missing from doc
+
+      4. **Surgically update** the document:
+         - START with the existing doc content (copy it)
+         - KEEP all unchanged sections exactly as they are
+         - INSERT new content in the appropriate location
+         - UPDATE only the specific values/lists that differ from source
+         - PRESERVE the exact frontmatter
+
+      5. **Save to**: {{output_dir}}/staging/{staging_name}
+         - Where staging_name is provided in each doc's entry (e.g. "docs__architecture__index.md")
+         - This avoids filename collisions when multiple docs share the same basename
+
+      ## What NOT to do:
+      - Do NOT rephrase existing sentences that are still accurate
+      - Do NOT reorganize sections that don't need it
+      - Do NOT change formatting style (code fence language, list markers)
+      - Do NOT add content that isn't in the source files
+
+      Work through ALL selected docs. Be surgical - the goal is MINIMAL diff.
+    output: "regeneration_result"
+    timeout: 900
+
+  # Evidence-based validation: verify all claims against source code
+  - id: "evidence-validation"
+    agent: "foundation:zen-architect"
+    mode: "REVIEW"
+    prompt: |
+      You are a SKEPTICAL EVIDENCE REVIEWER. Your job is to verify that every
+      factual claim in the regenerated docs is grounded in actual source code.
+
+      ## Regenerated docs
+      Read .md files from: {{output_dir}}/staging/ (ignore existing-docs.json)
+      Files use collision-safe names (e.g. "docs__architecture__index.md").
+      Match them to their doc_path using the staging_name field in the selected docs below.
+
+      ## Source repos
+      All source repos are at: {{repos_dir}}
+
+      ## Doc-to-source mappings
+      {{selected_docs}}
+
+      ## Your process for EACH regenerated doc:
+
+      1. Read the regenerated .md file from staging
+      2. Read its corresponding source files from {{repos_dir}}/{repo}/{path}
+      3. Extract every factual claim in the doc:
+         - Config keys and their types/defaults
+         - API signatures (function names, parameters, return types)
+         - Feature descriptions and capabilities
+         - Model names and versions
+         - Environment variables
+         - Default values and constants
+         - CLI commands and flags
+      4. For EACH claim, search the source code for evidence:
+         - VERIFIED: Claim matches source. Keep it.
+         - NOT FOUND: Claim has no source evidence. REMOVE it from the doc.
+         - CONTRADICTED: Source says something different. FIX the doc to match source.
+         - OUTDATED: Value changed in source. UPDATE the doc with current value.
+      5. Save the corrected doc back to {{output_dir}}/staging/ (overwrite)
+
+      ## Output
+
+      After processing all docs, print a JSON validation report:
+      {
+        "docs_validated": N,
+        "total_claims": N,
+        "verified": N,
+        "fixed": N,
+        "removed": N,
+        "details": [
+          {
+            "doc": "filename.md",
+            "claims_checked": N,
+            "verified": N,
+            "fixes": [{"claim": "...", "was": "...", "now": "...", "source_file": "..."}],
+            "removals": [{"claim": "...", "reason": "no evidence in source"}]
+          }
+        ]
+      }
+
+      ## RULES
+      - If you CANNOT find evidence for a claim in the source files, REMOVE IT
+      - Do NOT invent features, config keys, or behaviors
+      - When fixing a value, use the EXACT value from source code
+      - Preserve all document structure, headings, and frontmatter
+      - Only modify factual content, not prose style or formatting
+      - Be thorough: check every config table, every feature list, every code example
+    output: "evidence_result"
+    parse_json: true
+    timeout: 900
+
+  # Semantic diff analysis - auto-filter cosmetic-only changes
+  - id: "semantic-diff-filter"
+    type: "bash"
+    command: |
+      python3 << 'EOF'
+      import json
+      import re
+      import shutil
+      from pathlib import Path
+
+      output_dir = Path("{{output_dir}}")
+      docs_dir = Path("{{docs_dir}}").parent  # Go up since doc_path includes "docs/"
+      staging_dir = output_dir / "staging"
+      min_ratio = float("{{min_change_ratio}}")
+
+      # Load selected docs to build staging_name -> doc_path mapping
+      selected = json.loads('''{{selected_docs}}''')
+      staging_to_docpath = {}
+      for doc in selected.get("docs", []):
+          staging_to_docpath[doc["staging_name"]] = doc["doc_path"]
+
+      # Load existing docs info
+      existing_path = staging_dir / "existing-docs.json"
+      if existing_path.exists():
+          with open(existing_path) as f:
+              existing = json.load(f)
+      else:
+          existing = {}
+
+      results = {"accepted": [], "rejected": [], "analysis": []}
+
+      def extract_meaningful_content(text):
+          """Extract words, ignoring formatting and common words."""
+          # Remove frontmatter
+          text = re.sub(r'^---\n.*?\n---\n', '', text, flags=re.DOTALL)
+          # Remove code blocks (keep just the code, not fences)
+          text = re.sub(r'```\w*\n', '', text)
+          text = re.sub(r'```', '', text)
+          # Extract words
+          words = re.findall(r'\b[a-zA-Z_][a-zA-Z0-9_]*\b', text.lower())
+          # Filter out very common words
+          stopwords = {'the', 'a', 'an', 'is', 'are', 'was', 'were', 'be', 'been',
+                       'being', 'have', 'has', 'had', 'do', 'does', 'did', 'will',
+                       'would', 'could', 'should', 'may', 'might', 'must', 'shall',
+                       'can', 'to', 'of', 'in', 'for', 'on', 'with', 'at', 'by',
+                       'from', 'or', 'and', 'not', 'this', 'that', 'it', 'as', 'if'}
+          return [w for w in words if w not in stopwords and len(w) > 2]
+
+      # Process each staged file (now using collision-safe staging names)
+      for staged_file in staging_dir.glob("*.md"):
+          staging_name = staged_file.name
+
+          # Look up the original doc_path via staging_name mapping
+          doc_path_str = staging_to_docpath.get(staging_name)
+          if not doc_path_str:
+              results["rejected"].append({"file": staging_name, "reason": "no mapping found"})
+              continue
+
+          original_path = docs_dir / doc_path_str
+
+          if not original_path.exists():
+              # New file - always accept
+              shutil.copy(staged_file, output_dir / staging_name)
+              results["accepted"].append({"file": staging_name, "doc_path": doc_path_str, "reason": "new file"})
+              continue
+
+          # Read both versions
+          with open(original_path) as f:
+              original_content = f.read()
+          with open(staged_file) as f:
+              staged_content = f.read()
+
+          # If identical, skip
+          if original_content.strip() == staged_content.strip():
+              results["rejected"].append({"file": staging_name, "doc_path": doc_path_str, "reason": "identical"})
+              continue
+
+          # Extract meaningful words
+          orig_words = set(extract_meaningful_content(original_content))
+          staged_words = set(extract_meaningful_content(staged_content))
+
+          # Calculate change metrics
+          new_words = staged_words - orig_words
+          removed_words = orig_words - staged_words
+
+          total_original = len(orig_words) if orig_words else 1
+          new_ratio = len(new_words) / total_original
+
+          analysis = {
+              "file": staging_name,
+              "doc_path": doc_path_str,
+              "original_words": len(orig_words),
+              "staged_words": len(staged_words),
+              "new_words": len(new_words),
+              "removed_words": len(removed_words),
+              "new_ratio": round(new_ratio, 4),
+              "threshold": min_ratio,
+              "new_word_sample": list(new_words)[:15]
+          }
+
+          if new_ratio >= min_ratio:
+              # Meaningful change - accept
+              shutil.copy(staged_file, output_dir / staging_name)
+              analysis["status"] = "ACCEPTED"
+              results["accepted"].append({"file": staging_name, "doc_path": doc_path_str, "new_ratio": new_ratio, "new_words": len(new_words)})
+          else:
+              # Cosmetic only - reject
+              analysis["status"] = "REJECTED (cosmetic)"
+              results["rejected"].append({"file": staging_name, "doc_path": doc_path_str, "new_ratio": new_ratio, "reason": "below threshold"})
+
+          results["analysis"].append(analysis)
+
+      # Save detailed analysis
+      with open(output_dir / "diff-analysis.json", "w") as f:
+          json.dump(results, f, indent=2)
+
+      # Print summary
+      print(json.dumps({
+          "accepted": len(results["accepted"]),
+          "rejected": len(results["rejected"]),
+          "accepted_files": [a["file"] for a in results["accepted"]],
+          "rejected_files": [r["file"] for r in results["rejected"]]
+      }))
+      EOF
+    output: "diff_filter_result"
+    parse_json: true
+    timeout: 120
+
+  - id: "validate-output"
+    agent: "foundation:file-ops"
+    prompt: |
+      Validate the accepted regenerated documentation files.
+
+      Diff filter results:
+      {{diff_filter_result}}
+
+      1. List files directly in: {{output_dir}} (not staging subdirectory)
+         Only .md files that passed the semantic diff filter
+
+      2. For each file, check:
+         - Has valid markdown frontmatter (starts with ---)
+         - Has proper heading structure
+         - No obvious placeholder text
+
+      3. Report validation summary.
+    output: "validation_result"
+    timeout: 120
+
+  # Auto-apply accepted files to their correct doc locations
+  - id: "apply-to-docs"
+    type: "bash"
+    command: |
+      python3 << 'EOF'
+      import json
+      import shutil
+      from pathlib import Path
+
+      output_dir = Path("{{output_dir}}")
+
+      # Build staging_name -> doc_path mapping from selected docs
+      selected = json.loads('''{{selected_docs}}''')
+      staging_to_docpath = {}
+      for doc in selected.get("docs", []):
+          staging_to_docpath[doc["staging_name"]] = doc["doc_path"]
+
+      applied = []
+      skipped = []
+
+      for md_file in sorted(output_dir.glob("*.md")):
+          staging_name = md_file.name
+          if staging_name in staging_to_docpath:
+              doc_path = staging_to_docpath[staging_name]
+              target = Path(".") / doc_path
+              target.parent.mkdir(parents=True, exist_ok=True)
+              shutil.copy(md_file, target)
+              applied.append({"file": staging_name, "doc_path": doc_path, "target": str(target)})
+          else:
+              skipped.append(staging_name)
+
+      print(json.dumps({
+          "applied": len(applied),
+          "skipped": len(skipped),
+          "files": applied,
+          "skipped_files": skipped
+      }))
+      EOF
+    output: "apply_result"
+    parse_json: true
+    timeout: 60
+
+  # Show git diff for review
+  - id: "show-diff"
+    type: "bash"
+    command: |
+      python3 << 'PYEOF'
+      import json, os
+
+      print("=== REGENERATION SUMMARY ===\n")
+
+      # Evidence validation
+      print("Evidence validation:")
+      try:
+          ev = json.loads('''{{evidence_result}}''')
+          print(f"  Claims checked: {ev.get('total_claims', 'N/A')}")
+          print(f"  Verified: {ev.get('verified', 'N/A')}")
+          print(f"  Fixed: {ev.get('fixed', 'N/A')}")
+          print(f"  Removed: {ev.get('removed', 'N/A')}")
+          for detail in ev.get("details", []):
+              if detail.get("fixes") or detail.get("removals"):
+                  print(f"  {detail['doc']}:")
+                  for fix in detail.get("fixes", []):
+                      print(f"    FIXED: {fix['claim'][:60]}...")
+                  for rm in detail.get("removals", []):
+                      print(f"    REMOVED: {rm['claim'][:60]}...")
+      except Exception:
+          print("  (see evidence_result for details)")
+
+      # Diff filter
+      print("\nSemantic diff filter:")
+      try:
+          df = json.loads('''{{diff_filter_result}}''')
+          print(f"  Accepted: {df.get('accepted', 0)} files")
+          print(f"  Rejected: {df.get('rejected', 0)} files (cosmetic only)")
+      except Exception:
+          print("  (see diff_filter_result for details)")
+
+      # Applied files
+      print("\nApplied to docs/:")
+      try:
+          ar = json.loads('''{{apply_result}}''')
+          for f in ar.get("files", []):
+              print(f"  {f.get('doc_path', f.get('file','?'))} -> {f['target']}")
+      except Exception:
+          print("  (see apply_result for details)")
+      PYEOF
+
+      echo ""
+      echo "=== GIT DIFF ==="
+      git diff --stat
+      echo ""
+      git diff
+    output: "diff_output"
+    timeout: 60
+
+  - id: "commit-changes"
+    agent: "foundation:git-ops"
+    prompt: |
+      Commit the documentation changes that were regenerated and approved.
+
+      Applied files: {{apply_result}}
+      Evidence validation results: {{evidence_result}}
+      Diff filter results: {{diff_filter_result}}
+
+      IMPORTANT: You MUST stage and include `baseline-hashes.json` in this commit.
+      Run `git add baseline-hashes.json` before committing. The docs and baseline
+      must always be committed together atomically.
+
+      Create a commit with:
+      - Type prefix "docs:"
+      - Summarize which docs were regenerated
+      - Note evidence validation results (claims checked/fixed/removed)
+      - Keep the message concise
+    output: "commit_result"
+    timeout: 120
+
+  # Per-section baseline update: only advance baseline for sections that were committed
+  - id: "update-baseline"
+    type: "bash"
+    command: |
+      python3 << 'EOF'
+      import json
+      from pathlib import Path
+
+      # What was actually applied (committed docs)
+      applied = json.loads('''{{apply_result}}''')
+      committed_docs = {f["doc_path"] for f in applied.get("files", [])}
+
+      if not committed_docs:
+          print(json.dumps({"sections_updated": 0, "message": "No docs committed, baseline unchanged"}))
+          exit(0)
+
+      # Current source hashes
+      with open("{{hashes_path}}") as f:
+          current = json.load(f)
+
+      # Existing baseline (or empty for first run)
+      baseline_path = Path("{{baseline_path}}")
+      if baseline_path.exists():
+          with open(baseline_path) as f:
+              baseline = json.load(f)
+      else:
+          baseline = {"sections": {}}
+
+      # Merge: only update sections whose docs were actually committed
+      updated = 0
+      for section_id, section_data in current.get("sections", {}).items():
+          if section_data.get("doc_path") in committed_docs:
+              baseline["sections"][section_id] = section_data
+              updated += 1
+
+      baseline["last_updated"] = current.get("generated_at", "")
+
+      with open(baseline_path, "w") as f:
+          json.dump(baseline, f, indent=2)
+
+      print(json.dumps({"sections_updated": updated, "total_baseline": len(baseline["sections"])}))
+      EOF
+    output: "baseline_result"
+    parse_json: true
+    timeout: 60
+
+
+  - id: "cleanup-sources"
+    type: "bash"
+    command: |
+      echo "Cleaning up cloned source repos..."
+      rm -rf {{repos_dir}} && echo "Removed {{repos_dir}}" || echo "Warning: could not remove {{repos_dir}}"
+      echo "Cleaning up staging output..."
+      rm -rf {{output_dir}}/staging && echo "Removed staging dir" || echo "Warning: staging dir not found"
+      echo "Cleanup complete"
+    output: "cleanup_result"
+    on_error: "continue"
+    timeout: 60
+  - id: "generate-report"
+    type: "bash"
+    command: |
+      echo "=== REGENERATION COMPLETE ==="
+      echo ""
+      echo "Commit: {{commit_result}}"
+      echo ""
+      echo "Baseline: {{baseline_result}}"
+      echo ""
+      if [ -f "{{output_dir}}/diff-analysis.json" ]; then
+        echo "Change details:"
+        python3 -c "
+      import json
+      with open('{{output_dir}}/diff-analysis.json') as f:
+          d = json.load(f)
+      for a in d.get('analysis', []):
+          status = 'ACCEPTED' if a.get('status') == 'ACCEPTED' else 'SKIPPED'
+          print(f'  [{status}] {a[\"file\"]}: {a[\"new_words\"]} new words ({a[\"new_ratio\"]*100:.1f}% change)')
+      "
+      fi
+    output: "final_report"
+    timeout: 30
