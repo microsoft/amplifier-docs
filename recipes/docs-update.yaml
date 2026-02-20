@@ -76,6 +76,15 @@ stages:
         output: "setup_result"
         timeout: 30
 
+      - id: "generate-outline"
+        type: "bash"
+        description: "Regenerate outline JSON from DOC_SOURCE_MAPPING.csv (always fresh)"
+        command: |
+          uv run python scripts/csv_to_outline.py
+          echo "Outline regenerated from docs/DOC_SOURCE_MAPPING.csv"
+        output: "outline_result"
+        timeout: 30
+
       - id: "extract-repos"
         type: "bash"
         command: "python3 -c \"import json; d=json.load(open('{{outline_path}}')); repos=set(); [repos.update(v) for v in d.get('_meta',{}).get('allowed_repos',{}).values()]; print(json.dumps(sorted(list(repos))))\""
