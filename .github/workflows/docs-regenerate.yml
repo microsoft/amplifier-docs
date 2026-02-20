@@ -1,0 +1,214 @@
+name: Daily Docs Regeneration
+
+on:
+  schedule:
+    - cron: '0 6 * * *'  # 6 AM UTC daily
+  workflow_dispatch:       # allow manual trigger
+
+concurrency:
+  group: docs-regenerate
+  cancel-in-progress: false  # let the current run finish; queue the next one
+
+jobs:
+  regenerate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    permissions:
+      contents: write  # git push
+      issues: write    # gh issue create
+
+    env:
+      ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+      NO_COLOR: 1
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # ── Preflight ──────────────────────────────────────────────────────────
+      - name: Preflight — check required secrets
+        id: preflight
+        run: |
+          if [ -z "$ANTHROPIC_API_KEY" ]; then
+            echo "::warning::ANTHROPIC_API_KEY secret not configured — skipping run"
+            echo "skip=true" >> $GITHUB_OUTPUT
+          else
+            echo "skip=false" >> $GITHUB_OUTPUT
+          fi
+
+      # ── Cache + Install ────────────────────────────────────────────────────
+      - name: Cache UV + Amplifier modules
+        if: steps.preflight.outputs.skip != 'true'
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.local/share/uv
+            ~/.amplifier/cache
+            ~/.amplifier/bundles
+          key: amplifier-${{ runner.os }}-v1
+          restore-keys: amplifier-${{ runner.os }}-
+
+      - name: Install UV + Amplifier
+        if: steps.preflight.outputs.skip != 'true'
+        run: |
+          curl -LsSf https://astral.sh/uv/install.sh | sh
+          export PATH="$HOME/.local/bin:$PATH"
+          echo "$HOME/.local/bin" >> $GITHUB_PATH
+          uv tool install git+https://github.com/microsoft/amplifier
+
+      - name: Init Amplifier
+        if: steps.preflight.outputs.skip != 'true'
+        run: amplifier init --yes
+
+      # ── One-time setup ─────────────────────────────────────────────────────
+      - name: Ensure docs-warning label exists
+        if: steps.preflight.outputs.skip != 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh label create "docs-warning" \
+            --color "#e4e669" \
+            --description "Automated warning from docs-sync" \
+            2>/dev/null || true
+
+      - name: Configure git identity
+        if: steps.preflight.outputs.skip != 'true'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      # ── docs-sync ──────────────────────────────────────────────────────────
+      - name: Sync sources
+        if: steps.preflight.outputs.skip != 'true'
+        run: |
+          amplifier tool invoke recipes \
+            operation=execute \
+            recipe_path=recipes/docs-sync.yaml
+
+      # ── Issue filing ───────────────────────────────────────────────────────
+      - name: File issues for warnings
+        if: steps.preflight.outputs.skip != 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          python3 << 'PYEOF'
+          import json, subprocess, sys
+          from pathlib import Path
+
+          HASHES  = Path("sync-output/cache/source-hashes.json")
+          OUTLINE = Path("outlines/amplifier-docs-outline.json")
+          REPOS_DIR = Path.home() / "repo" / "amplifier-sources"
+
+          def find_existing_issue(title):
+              """Return the existing open issue dict, or None."""
+              result = subprocess.run(
+                  ["gh", "issue", "list",
+                   "--search", title,
+                   "--state", "open",
+                   "--json", "number,url,title"],
+                  capture_output=True, text=True
+              )
+              issues = json.loads(result.stdout or "[]")
+              return next((i for i in issues if i["title"] == title), None)
+
+          def file_or_skip(title, body):
+              existing = find_existing_issue(title)
+              if existing:
+                  print(f"Issue already exists: {title} — {existing['url']}")
+              else:
+                  subprocess.run([
+                      "gh", "issue", "create",
+                      "--title", title,
+                      "--body", body,
+                      "--label", "docs-warning"
+                  ])
+                  print(f"Created issue: {title}")
+
+          if not HASHES.exists():
+              print("No source-hashes.json — skipping issue filing")
+              sys.exit(0)
+
+          with open(HASHES) as f:
+              hashes_data = json.load(f)
+
+          # Build set of (repo, path) tuples referenced in the outline
+          outlined_sources = set()
+          if OUTLINE.exists():
+              with open(OUTLINE) as f:
+                  outline_data = json.load(f)
+              for section in outline_data.get("content_sections", []):
+                  for src in section.get("sources", []):
+                      outlined_sources.add((src.get("repo", ""), src.get("path", "")))
+
+          # ── Type 1: Missing sources (in outline, not found in repo) ────────
+          for section_id, section in hashes_data.get("sections", {}).items():
+              for source in section.get("sources", []):
+                  if not source.get("exists", True):
+                      repo = source["repo"]
+                      path = source["path"]
+                      title = f"[docs-warning] Missing source: {repo}/{path}"
+                      body = f"""## Missing Source File
+
+          **Section:** `{section_id}`
+          **Affected doc:** `{section.get('doc_path', 'unknown')}`
+          **Missing file:** `{repo}/{path}`
+
+          The source file referenced in `outlines/amplifier-docs-outline.json` no longer exists in the repository.
+
+          **Suggested action:** Update `docs/DOC_SOURCE_MAPPING.csv` to remove or fix this entry, then regenerate the outline with `python3 scripts/csv_to_outline.py`.
+          """
+                      file_or_skip(title, body)
+
+          # ── Type 2: Outdated sections (every source for a section is missing)
+          for section_id, section in hashes_data.get("sections", {}).items():
+              sources = section.get("sources", [])
+              if sources and all(not s.get("exists", True) for s in sources):
+                  doc_path = section.get("doc_path", "unknown")
+                  title = f"[docs-warning] Outdated mapping section: {section_id}"
+                  body = f"""## Outdated Mapping Section
+
+          **Section:** `{section_id}`
+          **Doc:** `{doc_path}`
+          **All {len(sources)} source file(s) are missing.**
+
+          Every source file for this section is gone. The section mapping is entirely stale.
+
+          **Suggested action:** Remove the `{section_id}` entry from `docs/DOC_SOURCE_MAPPING.csv`, delete `{doc_path}` if it is no longer relevant, then regenerate the outline.
+          """
+                  file_or_skip(title, body)
+
+          # ── Type 3: New undocumented files (in repo, not in outline) ────────
+          if REPOS_DIR.exists():
+              for repo_dir in sorted(REPOS_DIR.iterdir()):
+                  if not repo_dir.is_dir():
+                      continue
+                  repo_name = repo_dir.name
+                  # README.md and package __init__.py are signals a module may need docs
+                  candidates = (
+                      list(repo_dir.glob("README.md")) +
+                      list(repo_dir.glob("*/__init__.py"))
+                  )
+                  for candidate in candidates:
+                      rel_path = str(candidate.relative_to(repo_dir))
+                      if (repo_name, rel_path) not in outlined_sources:
+                          title = f"[docs-warning] Potential new source: {repo_name}/{rel_path}"
+                          body = f"""## Potential New Source File
+
+          **Repo:** `{repo_name}`
+          **File:** `{rel_path}`
+
+          This file exists in the cloned repository but is not referenced in any section of `outlines/amplifier-docs-outline.json`.
+
+          **Suggested action:** If this file should be documented, add an entry to `docs/DOC_SOURCE_MAPPING.csv` and regenerate the outline with `python3 scripts/csv_to_outline.py`.
+          """
+                          file_or_skip(title, body)
+
+          print("Issue filing complete.")
+          PYEOF
+
+      # ── docs-regenerate ────────────────────────────────────────────────────
+      - name: Regenerate docs
+        if: steps.preflight.outputs.skip != 'true'
+        run: |
+          amplifier tool invoke recipes \
+            operation=execute \
+            recipe_path=recipes/docs-regenerate.yaml
