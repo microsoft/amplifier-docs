@@ -77,6 +77,10 @@ jobs:
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
       # ── docs-sync ──────────────────────────────────────────────────────────
+      - name: Generate docs outline from CSV
+        if: steps.preflight.outputs.skip != 'true'
+        run: python3 scripts/csv_to_outline.py
+
       - name: Sync sources
         if: steps.preflight.outputs.skip != 'true'
         run: |
