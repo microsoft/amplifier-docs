@@ -22,18 +22,29 @@ Tools provide capabilities that agents can invoke to interact with the environme
 
 ## Configuration
 
-```yaml
-tools:
-  - module: tool-filesystem
-    config:
-      allowed_write_paths: ["/home/user/projects"]
-      require_approval: false
+```toml
+[[tools]]
+module = "tool-filesystem"
+config = {
+    allowed_read_paths = null,  # null = allow all reads (default), or ["path1", "path2"]
+    allowed_write_paths = ["."],  # Default: current directory and subdirectories only
+    require_approval = false
+}
 
-  - module: tool-bash
-    config:
-      timeout: 30
-      safety_profile: "strict"
-      denied_commands: []
+[[tools]]
+module = "tool-bash"
+config = {
+    working_dir = ".",           # Working directory (defaults to session.working_dir capability)
+    timeout = 30,                # Default timeout in seconds
+    require_approval = false,
+    safety_profile = "strict",   # Safety profile: strict, standard, permissive, unrestricted
+    allowed_commands = [],       # Allowlist patterns (supports wildcards)
+    denied_commands = [],        # Additional custom blocked patterns
+    safety_overrides = {         # Fine-grained overrides
+        allow = [],              # Patterns to allow (even if normally blocked)
+        block = []               # Patterns to block (even if normally allowed)
+    }
+}
 ```
 
 ## Contract

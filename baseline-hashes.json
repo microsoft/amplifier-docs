@@ -1803,10 +1803,40 @@
       "doc_path": "docs/modules/tools/index.md",
       "sources": [
         {
-          "repo": "amplifier-module-tool-*",
+          "repo": "amplifier-module-tool-search",
           "path": "README.md",
-          "exists": false,
-          "hash": null
+          "exists": true,
+          "hash": "0743af1d1c7312da"
+        },
+        {
+          "repo": "amplifier-module-tool-bash",
+          "path": "README.md",
+          "exists": true,
+          "hash": "a71cfb966d602034"
+        },
+        {
+          "repo": "amplifier-module-tool-web",
+          "path": "README.md",
+          "exists": true,
+          "hash": "1181ec2c696cd001"
+        },
+        {
+          "repo": "amplifier-module-tool-filesystem",
+          "path": "README.md",
+          "exists": true,
+          "hash": "8b3777ec256498f5"
+        },
+        {
+          "repo": "amplifier-module-tool-todo",
+          "path": "README.md",
+          "exists": true,
+          "hash": "7ee055a0d528a88a"
+        },
+        {
+          "repo": "amplifier-module-tool-task",
+          "path": "README.md",
+          "exists": true,
+          "hash": "4b38970dc621eb97"
         }
       ]
     },
@@ -2000,7 +2030,7 @@
           "repo": "amplifier-module-loop-events",
           "path": "amplifier_module_loop_events/__init__.py",
           "exists": true,
-          "hash": "0afe2b7184f04455"
+          "hash": "7207eb84bebd9cd6"
         },
         {
           "repo": "amplifier-module-loop-events",

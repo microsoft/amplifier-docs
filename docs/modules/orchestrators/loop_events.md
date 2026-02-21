@@ -23,19 +23,18 @@ orchestrators:
 
 Provides event-driven orchestration that:
 
-- Queries schedulers for tool/agent/context decisions
-- Reduces multiple scheduler responses to single decision
-- Falls back gracefully if no schedulers respond
+- Trusts LLM decisions with optional scheduler veto/modification
+- Emits events for observability and hook integration
+- Falls back gracefully if schedulers veto tool calls
 - Maintains all standard orchestrator functionality
 
 ## Execution Flow
 
 1. Get user prompt
 2. Loop while tool calls needed:
-   - Query schedulers for tool selection via `decision:tool_resolution` event
-   - Reduce responses (highest score wins)
-   - Fall back to first available if no responses
-   - Execute selected tool
+   - LLM selects tool to execute
+   - Emit `tool:selecting` event (schedulers can veto or modify)
+   - Execute selected tool (or modified tool if scheduler changed it)
    - Feed results back to LLM
 3. Return final response
 
