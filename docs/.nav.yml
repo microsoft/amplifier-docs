@@ -1,54 +1,67 @@
 nav:
   - Home: index.md
-  - Getting Started:
+  - Get Started:
       - getting_started/index.md
       - Installation Options: getting_started/installation.md
       - Provider Setup: getting_started/providers.md
-  - User Guide:
-      - user_guide/index.md
-      - CLI Reference: user_guide/cli.md
-      - Profiles: user_guide/profiles.md
-      - Agents: user_guide/agents.md
-      - Sessions: user_guide/sessions.md
-      - Collections: user_guide/collections.md
-  - Developer Guides:
-      - Foundation:
-          - developer_guides/foundation/index.md
-          - amplifier-foundation Library:
-              - developer_guides/foundation/amplifier_foundation/index.md
-              - Getting Started: developer_guides/foundation/amplifier_foundation/getting_started.md
-              - Core Concepts: developer_guides/foundation/amplifier_foundation/concepts.md
-              - Bundle System: developer_guides/foundation/amplifier_foundation/bundle_system.md
-              - Utilities: developer_guides/foundation/amplifier_foundation/utilities.md
-              - Patterns: developer_guides/foundation/amplifier_foundation/patterns.md
-              - Examples:
-                  - developer_guides/foundation/amplifier_foundation/examples/index.md
-                  - Hello World: developer_guides/foundation/amplifier_foundation/examples/hello_world.md
-                  - Custom Configuration: developer_guides/foundation/amplifier_foundation/examples/custom_configuration.md
-                  - Custom Tool: developer_guides/foundation/amplifier_foundation/examples/custom_tool.md
-                  - CLI Application: developer_guides/foundation/amplifier_foundation/examples/cli_application.md
-                  - Multi-Agent System: developer_guides/foundation/amplifier_foundation/examples/multi_agent_system.md
-              - API Reference: developer_guides/foundation/amplifier_foundation/api_reference.md
-      - Applications:
-          - developer_guides/applications/index.md
-          - CLI Case Study: developer_guides/applications/cli_case_study.md
-      - Modules:
-          - developer/index.md
-          - Module Development: developer/module_development.md
-          - Contracts:
-              - developer/contracts/index.md
-              - Provider Contract: developer/contracts/provider.md
-              - Tool Contract: developer/contracts/tool.md
-              - Hook Contract: developer/contracts/hook.md
-              - Orchestrator Contract: developer/contracts/orchestrator.md
-              - Context Contract: developer/contracts/context.md
-  - Architecture:
-      - architecture/index.md
-      - Overview: architecture/overview.md
-      - Kernel Philosophy: architecture/kernel.md
-      - Module System: architecture/modules.md
-      - Mount Plans: architecture/mount_plans.md
-      - Event System: architecture/events.md
+  - Learn:
+      - User Guide:
+          - user_guide/index.md
+          - CLI Reference: user_guide/cli.md
+          - Profiles: user_guide/profiles.md
+          - Agents: user_guide/agents.md
+          - Sessions: user_guide/sessions.md
+          - Collections: user_guide/collections.md
+      - Architecture:
+          - architecture/index.md
+          - Overview: architecture/overview.md
+          - Kernel Philosophy: architecture/kernel.md
+          - Module System: architecture/modules.md
+          - Mount Plans: architecture/mount_plans.md
+          - Event System: architecture/events.md
+  - Build:
+      - Developer Guides:
+          - Foundation:
+              - developer_guides/foundation/index.md
+              - amplifier-foundation Library:
+                  - developer_guides/foundation/amplifier_foundation/index.md
+                  - Getting Started: developer_guides/foundation/amplifier_foundation/getting_started.md
+                  - Core Concepts: developer_guides/foundation/amplifier_foundation/concepts.md
+                  - Bundle System: developer_guides/foundation/amplifier_foundation/bundle_system.md
+                  - Utilities: developer_guides/foundation/amplifier_foundation/utilities.md
+                  - Patterns: developer_guides/foundation/amplifier_foundation/patterns.md
+                  - Examples:
+                      - developer_guides/foundation/amplifier_foundation/examples/index.md
+                      - Hello World: developer_guides/foundation/amplifier_foundation/examples/hello_world.md
+                      - Custom Configuration: developer_guides/foundation/amplifier_foundation/examples/custom_configuration.md
+                      - Custom Tool: developer_guides/foundation/amplifier_foundation/examples/custom_tool.md
+                      - CLI Application: developer_guides/foundation/amplifier_foundation/examples/cli_application.md
+                      - Multi-Agent System: developer_guides/foundation/amplifier_foundation/examples/multi_agent_system.md
+                  - API Reference: developer_guides/foundation/amplifier_foundation/api_reference.md
+          - Applications:
+              - developer_guides/applications/index.md
+              - CLI Case Study: developer_guides/applications/cli_case_study.md
+          - Module Development:
+              - developer/index.md
+              - Development Guide: developer/module_development.md
+              - Contracts:
+                  - developer/contracts/index.md
+                  - Provider Contract: developer/contracts/provider.md
+                  - Tool Contract: developer/contracts/tool.md
+                  - Hook Contract: developer/contracts/hook.md
+                  - Orchestrator Contract: developer/contracts/orchestrator.md
+                  - Context Contract: developer/contracts/context.md
+      - API Reference:
+          - api/index.md
+          - Core:
+              - api/core/index.md
+              - Session: api/core/session.md
+              - Coordinator: api/core/coordinator.md
+              - Hooks: api/core/hooks.md
+              - Models: api/core/models.md
+              - Events: api/core/events.md
+          - CLI:
+              - api/cli/index.md
   - Ecosystem:
       - ecosystem/index.md
       - Modules:
@@ -95,20 +108,8 @@ nav:
           - Collections: libraries/collections.md
           - Config: libraries/config.md
           - Module Resolution: libraries/module_resolution.md
-  - API Reference:
-      - api/index.md
-      - Core:
-          - api/core/index.md
-          - Session: api/core/session.md
-          - Coordinator: api/core/coordinator.md
-          - Hooks: api/core/hooks.md
-          - Models: api/core/models.md
-          - Events: api/core/events.md
-      - CLI:
-          - api/cli/index.md
-  - Showcase:
-      - showcase/index.md
   - Community:
       - community/index.md
       - Contributing: community/contributing.md
       - Roadmap: community/roadmap.md
+      - Showcase: showcase/index.md
