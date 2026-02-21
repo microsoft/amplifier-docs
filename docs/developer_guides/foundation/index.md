@@ -7,6 +7,9 @@ description: Building with amplifier-core and contributing to the foundation
 
 This guide is for developers who want to **work with the Amplifier foundation** - the core kernel, libraries, and architectural components that power all Amplifier applications.
 
+!!! note "Audience"
+    Building an application on top of Amplifier? You're in the right place. For building a pluggable module (Provider, Tool, Hook), see [Module Development](../../developer/index.md).
+
 ## Who This Guide Is For
 
 This guide is for you if you want to:
@@ -19,7 +22,7 @@ This guide is for you if you want to:
 ## Not What You're Looking For?
 
 - **Using the Amplifier CLI?** → See the [CLI User Guide](../../user_guide/)
-- **Creating custom modules (tools/providers)?** → See the [Module Developer Guide](../modules/index.md)
+- **Creating custom modules (tools/providers)?** → See the [Module Developer Guide](../../developer/index.md)
 - **Building applications on Amplifier?** → Start here, then see [Application Developer Guide](../applications/)
 
 ## Understanding the Architecture

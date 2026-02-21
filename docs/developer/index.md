@@ -9,6 +9,9 @@ description: Building modules and extending Amplifier
 
 This guide covers creating custom modules that extend Amplifier's capabilities: providers, tools, hooks, orchestrators, and context managers.
 
+!!! note "Audience"
+    Building a module that plugs into Amplifier (Provider, Tool, Hook, Orchestrator, Context)? You're in the right place. For building an application with Amplifier, see [Foundation Guide](../developer_guides/foundation/index.md).
+
 ## Module Types
 
 | Module Type | Contract | Purpose |
