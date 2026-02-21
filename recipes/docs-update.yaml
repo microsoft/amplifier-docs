@@ -988,3 +988,14 @@ stages:
           fi
         output: "final_report"
         timeout: 30
+
+      # Clean up working directory — remove sync-output/ so stale artifacts
+      # never accumulate locally. CI runners are ephemeral so this only matters
+      # for local runs. baseline-hashes.json (committed) is the source of truth.
+      - id: "cleanup"
+        type: "bash"
+        command: |
+          rm -rf sync-output/
+          echo "sync-output/ removed"
+        output: "cleanup_result"
+        timeout: 15
