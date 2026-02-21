@@ -8,10 +8,8 @@ nav:
       - User Guide:
           - user_guide/index.md
           - CLI Reference: user_guide/cli.md
-          - Profiles: user_guide/profiles.md
           - Agents: user_guide/agents.md
           - Sessions: user_guide/sessions.md
-          - Collections: user_guide/collections.md
       - Architecture:
           - architecture/index.md
           - Overview: architecture/overview.md
@@ -104,8 +102,6 @@ nav:
               - Todo Reminder: modules/hooks/todo_reminder.md
       - Libraries:
           - libraries/index.md
-          - Profiles: libraries/profiles.md
-          - Collections: libraries/collections.md
           - Config: libraries/config.md
           - Module Resolution: libraries/module_resolution.md
   - Community:

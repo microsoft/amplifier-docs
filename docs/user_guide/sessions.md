@@ -285,5 +285,4 @@ Remember that:
 ## See Also
 
 - [CLI Reference](cli.md) - Session commands
-- [Profiles](profiles.md) - Session configuration
 - [Architecture: Events](../architecture/events.md) - Event system details

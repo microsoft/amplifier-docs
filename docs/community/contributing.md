@@ -111,7 +111,7 @@ Package agents, context files, and philosophy documents for specific workflows.
 - [collection-design-intelligence](https://github.com/microsoft/amplifier-collection-design-intelligence)
 - [collection-recipes](https://github.com/microsoft/amplifier-collection-recipes)
 
-**Learn More:** [Collections Guide](../user_guide/collections.md) | **Examples:** [Showcase](../showcase/index.md)
+**Examples:** [Showcase](../showcase/index.md)
 
 ---
 

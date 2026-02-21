@@ -105,4 +105,4 @@ amplifier module list
 amplifier module show tool-filesystem
 ```
 
-See the [User Guide](../user_guide/profiles.md) for complete profile documentation.
+See the [User Guide](../user_guide/index.md) for complete documentation.

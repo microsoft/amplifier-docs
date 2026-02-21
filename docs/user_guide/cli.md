@@ -896,6 +896,5 @@ amplifier reset [OPTIONS]
 
 ## See Also
 
-- [Profiles](profiles.md) - Profile configuration
 - [Sessions](sessions.md) - Session management
 - [Agents](agents.md) - Agent delegation
