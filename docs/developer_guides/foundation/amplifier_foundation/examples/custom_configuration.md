@@ -28,10 +28,10 @@ cd amplifier-foundation
 export ANTHROPIC_API_KEY='your-key-here'
 
 # Run the example (shows 3 different configurations)
-uv run python examples/06_custom_configuration.py
+uv run python examples/02_custom_configuration.py
 ```
 
-[:material-github: View Full Source Code](https://github.com/microsoft/amplifier-foundation/blob/main/examples/06_custom_configuration.py){ .md-button }
+[:material-github: View Full Source Code](https://github.com/microsoft/amplifier-foundation/blob/main/examples/02_custom_configuration.py){ .md-button }
 
 ## How It Works
 
@@ -74,147 +74,234 @@ streaming_config = Bundle(
     name="streaming-config",
     session={
         "orchestrator": {
-            "module": "loop-streaming",
-            "source": "git+https://..."
+            "module": "loop-streaming",  # Streaming orchestrator!
+            "source": "git+https://github.com/microsoft/amplifier-module-loop-streaming@main",
         }
     },
     hooks=[
-        {"module": "hooks-streaming-ui", "source": "git+https://..."}
-    ]
+        {
+            "module": "hooks-streaming-ui",  # Hook to display streaming output
+            "source": "git+https://github.com/microsoft/amplifier-module-hooks-streaming-ui@main",
+        }
+    ],
 )
 
 composed = foundation.compose(provider).compose(streaming_config)
 ```
 
-**Key changes**:
-- **Orchestrator swap**: `loop-basic` → `loop-streaming`
-- **Hook added**: `hooks-streaming-ui` displays streaming output
+**What changed**:
+- Swapped orchestrator from `loop-basic` to `loop-streaming`
+- Added `hooks-streaming-ui` to display streaming output
 
-**Result**: Real-time response streaming to console.
+**Result**: See responses appear word-by-word in real-time!
 
 Learn more: [Orchestrator modules](/modules/orchestrators/)
 
-## Key Concept: Composition Over Configuration
+## Key Concepts
 
-amplifier-foundation uses **composition, not configuration**:
+### Composition is Additive
 
-❌ **Configuration approach** (not used):
-```yaml
-tools:
-  filesystem: true  # Toggle flag
-  bash: true
-streaming: true     # Toggle flag
-```
-
-✅ **Composition approach** (used):
-```python
-foundation.compose(provider).compose(tools).compose(streaming)
-```
-
-**Why composition is better**:
-- Modules are independently versioned
-- Each module can be swapped without affecting others
-- Clear dependency chain
-- No combinatorial explosion of flag combinations
-
-Learn more: [Composition Patterns](../patterns.md)
-
-## Adding Tools Pattern
-
-Create a bundle with tools and compose it:
+Each `.compose()` call adds or overrides configuration:
 
 ```python
-from amplifier_foundation import Bundle
+foundation           # Has orchestrator, context manager
+  .compose(provider) # Adds LLM provider
+  .compose(tools)    # Adds tool capabilities
+  .compose(streaming) # Swaps orchestrator to streaming
+```
 
-tools = Bundle(
-    name="my-tools",
-    tools=[
-        {
-            "module": "tool-filesystem",
-            "source": "git+https://github.com/microsoft/amplifier-module-tool-filesystem@main"
+Later bundles override earlier ones when they define the same keys.
+
+### Module Sources
+
+Every module needs a `source` - where to download it from:
+
+```python
+{
+    "module": "tool-filesystem",
+    "source": "git+https://github.com/microsoft/amplifier-module-tool-filesystem@main"
+}
+```
+
+Foundation bundle includes sources for common modules, so you often don't need to specify them.
+
+### Configuration via Bundles
+
+Instead of flags and settings, Amplifier uses **composition**:
+
+❌ **Don't**: `session.enable_streaming = True`  
+✅ **Do**: Compose a bundle that specifies the streaming orchestrator
+
+This makes configurations:
+- Shareable (bundle files)
+- Testable (swap in test bundles)
+- Composable (mix and match capabilities)
+
+## Complete Example Code
+
+```python
+import asyncio
+import os
+from pathlib import Path
+
+from amplifier_foundation import Bundle, load_bundle
+
+async def basic_agent():
+    """A minimal agent with no tools."""
+    foundation_path = Path(__file__).parent.parent
+    foundation = await load_bundle(str(foundation_path))
+    provider = await load_bundle(str(foundation_path / "providers" / "anthropic-sonnet.yaml"))
+
+    composed = foundation.compose(provider)
+    prepared = await composed.prepare()
+    session = await prepared.create_session()
+
+    async with session:
+        response = await session.execute("What tools do you have available?")
+        print(f"Response: {response[:200]}...")
+
+async def agent_with_tools():
+    """An agent with filesystem and bash capabilities."""
+    foundation_path = Path(__file__).parent.parent
+    foundation = await load_bundle(str(foundation_path))
+    provider = await load_bundle(str(foundation_path / "providers" / "anthropic-sonnet.yaml"))
+
+    # Add tools via composition
+    tools_config = Bundle(
+        name="tools-config",
+        version="1.0.0",
+        tools=[
+            {
+                "module": "tool-filesystem",
+                "source": "git+https://github.com/microsoft/amplifier-module-tool-filesystem@main",
+            },
+            {"module": "tool-bash", "source": "git+https://github.com/microsoft/amplifier-module-tool-bash@main"},
+        ],
+    )
+
+    composed = foundation.compose(provider).compose(tools_config)
+    prepared = await composed.prepare()
+    session = await prepared.create_session()
+
+    async with session:
+        response = await session.execute("List the files in the current directory and tell me what you find.")
+        print(f"Response: {response[:300]}...")
+
+async def streaming_agent():
+    """An agent with streaming for real-time responses."""
+    foundation_path = Path(__file__).parent.parent
+    foundation = await load_bundle(str(foundation_path))
+    provider = await load_bundle(str(foundation_path / "providers" / "anthropic-sonnet.yaml"))
+
+    # Configure streaming via session config
+    streaming_config = Bundle(
+        name="streaming-config",
+        version="1.0.0",
+        session={
+            "orchestrator": {
+                "module": "loop-streaming",
+                "source": "git+https://github.com/microsoft/amplifier-module-loop-streaming@main",
+            }
         },
-        {
-            "module": "tool-bash",
-            "source": "git+https://github.com/microsoft/amplifier-module-tool-bash@main"
-        }
-    ]
-)
+        hooks=[
+            {
+                "module": "hooks-streaming-ui",
+                "source": "git+https://github.com/microsoft/amplifier-module-hooks-streaming-ui@main",
+            }
+        ],
+    )
 
-composed = foundation.compose(provider).compose(tools)
+    composed = foundation.compose(provider).compose(streaming_config)
+    prepared = await composed.prepare()
+    session = await prepared.create_session()
+
+    async with session:
+        response = await session.execute("Write a short poem about software modularity.")
+        print(f"Final response captured: {len(response)} chars")
+
+async def main():
+    """Run all examples to showcase configuration patterns."""
+    await basic_agent()
+    await agent_with_tools()
+    await streaming_agent()
+
+if __name__ == "__main__":
+    if not os.getenv("ANTHROPIC_API_KEY"):
+        print("✖ ERROR: Set ANTHROPIC_API_KEY environment variable")
+        exit(1)
+
+    asyncio.run(main())
 ```
-
-**Module sources**: The `source:` field tells `prepare()` where to download modules from.
-
-Learn more: [Module Resolution](/libraries/module_resolution.md)
-
-## Swapping Orchestrators Pattern
-
-Change execution behavior by swapping the orchestrator:
-
-```python
-streaming = Bundle(
-    name="streaming",
-    session={
-        "orchestrator": {
-            "module": "loop-streaming",  # Instead of loop-basic
-            "source": "git+https://..."
-        }
-    }
-)
-
-composed = foundation.compose(provider).compose(streaming)
-```
-
-**Available orchestrators**:
-- `loop-basic`: Simple request/response
-- `loop-streaming`: Real-time streaming responses
-- `loop-events`: Event-driven execution
-
-Learn more: [Orchestrator Contract](/developer/contracts/orchestrator.md)
-
-## Why This Works
-
-**Composition is powerful because**:
-
-1. **Modules are self-contained** - Each module is independently developed and versioned
-2. **Later wins** - Provider config can override foundation defaults
-3. **No side effects** - Composing bundles doesn't modify them
-4. **Reusable** - Create reusable bundle "templates" for common configurations
-
-The foundation bundle provides sensible defaults, and you **layer on capabilities** as needed.
 
 ## Expected Output
-
-The example runs three agents and shows their different capabilities:
 
 ```
 🎨 Amplifier Configuration Showcase
 ============================================================
 
+KEY CONCEPT: Composition over Configuration
+- Want different behavior? Swap modules, don't toggle flags
+- Each module is independently testable and upgradeable
+- Compose your perfect agent from building blocks
+
+============================================================
 EXAMPLE 1: Basic Agent (No Tools)
 ============================================================
-✓ Response: I don't have access to tools to list files...
+⏳ Preparing...
+📝 Asking: What tools do you have available?
 
+✓ Response: I don't have any tools available...
+
+============================================================
 EXAMPLE 2: Agent with Tools (Filesystem + Bash)
 ============================================================
-✓ Response: [Lists actual files from current directory]
+⏳ Preparing (downloading tool modules, may take 30s first time)...
+📝 Asking: List files in current directory
 
+✓ Response: [Lists files using tool-filesystem]...
+
+============================================================
 EXAMPLE 3: Streaming Agent (Real-time Responses)
 ============================================================
-[Streams poem line by line in real-time]
+⏳ Preparing...
+
+📝 Watch the response stream in real-time:
+
+[Words appear one by one as the poem is generated]
+
+✓ Final response captured: 234 chars
+
+============================================================
+📚 WHAT YOU LEARNED:
+============================================================
+1. Orchestrators: loop-basic (simple) vs loop-streaming (real-time)
+2. Tools: Add capabilities by composing tool modules with 'source' field
+3. Composition: foundation.compose(provider).compose(tools)
+
+✅ All configuration through composition - no flags, no YAML hell!
+
+💡 Next: Try 03_custom_tool.py to build your own custom tool
 ```
 
-## Related Concepts
+## Key Takeaways
 
-- **[Bundles](../concepts.md)** - Understanding bundle structure
-- **[Composition](../concepts.md#composition)** - How merging works
-- **[Module System](/architecture/modules.md)** - Module types and contracts
-- **[Tools](/modules/tools/)** - Available tool modules
-- **[Orchestrators](/modules/orchestrators/)** - Execution strategies
-- **[Hooks](/modules/hooks/)** - Observability and control
+**Composition over Configuration**:
+- No flags to toggle
+- No complex YAML configuration
+- Just compose bundles with the capabilities you need
+
+**Modules are Swappable**:
+- Want streaming? Swap orchestrator
+- Want different tools? Compose different tool bundles
+- Want different provider? Compose different provider bundle
+
+**First-class Tools**:
+- Tools are modules with source URLs
+- Downloaded automatically on first use
+- Cached for subsequent runs
 
 ## Next Steps
 
-- **[Custom Tool Example](custom_tool.md)** - Build your own tool from scratch
-- **[CLI Application Example](cli_application.md)** - Production application patterns
-- **[Patterns Guide](../patterns.md)** - More composition patterns
+- **[Multi-Agent System](multi_agent_system.md)** - Coordinate specialized agents
+- **[Common Patterns](../patterns.md)** - More composition patterns
+- **[Bundle Guide](https://github.com/microsoft/amplifier-foundation/blob/main/docs/BUNDLE_GUIDE.md)** - Create your own bundles

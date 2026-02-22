@@ -57,461 +57,342 @@ amplifier-app-cli/
 
 ### 1. Configuration Resolution
 
-**Challenge:** Users can configure Amplifier at three levels:
-- User scope: `~/.amplifier/settings.yaml`
-- Project scope: `.amplifier/settings.yaml`
-- Local scope: `.amplifier/settings.local.yaml`
+**Challenge:** Users need flexible configuration (global defaults, project-specific, runtime overrides).
 
-**Solution:** Use amplifier-foundation for three-scope configuration. amplifier-foundation implements the deep merge semantics internally, so the CLI doesn't have to manually merge scopes.
-
-**Why this works:** amplifier-foundation implements the deep merge semantics, so the CLI doesn't have to.
-
-### 2. Bundle System
-
-**Challenge:** Users want pre-configured capability sets (foundation, base, dev) without manually specifying every module.
-
-**Solution:** Use amplifier-foundation for bundle loading and session creation.
+**Solution:** Multi-scope configuration via amplifier-foundation's Bundle system:
 
 ```python
-from amplifier_foundation.bundle import PreparedBundle
-
-# Load and prepare bundle (handles inheritance, @mentions, module resolution)
-prepared_bundle = await PreparedBundle.prepare("dev")
-
-# Create session (foundation handles all setup internally)
-session = await prepared_bundle.create_session(
-    session_id=session_id,
-    approval_system=approval_system,
-    display_system=display_system,
-)
-```
-
-**Why this works:** Separates user-facing configuration (bundles) from kernel input (mount plans).
-
-### 3. Interactive REPL
-
-**Challenge:** Provide a chat-style interface with command support.
-
-**Solution:** Simple read-eval-print loop with command detection.
-
-```python
-async def interactive_mode(session):
-    """Interactive chat mode."""
+# runtime/config.py
+def resolve_config(bundle_name: str, app_settings: AppSettings, console) -> tuple:
+    """Resolve configuration from bundle."""
+    # Load bundle
+    bundle = await load_bundle(bundle_uri)
     
-    while True:
-        try:
-            # Get user input
-            prompt = prompt_toolkit.prompt("amplifier> ")
-            
-            # Handle commands
-            if prompt.startswith("/"):
-                handle_command(prompt)
-                continue
-            
-            # Handle agent mentions
-            if prompt.startswith("@"):
-                # Delegate to agent (via task tool)
-                response = await session.execute(prompt)
-            else:
-                # Normal execution
-                response = await session.execute(prompt)
-            
-            # Display response
-            console.print(Markdown(response.text))
-            
-        except KeyboardInterrupt:
-            break
-        except Exception as e:
-            console.print(f"[red]Error: {e}[/red]")
+    # Apply settings overrides (provider, tools, etc.)
+    # from local/project/global scopes
+    
+    # Prepare bundle (download modules)
+    prepared = await bundle.prepare()
+    
+    return config_data, prepared
 ```
 
-**Why this works:** Simple loop, delegates all AI logic to amplifier-core.
+**Key insight**: Configuration flows from bundles, not hardcoded settings. Settings override specific bundle sections.
 
-### 4. Session Persistence
+### 2. Provider Management
 
-**Challenge:** Users want to resume previous conversations.
+**Challenge:** Users want to switch providers without editing configuration files.
 
-**Solution:** Save session state atomically and restore it.
+**Solution:** ProviderManager with three-scope configuration:
 
 ```python
-from amplifier_app_cli.session_store import SessionStore
-
-# Save session (atomic write with backup)
-# Saves to: ~/.amplifier/projects/{project-slug}/sessions/{session-id}/
-#   - transcript.jsonl  (conversation history, one JSON object per line)
-#   - metadata.json     (session config, bundle, model, turn count)
-store = SessionStore()
-messages = await context.get_messages()
-metadata = {
-    "session_id": actual_session_id,
-    "bundle": bundle_name,
-    "model": model_name,
-    "turn_count": len([m for m in messages if m.get("role") == "user"]),
-    "working_dir": str(Path.cwd().resolve()),
-}
-store.save(actual_session_id, messages, metadata)
-
-# Resume session
-store = SessionStore()
-transcript, metadata = store.load(session_id)
-
-# Create new session with saved bundle name
-prepared_bundle = await PreparedBundle.prepare(metadata["bundle"])
-session = await prepared_bundle.create_session(session_id=session_id, ...)
-
-# Restore transcript to context
-context = session.coordinator.get("context")
-await context.set_messages(transcript)
+# provider_manager.py
+class ProviderManager:
+    def use_provider(self, provider_id: str, scope: ScopeType, config: dict):
+        """Configure provider at specified scope (local/project/global)."""
+        # Build provider entry with high priority
+        config_with_priority = {**config, "priority": 1}
+        provider_entry = {"module": provider_id, "config": config_with_priority}
+        
+        # Update settings at scope
+        self._settings.set_provider_override(provider_entry, scope)
 ```
 
-**Why this works:** The kernel provides access to context, the CLI decides what to persist.
-
-### 5. Display Formatting
-
-**Challenge:** Make output beautiful and readable.
-
-**Solution:** Use Rich library for formatting, but keep it in the application layer.
-
-```python
-from rich.console import Console
-from rich.markdown import Markdown
-
-console = Console()
-
-# Kernel returns plain response
-response = await session.execute(prompt)
-
-# CLI formats it beautifully
-console.print(Markdown(response.text))
-
-# CLI can also show metadata
-if verbose:
-    console.print(f"[dim]Model: {response.model}[/dim]")
-    console.print(f"[dim]Tokens: {response.usage.total_tokens}[/dim]")
-```
-
-**Why this works:** Kernel doesn't know about display, CLI owns the presentation.
-
-### 6. Provider Switching
-
-**Challenge:** Users want to easily switch providers/models.
-
-**Solution:** Use priority-based provider configuration via `ProviderManager`.
-
-```python
-from amplifier_app_cli.provider_manager import ProviderManager
-
-# Configure provider at a scope (local/project/global)
-# Priority 1 ensures this provider wins over bundle defaults (priority 100)
-manager = ProviderManager(config)
-manager.use_provider(
-    "provider-openai",
-    scope="global",
-    config={"default_model": "gpt-4o", "priority": 1},
-)
-
-# Or override provider for a specific sub-session spawn
-# In session_spawner.py: promotes provider to priority 0
-merged_config = _apply_provider_override(
-    config, provider_id="openai", model="gpt-4o"
-)
-```
-
-**Why this works:** Mount plans use a priority system — lower numbers mean higher precedence. Applications control priority to override bundle defaults.
-
-### 7. Command Handling
-
-**Challenge:** Provide helpful commands like `/help`, `/tools`, `/status`.
-
-**Solution:** Simple command routing in the application layer via `CommandProcessor`.
-
-```python
-class CommandProcessor:
-    """Process slash commands and special directives."""
-
-    COMMANDS = {
-        "/mode":         "Set or toggle a mode (e.g., /mode plan)",
-        "/modes":        "List available modes",
-        "/save":         "Save conversation transcript",
-        "/status":       "Show session status",
-        "/clear":        "Clear conversation context",
-        "/help":         "Show available commands",
-        "/config":       "Show current configuration",
-        "/tools":        "List available tools",
-        "/agents":       "List available agents",
-        "/allowed-dirs": "Manage allowed write directories",
-        "/denied-dirs":  "Manage denied write directories",
-        "/rename":       "Rename current session",
-        "/fork":         "Fork session at turn N: /fork [turn]",
-    }
-
-    def process_input(self, user_input: str) -> tuple[str, dict]:
-        """Process user input and extract commands."""
-        if user_input.startswith("/"):
-            parts = user_input.split(maxsplit=1)
-            command = parts[0].lower()
-            args = parts[1] if len(parts) > 1 else ""
-            if command in self.COMMANDS:
-                return self.COMMANDS[command]["action"], {"args": args}
-            return "unknown_command", {"command": command}
-        return "prompt", {"text": user_input}
-```
-
-**Why this works:** Commands are UI concerns, not kernel concerns. Mode shortcuts (e.g., `/plan` as an alias for `/mode plan`) are populated dynamically from bundle mode definitions.
-
-### 8. Output Formats
-
-**Challenge:** Automation tools, CI/CD pipelines, and evaluation platforms need structured output.
-
-**Solution:** Support three output formats via `--output-format` flag on `amplifier run`.
-
-```python
-async def execute_single(prompt, config, ..., output_format="text"):
-    """Execute a single prompt with configurable output format."""
-
-    # In JSON modes, redirect Rich console output to stderr
-    # so stdout carries only clean JSON
-    if output_format in ["json", "json-trace"]:
-        sys.stdout = sys.stderr
-        console.file = sys.stderr
-
-    response = await session.execute(prompt)
-
-    if output_format == "json":
-        # Response + session metadata
-        output = {
-            "status": "success",
-            "response": response,
-            "session_id": actual_session_id,
-            "bundle": bundle_name,
-            "model": model_name,
-            "timestamp": datetime.now(UTC).isoformat(),
-        }
-    elif output_format == "json-trace":
-        # Adds execution_trace: all tool calls with timing and arguments
-        # Adds metadata: total_tool_calls, total_agents_invoked, duration_ms
-        output = {**base_output, "execution_trace": trace_collector.get_trace()}
-    else:
-        # Default text: render markdown to console
-        console.print(Markdown(response))
-```
-
-**Usage:**
+**Commands**:
 ```bash
-amplifier run "analyze this code"                        # text (human)
-amplifier run --output-format json "analyze this code"   # JSON for scripts
-amplifier run --output-format json-trace "..."           # full trace for evals
+amplifier provider use anthropic --model claude-sonnet-4-5 --local
+amplifier provider use openai --global
+amplifier provider current
 ```
 
-**Why this works:** stdout carries only the structured data; all diagnostics, hook output, and progress indicators go to stderr. Downstream tools can pipe cleanly.
+### 3. Session Storage
 
-### 9. Error Handling
+**Challenge:** Persist conversations across runs, support resume.
 
-**Challenge:** Present errors helpfully to users.
-
-**Solution:** Catch and format errors in the application.
+**Solution:** SessionStore with project-scoped storage:
 
 ```python
-try:
-    response = await session.execute(prompt)
-    console.print(Markdown(response.text))
+# session_store.py
+class SessionStore:
+    """Project-scoped session persistence."""
     
-except ModuleValidationError as e:
-    display_validation_error(console, e, verbose=verbose)
-    
-except ModuleNotFoundError as e:
-    console.print(f"[red]Module not found: {e}[/red]")
-    console.print("[yellow]Try: amplifier module refresh[/yellow]")
-    
-except ProviderAuthError as e:
-    console.print(f"[red]Authentication failed: {e}[/red]")
-    console.print("[yellow]Check your API key: amplifier provider setup[/yellow]")
-    
-except Exception as e:
-    console.print(f"[red]Error: {e}[/red]")
-    if debug:
-        console.print_exception()
+    def save(self, session_id: str, transcript: list, metadata: dict):
+        """Save session to ~/.amplifier/projects/{project}/sessions/{id}/"""
+        
+    def load(self, session_id: str) -> tuple[list, dict]:
+        """Load transcript and metadata."""
+        
+    def find_session(self, partial_id: str) -> str:
+        """Find session by partial ID match."""
 ```
 
-**Why this works:** User-friendly error messages are application responsibility.
-
-## Lessons Learned
-
-### 1. Libraries Simplify Application Development
-
-Without amplifier-foundation, amplifier-app-cli would need to implement:
-- Bundle loading and inheritance
-- Three-scope configuration merging
-- Module resolution strategies
-
-With amplifier-foundation, this is ~20 lines of code.
-
-### 2. Kernel is Just Session Management
-
-The CLI doesn't talk to LLMs, execute tools, or manage context directly. It just:
-1. Creates a mount plan
-2. Creates a session
-3. Calls `session.execute()`
-4. Displays results
-
-Everything else is in modules.
-
-### 3. Mount Plans are Data
-
-Mount plans are just dictionaries. Applications can:
-- Load them from bundles
-- Modify them dynamically
-- Generate them programmatically
-- Validate them before use
-
-This flexibility is powerful.
-
-### 4. Events Provide Observability
-
-The CLI subscribes to events for:
-- Progress indicators
-- Logging
-- Approval prompts
-- Debug output
-
-Without writing event handlers, it's just a silent execution.
-
-### 5. Separation of Concerns Works
-
+**Storage structure**:
 ```
-User types → CLI parses → App creates mount plan → Kernel executes → App formats → CLI displays
+~/.amplifier/projects/my-project/sessions/
+├── abc123-def456/
+│   ├── events.jsonl       # Full event log
+│   ├── transcript.json    # Messages only
+│   └── metadata.json      # Bundle, provider, timestamp
+└── xyz789-uvw012/
+    └── ...
 ```
 
-Each layer has clear responsibility. No layer reaches across boundaries.
+### 4. Interactive Mode
 
-## Code Structure
+**Challenge:** REPL with slash commands for control.
+
+**Solution:** Slash command processor integrated into chat loop:
 
 ```python
-# main.py - Entry point
-import click
-from amplifier_app_cli.utils.help_formatter import AmplifierGroup
-
-@click.group(cls=AmplifierGroup, invoke_without_command=True)
-@click.version_option(version=get_version(), prog_name="amplifier")
-@click.pass_context
-def cli(ctx, install_completion):
-    """Amplifier - AI-powered modular development platform."""
-    # Default: launch interactive chat
-    if ctx.invoked_subcommand is None:
-        ctx.invoke(_run_command, prompt=None, bundle=None, mode="chat")
-
-# Commands registered as groups and standalone commands
-cli.add_command(bundle_group)    # amplifier bundle ...
-cli.add_command(provider_group)  # amplifier provider ...
-cli.add_command(agents_group)    # amplifier agent list/show
-cli.add_command(session_group)   # amplifier session list/resume
-cli.add_command(tool_group)      # amplifier tool ...
-cli.add_command(module_group)    # amplifier module ...
-# (also: init, update, version, reset, notify, source, allowed_dirs, denied_dirs)
-
-# session_runner.py - Unified session initialization
-from amplifier_core import AmplifierSession
-from amplifier_foundation.bundle import PreparedBundle
-
-async def create_initialized_session(config: SessionConfig, console) -> InitializedSession:
-    """Single entry point for all session creation.
-    Handles: provider auto-install, bundle loading, resume, capability registration.
-    """
-    session = await _create_bundle_session(config, ...)
-    register_mention_handling(session)
-    register_session_spawning(session)
-    return InitializedSession(session=session, session_id=session_id, ...)
-
-# session_spawner.py - Agent delegation
-async def spawn_sub_session(agent_name, instruction, parent_session, ...) -> dict:
-    """Create child session with agent config overlay.
-    Returns: {"output": str, "session_id": str, "status": str, "turn_count": int}
-    """
-    merged_config = merge_configs(parent_session.config, agent_config)
-    child_session = AmplifierSession(config=merged_config, parent_id=parent_session.session_id)
-    await child_session.initialize()
-    response = await child_session.execute(instruction)
-    return {"output": response, "session_id": sub_session_id, ...}
-
-# display.py - Display logic
-from rich.console import Console
-from rich.markdown import Markdown
-
-class Display:
-    def __init__(self):
-        self.console = Console()
+# Interactive loop with slash commands
+while True:
+    user_input = prompt("> ")
     
-    def print_response(self, response):
-        """Display a response."""
-        self.console.print(Markdown(response.text))
+    # Handle slash commands
+    if user_input.startswith("/"):
+        if user_input == "/think":
+            enable_plan_mode()  # Read-only
+        elif user_input == "/do":
+            disable_plan_mode()  # Re-enable writes
+        elif user_input.startswith("/save"):
+            save_transcript(user_input)
+        # ... more commands
+        continue
     
-    def print_error(self, error):
-        """Display an error."""
-        self.console.print(f"[red]Error: {error}[/red]")
+    # Execute normal prompt
+    response = await session.execute(user_input)
+    display(response)
 ```
 
-## Testing
+**Available commands**: `/think`, `/do`, `/save`, `/clear`, `/status`, `/tools`, `/config`, `/help`, `/stop`
 
-The CLI is testable because each layer is independent:
+### 5. Bundle System Integration
+
+**Challenge:** Users want pre-configured capability sets.
+
+**Solution:** Bundle-based configuration with registry:
 
 ```python
-# Test application layer
-def test_application_initialization():
-    app = Application("dev")
-    assert app.profile.name == "dev"
-    assert "providers" in app.mount_plan
-
-# Test with mock session
-async def test_execution():
-    app = Application("dev")
-    app.session = MockSession()
+# Bundle usage
+async def run(bundle: str, prompt: str):
+    # Default to foundation
+    if not bundle:
+        bundle = "foundation"
     
-    response = await app.execute("test")
-    assert response == "mock response"
-
-# Integration test
-async def test_end_to_end():
-    app = Application("dev")
-    await app.initialize()
+    # Resolve and prepare bundle
+    config_data, prepared_bundle = resolve_config(
+        bundle_name=bundle,
+        app_settings=app_settings,
+        console=console,
+    )
     
-    response = await app.execute("What is 2+2?")
-    assert "4" in response
-    
-    await app.cleanup()
+    # Create session from prepared bundle
+    session = await prepared_bundle.create_session()
 ```
 
-## Comparison: Application vs Module
+**Commands**:
+```bash
+amplifier bundle use my-bundle --local
+amplifier bundle current
+amplifier run --bundle dev "prompt"
+```
 
-| Aspect | Application (amplifier-app-cli) | Module (e.g., tool-bash) |
-|--------|--------------------------------|-------------------------|
-| **Depends on** | amplifier-core + amplifier-foundation | Only amplifier-core |
-| **Uses libraries?** | ✅ Yes (amplifier-foundation) | ❌ No |
-| **Creates mount plans?** | ✅ Yes | ❌ No |
-| **User interaction?** | ✅ Yes (CLI) | ❌ No |
-| **Display formatting?** | ✅ Yes (Rich) | ❌ No |
-| **Loaded by** | User directly | Kernel at runtime |
-| **Versioning** | Can change freely | Must maintain contracts |
+### 6. Runtime Overrides
+
+**Challenge:** Override provider/model without changing configuration.
+
+**Solution:** CLI flags with priority system:
+
+```python
+# commands/run.py
+@click.option("--provider", "-p", help="LLM provider to use")
+@click.option("--model", "-m", help="Model to use")
+@click.option("--max-tokens", type=int, help="Maximum output tokens")
+def run(provider: str, model: str, max_tokens: int, ...):
+    # Apply runtime overrides to config_data
+    if provider:
+        # Set priority=0 (highest) for specified provider
+        for entry in config_data["providers"]:
+            if entry["module"] == provider_module:
+                entry["config"]["priority"] = 0
+                if model:
+                    entry["config"]["default_model"] = model
+```
+
+**Usage**:
+```bash
+amplifier run -p anthropic "prompt"
+amplifier run -m claude-sonnet-4-5 "prompt"
+amplifier run -p openai -m gpt-5.2 --max-tokens 1000 "prompt"
+```
+
+### 7. Context Loading (@Mentions)
+
+**Challenge:** Load context files referenced in prompts.
+
+**Solution:** @mention system integrated at application layer:
+
+```python
+# Detect @mentions in user input
+mentions = parse_mentions(user_input)
+
+# Load mentioned files
+for mention in mentions:
+    content = await load_file(mention)
+    # Add as context message BEFORE user message
+    context.add_message("user", f"<context_file paths=\"{mention}\">\n{content}\n</context_file>")
+
+# Then add user message with @mention preserved
+context.add_message("user", user_input)
+```
+
+**Supported syntax**:
+- `@AGENTS.md` - Current directory
+- `@foundation:context/file.md` - Bundle resource
+- `@~/path/to/file.md` - User home directory
+- `./relative/path.md` - Relative to source
+
+## Design Patterns
+
+### 1. Protocol Boundary Pattern
+
+**Keep kernel simple, add features at app layer:**
+
+```python
+# ✓ App layer handles @mentions
+user_input = "Analyze @AGENTS.md"
+mentions = parse_mentions(user_input)  # App-layer parsing
+for file in mentions:
+    context.add_message("user", load_file(file))  # Use kernel API
+
+# ✗ Don't add @mention handling to kernel
+# Kernel provides add_message() API, app decides when/how to use it
+```
+
+### 2. Thin Configuration Pattern
+
+**Bundles provide configuration, not business logic:**
+
+```yaml
+# ✓ Bundle specifies modules and config
+bundle:
+  name: my-app
+providers:
+  - module: provider-anthropic
+    config:
+      default_model: claude-sonnet-4-5
+
+# ✗ Don't put app logic in bundles
+# App layer handles provider selection, runtime overrides, etc.
+```
+
+### 3. Three-Scope Configuration
+
+**Local > Project > Global priority:**
+
+```python
+# Settings merge with precedence
+settings = merge_settings([
+    local_settings,      # Highest priority (.amplifier/settings.yaml)
+    project_settings,    # (.amplifier/settings.yaml in repo root)
+    global_settings,     # (~/.amplifier/settings.yaml)
+])
+```
+
+### 4. Session Persistence Pattern
+
+**Project-scoped sessions:**
+
+```python
+# Sessions stored under project directory
+session_dir = Path.cwd() / ".amplifier" / "sessions" / session_id
+
+# Enables:
+# - Resume by project context
+# - Multiple developers don't conflict
+# - Git can ignore session data
+```
+
+## Anti-Patterns to Avoid
+
+### ❌ Don't Put Business Logic in Bundles
+
+Bundles are configuration, not code:
+
+```python
+# ✗ Wrong: Business logic in bundle
+bundle.validate_user_input = lambda x: x.strip()
+
+# ✓ Right: App layer handles logic
+user_input = user_input.strip()
+session.execute(user_input)
+```
+
+### ❌ Don't Modify Kernel for App Features
+
+Use kernel APIs, don't extend kernel:
+
+```python
+# ✗ Wrong: Add custom kernel method
+session.execute_with_context_files(prompt, files)
+
+# ✓ Right: Use existing kernel APIs
+for file in files:
+    session.context.add_message("user", load_file(file))
+session.execute(prompt)
+```
+
+### ❌ Don't Hardcode Module Sources
+
+Use bundle composition:
+
+```python
+# ✗ Wrong: Hardcoded in app
+mount_plan = {
+    "providers": [{"module": "provider-anthropic", "source": "git+https://..."}]
+}
+
+# ✓ Right: From bundle
+bundle = await load_bundle("foundation")
+mount_plan = bundle.to_mount_plan()
+```
 
 ## Key Takeaways
 
-1. **Applications use libraries, modules don't** - Clean architectural boundary
-2. **Mount plans are configuration** - Applications create them, kernel consumes them
-3. **Kernel handles execution, app handles interaction** - Clear separation
-4. **Events provide observability** - Subscribe to what you care about
-5. **Testing is modular** - Each layer tests independently
+**Separation of Concerns**:
+- Kernel: Session lifecycle, module loading, coordination
+- Foundation: Bundle composition, utilities
+- App: Configuration resolution, UX, persistence
 
-## Resources
+**Configuration Flows Through Bundles**:
+- Default from foundation bundle
+- Override via settings (local/project/global)
+- Override via CLI flags (highest priority)
 
-- **[amplifier-app-cli Repository](https://github.com/microsoft/amplifier-app-cli)** - Full source code
-- **[Application Developer Guide](index.md)** - Building your own application
-- **[Foundation Guide](../foundation/index.md)** - Understanding the foundation
-- **[Architecture Overview](../../architecture/overview.md)** - System architecture
+**App Layer is Policy**:
+- When to process @mentions
+- How to store sessions
+- Which provider to use by default
+- Interactive vs single-shot mode
 
-## Next Steps
+**Kernel Provides Mechanism**:
+- `session.execute()` - Execute prompts
+- `context.add_message()` - Add messages
+- Module loading and lifecycle
+- Provider abstraction
 
-Now that you understand how a real application is built:
+## Further Reading
 
-1. **Build your own** - Start with the [Application Guide](index.md)
-2. **Extend the CLI** - Fork amplifier-app-cli and customize
-3. **Create a web app** - Use the same patterns with a web framework
-4. **Build an API** - Expose Amplifier capabilities as a REST API
+**CLI-Specific Documentation**:
+- [Interactive Mode](https://github.com/microsoft/amplifier-app-cli/blob/main/docs/INTERACTIVE_MODE.md) - Slash commands and REPL
+- [Context Loading](https://github.com/microsoft/amplifier-app-cli/blob/main/docs/CONTEXT_LOADING.md) - @mention system
+- [Agent Delegation](https://github.com/microsoft/amplifier-app-cli/blob/main/docs/AGENT_DELEGATION_IMPLEMENTATION.md) - Sub-session spawning
+
+**Foundation Documentation**:
+- [Bundle Guide](https://github.com/microsoft/amplifier-foundation/blob/main/docs/BUNDLE_GUIDE.md) - Creating bundles
+- [Concepts](../foundation/amplifier_foundation/concepts.md) - Mental models
+- [Patterns](../foundation/amplifier_foundation/patterns.md) - Common patterns
+
+**Core Documentation**:
+- [Architecture](/architecture/) - Kernel design
+- [Modules](/modules/) - Available modules

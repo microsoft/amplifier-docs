@@ -77,55 +77,11 @@ async def main():
 asyncio.run(main())
 ```
 
-## Core Concepts
-
-<div class="grid cards" markdown>
-
--   :material-cube-outline: __Bundle__
-
-    ---
-
-    A composable configuration unit containing providers, tools, hooks, orchestrator, context manager, and system instruction.
-    
-    Bundles are markdown files with YAML frontmatter.
-
--   :material-layers: __Composition__
-
-    ---
-
-    Layer bundles to build your desired configuration:
-    ```python
-    foundation.compose(provider).compose(tools)
-    ```
-    
-    Later bundles override earlier ones.
-
--   :material-cog: __Preparation__
-
-    ---
-
-    Downloads modules from git sources and caches them locally:
-    ```python
-    prepared = await bundle.prepare()
-    ```
-    
-    First run: downloads. Subsequent runs: uses cache.
-
--   :material-account-group: __Mount Plan__
-
-    ---
-
-    The final configuration dict consumed by AmplifierSession:
-    ```python
-    mount_plan = bundle.to_mount_plan()
-    session = AmplifierSession(mount_plan)
-    ```
-
-</div>
+For the complete workflow with provider selection and advanced features, see [`examples/04_full_workflow/`](https://github.com/microsoft/amplifier-foundation/tree/main/examples/04_full_workflow/).
 
 ## What's Included
 
-### Bundle System
+### Bundle System (`bundle.py`, `registry.py`, `validator.py`)
 
 | Export | Purpose |
 |--------|---------|
@@ -134,7 +90,7 @@ asyncio.run(main())
 | `BundleRegistry` | Track loaded bundles, check for updates |
 | `validate_bundle()` | Validate bundle structure |
 
-### @Mention System
+### @Mention System (`mentions/`)
 
 | Export | Purpose |
 |--------|---------|
@@ -145,164 +101,93 @@ asyncio.run(main())
 
 ### Utilities
 
-| Module | Purpose |
+| Module | Exports | Purpose |
+|--------|---------|---------|
+| `io/` | `read_yaml`, `write_yaml`, `parse_frontmatter`, `read_with_retry`, `write_with_retry` | File I/O with cloud sync retry |
+| `dicts/` | `deep_merge`, `merge_module_lists`, `get_nested`, `set_nested` | Dict manipulation |
+| `paths/` | `parse_uri`, `normalize_path`, `find_files`, `find_bundle_root` | Path and URI handling |
+| `cache/` | `SimpleCache`, `DiskCache` | In-memory and disk caching (apps can extend with TTL) |
+
+### Session Capabilities
+
+| Export | Purpose |
 |--------|---------|
-| `io/` | YAML/frontmatter I/O, retry logic |
-| `dicts/` | Deep merge, nested get/set |
-| `paths/` | URI parsing, path normalization |
-| `cache/` | SimpleCache, DiskCache |
-| `session/` | Session capabilities (working directory) |
-| `spawn_utils` | Provider preferences for sub-sessions |
+| `get_working_dir` | Get session working directory from coordinator |
+| `set_working_dir` | Update session working directory dynamically |
+| `WORKING_DIR_CAPABILITY` | Capability name constant (`"session.working_dir"`) |
 
-### Reference Content
+### Spawn Utilities
 
-The amplifier-foundation repository also includes reference content:
+| Export | Purpose |
+|--------|---------|
+| `ProviderPreference` | Dataclass for provider/model preference (supports glob patterns) |
+| `apply_provider_preferences` | Apply ordered preferences to mount plan |
+| `resolve_model_pattern` | Resolve glob patterns (e.g., `claude-haiku-*`) to concrete model names |
+| `is_glob_pattern` | Check if model string contains glob characters |
+
+### Reference Content (Co-located)
+
+This repo also contains reference bundle content for common configurations:
 
 | Path | Content |
-|------|---------| 
-| `bundle.md` | Main foundation bundle (provider-agnostic) |
-| `providers/` | Provider configurations (Anthropic, OpenAI, Azure OpenAI, Gemini, Ollama) |
+|------|---------|
+| `bundle.md` | **Main foundation bundle** - provider-agnostic base with streaming, tools, behaviors |
+| `providers/` | Provider configurations (anthropic, openai, azure-openai, gemini, ollama) |
 | `agents/` | Reusable agent definitions |
 | `behaviors/` | Behavioral configurations (logging, redaction, status, etc.) |
 | `context/` | Shared context files |
 | `bundles/` | Complete bundle examples |
 
-## Architecture Position
+**Note**: This content is just files - discovered and loaded like any other bundle. See [Common Patterns](patterns.md) for usage examples.
 
-```
-┌─────────────────────────────────────┐
-│  Your Application                   │
-│  (CLI, Web UI, Script)             │
-└──────────────┬──────────────────────┘
-               │ uses
-               ▼
-┌─────────────────────────────────────┐
-│  amplifier-foundation               │
-│  • Bundle loading & composition     │
-│  • @Mention resolution              │
-│  • Utilities (I/O, paths, cache)    │
-└──────────────┬──────────────────────┘
-               │ produces
-               ▼
-┌─────────────────────────────────────┐
-│  Mount Plan (Dict)                  │
-└──────────────┬──────────────────────┘
-               │ passed to
-               ▼
-┌─────────────────────────────────────┐
-│  amplifier-core (Kernel)           │
-│  • Session lifecycle                │
-│  • Module loading                   │
-│  • Coordination                     │
-└─────────────────────────────────────┘
-```
+## Examples
 
-**Key Insight**: amplifier-foundation sits **above** amplifier-core, providing convenient APIs for building mount plans. You can use amplifier-core directly (with manual mount plans) or use amplifier-foundation for a higher-level API.
+| Example | Description |
+|---------|-------------|
+| `examples/01_hello_world.py` | Minimal working example |
+| `examples/04_load_and_inspect.py` | Loading bundles from various sources |
+| `examples/05_composition.py` | Bundle composition and merge rules |
+| `examples/06_sources_and_registry.py` | Git URLs and BundleRegistry |
+| `examples/07_full_workflow.py` | Complete: prepare → create_session → execute |
 
-## When to Use Each
+See [`examples/README.md`](https://github.com/microsoft/amplifier-foundation/blob/main/examples/README.md) for the full catalog of 20+ examples.
 
-### Use amplifier-foundation when:
+## Documentation
 
-- ✅ Building applications with reusable configurations
-- ✅ You want human-readable YAML + Markdown bundles
-- ✅ You need bundle composition (base + overlays)
-- ✅ You want automatic module downloading
-- ✅ You benefit from built-in utilities
+| Document | Description |
+|----------|-------------|
+| [BUNDLE_GUIDE.md](https://github.com/microsoft/amplifier-foundation/blob/main/docs/BUNDLE_GUIDE.md) | Complete bundle authoring guide |
+| [AGENT_AUTHORING.md](https://github.com/microsoft/amplifier-foundation/blob/main/docs/AGENT_AUTHORING.md) | Agent creation and context sink pattern |
+| [CONCEPTS.md](concepts.md) | Mental model: bundles, composition, mount plans |
+| [PATTERNS.md](patterns.md) | Common patterns with code examples |
+| [URI_FORMATS.md](https://github.com/microsoft/amplifier-foundation/blob/main/docs/URI_FORMATS.md) | Source URI quick reference |
+| [API_REFERENCE.md](https://github.com/microsoft/amplifier-foundation/blob/main/docs/API_REFERENCE.md) | API index pointing to source files |
 
-### Use amplifier-core directly when:
+**Code is authoritative**: Each source file has comprehensive docstrings. Use `help(ClassName)` or read source directly.
 
-- ✅ You have your own configuration system
-- ✅ You generate mount plans programmatically
-- ✅ You want minimal dependencies
-- ✅ You're building a framework on top of Amplifier
+## For Bundle Authors
 
-## Documentation Structure
+This README covers the Python library API. **For bundle authoring guidance:**
 
-<div class="grid cards" markdown>
-
--   :material-rocket-launch: __[Getting Started](getting_started.md)__
-
-    ---
-
-    Installation, hello world, and basic workflow
-
--   :material-book-open-variant: __[Core Concepts](concepts.md)__
-
-    ---
-
-    Bundles, composition, mount plans, and philosophy
-
--   :material-cube-outline: __[Bundle System](bundle_system.md)__
-
-    ---
-
-    Deep dive: load, compose, validate, prepare
-
--   :material-tools: __[Utilities](utilities.md)__
-
-    ---
-
-    I/O, dicts, paths, mentions, caching utilities
-
--   :material-code-braces: __[Patterns](patterns.md)__
-
-    ---
-
-    Common patterns and best practices
-
--   :material-code-json: __[Examples](examples/)__
-
-    ---
-
-    Progressive examples from hello world to production
-
--   :material-api: __[API Reference](api_reference.md)__
-
-    ---
-
-    Complete API documentation
-
-</div>
-
-## Repository
-
-**GitHub**: [microsoft/amplifier-foundation](https://github.com/microsoft/amplifier-foundation)
+- **[BUNDLE_GUIDE.md](https://github.com/microsoft/amplifier-foundation/blob/main/docs/BUNDLE_GUIDE.md)** - Complete authoring guide (thin bundle pattern, behaviors, composition)
+- **[AGENT_AUTHORING.md](https://github.com/microsoft/amplifier-foundation/blob/main/docs/AGENT_AUTHORING.md)** - Agent creation and the context sink pattern
+- **`foundation:foundation-expert`** - Expert agent for guidance when building bundles
+- **Canonical example**: [amplifier-bundle-recipes](https://github.com/microsoft/amplifier-bundle-recipes) - demonstrates proper structure
 
 ## Philosophy
 
-amplifier-foundation follows Amplifier's core principles:
+Foundation follows Amplifier's core principles:
 
 - **Mechanism, not policy**: Provides loading/composition mechanisms. Apps decide which bundles to use.
 - **Ruthless simplicity**: One concept (bundle), one mechanism (`includes:` + `compose()`).
 - **Text-first**: YAML/Markdown formats are human-readable, diffable, versionable.
 - **Composable**: Small bundles compose into larger configurations.
 
-## Next Steps
+This library is pure mechanism. It doesn't know about specific bundles. The co-located reference content is just content - discovered and loaded like any other bundle.
 
-<div class="grid cards" markdown>
+## See Also
 
--   :material-play: __Quick Start__
-
-    ---
-
-    [Getting Started →](getting_started.md)
-    
-    Get your first bundle-based agent running
-
--   :material-school: __Learn by Example__
-
-    ---
-
-    [Examples Gallery →](examples/)
-    
-    Progressive examples from beginner to advanced
-
--   :material-book: __Understand Deeply__
-
-    ---
-
-    [Core Concepts →](concepts.md)
-    
-    Mental model for bundle composition
-
-</div>
+- [Getting Started](getting_started.md) - Installation and your first bundle-based application
+- [Core Concepts](concepts.md) - Mental model for amplifier-foundation's design
+- [Common Patterns](patterns.md) - Best practices and common usage patterns
+- [Example: Hello World](examples/hello_world.md) - Your first Amplifier agent in ~15 lines of code

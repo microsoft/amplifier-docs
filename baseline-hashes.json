@@ -358,7 +358,7 @@
           "repo": "amplifier-foundation",
           "path": "docs/CONCEPTS.md",
           "exists": true,
-          "hash": "a2c28773a50062ab"
+          "hash": "d40f28c686b74f0e"
         },
         {
           "repo": "amplifier-foundation",
@@ -387,7 +387,7 @@
           "repo": "amplifier-foundation",
           "path": "docs/CONCEPTS.md",
           "exists": true,
-          "hash": "a2c28773a50062ab"
+          "hash": "d40f28c686b74f0e"
         }
       ]
     },
@@ -788,7 +788,7 @@
           "repo": "amplifier-foundation",
           "path": "docs/CONCEPTS.md",
           "exists": true,
-          "hash": "a2c28773a50062ab"
+          "hash": "d40f28c686b74f0e"
         }
       ]
     },
@@ -805,7 +805,7 @@
           "repo": "amplifier-foundation",
           "path": "docs/PATTERNS.md",
           "exists": true,
-          "hash": "bd48db55ee02541a"
+          "hash": "79097e432d5a7fc5"
         }
       ]
     },
@@ -850,7 +850,7 @@
           "repo": "amplifier-foundation",
           "path": "docs/PATTERNS.md",
           "exists": true,
-          "hash": "bd48db55ee02541a"
+          "hash": "79097e432d5a7fc5"
         }
       ]
     },
@@ -980,7 +980,7 @@
           "repo": "amplifier-app-cli",
           "path": "amplifier_app_cli/session_runner.py",
           "exists": true,
-          "hash": "3a3858b8ac5c10fe"
+          "hash": "8f8860c953d85f71"
         },
         {
           "repo": "amplifier-app-cli",

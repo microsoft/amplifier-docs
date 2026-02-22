@@ -57,235 +57,131 @@ async def main():
 
 if __name__ == "__main__":
     if not os.getenv("ANTHROPIC_API_KEY"):
-        print("❌ Set ANTHROPIC_API_KEY environment variable")
+        print("✖ Set ANTHROPIC_API_KEY environment variable")
         exit(1)
 
     asyncio.run(main())
 ```
 
 !!! note
-    This example assumes you have the amplifier-foundation repo cloned locally. For loading from git URLs instead, see [Bundle System](bundle_system.md).
+    This example assumes you have the amplifier-foundation repo cloned locally. For production use, load bundles from git URLs or your application's bundle directory.
 
-## The Core Workflow
+## What This Does
 
-amplifier-foundation follows a clear pattern:
-
-```mermaid
-graph LR
-    A[Load Bundle] --> B[Compose Bundles]
-    B --> C[Prepare]
-    C --> D[Create Session]
-    D --> E[Execute]
-    
-    style C fill:#fff3cd
-    style D fill:#d1ecf1
-```
-
-### 1. Load Bundles
+### 1. Load the Foundation Bundle
 
 ```python
-foundation = await load_bundle(source)
+foundation = await load_bundle(str(foundation_path))
 ```
 
-Load bundles from:
-- Git URLs: `git+https://github.com/org/repo@ref`
-- Local paths: `./bundles/my-bundle.md`
-- With subdirectories: `git+...@main#subdirectory=path/to/bundle`
+The **foundation bundle** contains:
+- Orchestrator configuration (controls execution flow)
+- Context manager (handles conversation memory)
+- Hooks (observability and control points)
+- Base system instruction
 
-### 2. Compose Bundles
+Learn more: [What is a Bundle?](concepts.md#what-is-a-bundle)
+
+### 2. Load a Provider Bundle
 
 ```python
-composed = foundation.compose(provider).compose(tools)
+provider = await load_bundle(str(provider_path / "anthropic-sonnet.yaml"))
 ```
 
-Layer configurations:
-- Foundation → Base configuration
-- Provider → LLM backend
-- Tools → Additional capabilities
-- Later overrides earlier
+The **provider bundle** specifies:
+- Which LLM to use (Claude Sonnet 4.5)
+- API configuration
+- Module source (where to download the provider module)
 
-### 3. Prepare
+Learn more: [Providers](/modules/providers/)
+
+### 3. Compose Bundles
 
 ```python
-prepared = await composed.prepare()
-```
-
-Downloads and activates modules:
-- Resolves git sources
-- Downloads to `~/.amplifier/cache/modules/`
-- First run: 30s+ (downloading)
-- Subsequent: instant (cached)
-
-### 4. Create Session
-
-```python
-session = await prepared.create_session()
-```
-
-Creates an AmplifierSession instance with all modules loaded.
-
-### 5. Execute
-
-```python
-async with session:
-    response = await session.execute(prompt)
-```
-
-Run prompts through the configured agent.
-
-## Bundle Structure
-
-Bundles are markdown files with YAML frontmatter:
-
-```yaml
----
-bundle:
-  name: my-bundle
-  version: 1.0.0
-  description: My custom bundle
-
-session:
-  orchestrator: 
-    module: loop-streaming
-    source: git+https://github.com/microsoft/amplifier-module-loop-streaming@main
-  context:
-    module: context-simple
-    source: git+https://github.com/microsoft/amplifier-module-context-simple@main
-
-providers:
-  - module: provider-anthropic
-    source: git+https://github.com/microsoft/amplifier-module-provider-anthropic@main
-    config:
-      default_model: claude-sonnet-4-5
-      api_key_env: ANTHROPIC_API_KEY
-
-tools:
-  - module: tool-filesystem
-    source: git+https://github.com/microsoft/amplifier-module-tool-filesystem@main
-  - module: tool-bash
-    source: git+https://github.com/microsoft/amplifier-module-tool-bash@main
-
-hooks:
-  - module: hooks-logging
-    source: git+https://github.com/microsoft/amplifier-module-hooks-logging@main
----
-
-You are a helpful AI assistant with access to filesystem and bash tools.
-Follow the user's instructions carefully.
-```
-
-## Common Patterns
-
-### Use Foundation + Provider
-
-Most applications start with foundation + provider:
-
-```python
-foundation = await load_bundle("git+https://github.com/microsoft/amplifier-foundation@main")
-provider = await load_bundle("./providers/anthropic-sonnet.yaml")
 composed = foundation.compose(provider)
 ```
 
-### Add Tools
+**Composition** merges configurations - later bundles override earlier ones:
+- Foundation provides orchestrator, context manager, hooks
+- Provider adds the LLM backend
+- Result: Complete configuration ready for execution
 
-Compose in additional capabilities:
+Learn more: [Composition](concepts.md#composition)
 
-```python
-from amplifier_foundation import Bundle
-
-tools = Bundle(
-    name="tools",
-    version="1.0.0",
-    tools=[
-        {
-            "module": "tool-filesystem",
-            "source": "git+https://github.com/microsoft/amplifier-module-tool-filesystem@main"
-        }
-    ]
-)
-
-composed = foundation.compose(provider).compose(tools)
-```
-
-### Reuse Prepared Bundles
-
-Prepare once, create multiple sessions:
+### 4. Prepare for Execution
 
 ```python
 prepared = await composed.prepare()
-
-# Session 1
-async with await prepared.create_session() as session:
-    await session.execute("Task 1")
-
-# Session 2
-async with await prepared.create_session() as session:
-    await session.execute("Task 2")
 ```
 
-## Troubleshooting
+**Preparation** resolves module sources and downloads them:
+- Looks up module sources (git URLs)
+- Downloads modules if not cached
+- Validates module structure
+- Returns PreparedBundle ready for session creation
 
-### First run is slow
+First run takes ~30 seconds to download modules. Subsequent runs use cache.
 
-**Problem:** `prepare()` takes 30+ seconds
+Learn more: [Prepared Bundle](concepts.md#prepared-bundle)
 
-**Solution:** This is normal on first run while modules download. Subsequent runs use the cache.
+### 5. Create and Use Session
 
-Check cache:
-```bash
-ls -la ~/.amplifier/cache/modules/
+```python
+session = await prepared.create_session(session_cwd=Path.cwd())
+async with session:
+    response = await session.execute("Your prompt here")
 ```
 
-### Module not found
+**Session** is your interface to the AI:
+- Manages conversation history
+- Routes to appropriate provider
+- Handles tool execution
+- Maintains context across turns
 
-**Problem:** `ModuleNotFoundError` during prepare
-
-**Solution:** Ensure modules have `source:` fields:
-
-```yaml
-tools:
-  - module: tool-bash
-    source: git+https://github.com/microsoft/amplifier-module-tool-bash@main
-```
-
-### API key errors
-
-**Problem:** Authentication errors
-
-**Solution:** Set your API key:
-
-```bash
-export ANTHROPIC_API_KEY='your-key-here'
-# or
-export OPENAI_API_KEY='your-key-here'
-```
+The `session_cwd` parameter sets the working directory for file operations - critical for server deployments.
 
 ## Next Steps
 
-<div class="grid cards" markdown>
+**Try more examples:**
+- [Custom Configuration](examples/custom_configuration.md) - Add tools and enable streaming
+- [Multi-Agent Systems](examples/multi_agent_system.md) - Coordinate specialized agents
 
--   :material-school: __Learn by Example__
+**Learn core concepts:**
+- [What is a Bundle?](concepts.md#what-is-a-bundle)
+- [Composition Rules](concepts.md#composition)
+- [Mount Plans](concepts.md#mount-plan)
 
-    ---
+**Explore patterns:**
+- [Bundle Organization](patterns.md#bundle-organization)
+- [Provider Patterns](patterns.md#provider-patterns)
+- [Session Patterns](patterns.md#session-patterns)
 
-    [Examples Gallery →](examples/)
-    
-    Progressive examples from hello world to production apps
+## Troubleshooting
 
--   :material-book: __Core Concepts__
+### Module Download Fails
 
-    ---
+If `prepare()` fails to download modules:
 
-    [Understand Bundles →](concepts.md)
-    
-    Mental model for bundle composition
+1. Check internet connection
+2. Verify git URLs are accessible
+3. Check disk space for cache directory
 
--   :material-cube: __Bundle System__
+### API Key Issues
 
-    ---
+Set the appropriate environment variable for your provider:
 
-    [Deep Dive →](bundle_system.md)
-    
-    Loading, composition, validation, preparation
+```bash
+export ANTHROPIC_API_KEY="your-key-here"
+export OPENAI_API_KEY="your-key-here"
+export AZURE_OPENAI_API_KEY="your-key-here"
+```
 
-</div>
+### Import Errors
+
+If you get import errors:
+
+```bash
+pip install --upgrade git+https://github.com/microsoft/amplifier-foundation
+```
+
+Ensure you're using Python 3.11+.
