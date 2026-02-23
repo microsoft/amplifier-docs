@@ -2030,7 +2030,7 @@
           "repo": "amplifier-module-loop-events",
           "path": "amplifier_module_loop_events/__init__.py",
           "exists": true,
-          "hash": "7207eb84bebd9cd6"
+          "hash": "0c3aa15de0ff6f54"
         },
         {
           "repo": "amplifier-module-loop-events",
@@ -2310,7 +2310,7 @@
           "repo": "amplifier",
           "path": "docs/MODULES.md",
           "exists": true,
-          "hash": "cb4719cda4df7780"
+          "hash": "e6ff9452de45f912"
         },
         {
           "repo": "amplifier-core",

@@ -14,10 +14,22 @@ Event-driven agent loop orchestrator with scheduler integration.
 ## Installation
 
 ```yaml
-orchestrators:
-  - module: loop-events
-    source: git+https://github.com/microsoft/amplifier-module-loop-events@main
+session:
+  orchestrator: {module: loop-events}
+
+providers:
+  - module: provider-anthropic
+    source: git+https://github.com/microsoft/amplifier-module-provider-anthropic@main
 ```
+
+## Configuration
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `max_iterations` | int | `-1` | Maximum iterations (-1 = unlimited) |
+| `default_provider` | string | - | Default provider name to use |
+| `extended_thinking` | bool | `false` | Enable extended thinking for compatible providers |
+| `reasoning_effort` | string | - | Reasoning effort passed to ChatRequest (`low`/`medium`/`high`) |
 
 ## Behavior
 
@@ -37,25 +49,6 @@ Provides event-driven orchestration that:
    - Execute selected tool (or modified tool if scheduler changed it)
    - Feed results back to LLM
 3. Return final response
-
-## Configuration
-
-```toml
-[session]
-orchestrator = "loop-events"
-context = "context-simple"
-
-[[providers]]
-module = "provider-anthropic"
-name = "claude"
-
-[[hooks]]
-module = "hooks-scheduler-heuristic"
-
-[[hooks]]
-module = "hooks-scheduler-cost-aware"
-config = { cost_weight = 0.6, latency_weight = 0.4 }
-```
 
 ## Usage
 

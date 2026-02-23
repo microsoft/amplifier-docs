@@ -68,41 +68,25 @@ The **amplifier-foundation** library provides higher-level functionality for app
 
 | Category | Count | Examples |
 |----------|-------|----------|
-| Providers | 8 | Anthropic, OpenAI, Azure, Gemini, Ollama, GitHub Copilot, vLLM, Mock |
-| Tools | 9 | Filesystem, Bash, Web, Search, Task, Todo, Skills, MCP, Slash Command |
+| Providers | 8 | Anthropic, OpenAI, Azure, Gemini, Ollama, GitHub ... |
+| Tools | 9 | Filesystem, Bash, Web, Search, Task, Todo, Skills, MCP ... |
+| Contexts | 2 | Simple (in-memory), Persistent (file-backed) |
+| Hooks | 10+ | Logging, Redaction, Approval, Backup, Status ... |
 | Orchestrators | 3 | Basic, Streaming, Events |
-| Contexts | 2 | Simple, Persistent |
-| Hooks | 11 | Logging, Approval, Redaction, Backup, Streaming UI, Schedulers, etc. |
-| Libraries | 1 | amplifier-foundation |
-| Bundles | 12 | Recipes, Design Intelligence, Python Dev, Stories, Superpowers, Shadow, etc. |
 
 ---
 
-## Using Modules
+## Explore Components
 
-Modules are specified in profiles:
+**Browse by category:**
 
-```yaml
-# ~/.amplifier/profiles/my-profile.md
----
-profile:
-  name: my-profile
-  extends: base
+- **[Providers](../modules/providers/index.md)** - Connect to AI model backends
+- **[Tools](../modules/tools/index.md)** - Extend agent capabilities
+- **[Orchestrators](../modules/orchestrators/index.md)** - Control execution flow
+- **[Contexts](../modules/contexts/index.md)** - Manage conversation memory
+- **[Hooks](../modules/hooks/index.md)** - Observe and control behavior
 
-tools:
-  - module: tool-web
-    source: git+https://github.com/microsoft/amplifier-module-tool-web@main
----
-```
+**Build your own:**
 
-Or managed via CLI:
-
-```bash
-# List installed modules
-amplifier module list
-
-# Show module details
-amplifier module show tool-filesystem
-```
-
-See the [User Guide](../user_guide/index.md) for complete documentation.
+- **[Developer Guide](../developer_guides/index.md)** - Learn to build custom modules
+- **[Module Contracts](https://github.com/microsoft/amplifier-core/blob/main/docs/contracts/README.md)** - Technical specifications
