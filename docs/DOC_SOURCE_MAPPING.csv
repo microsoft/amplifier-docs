@@ -2,29 +2,29 @@ Documentation Page,Source Files,Relationship Type,Notes
 docs/index.md,N/A,DERIVED,Landing page - manually maintained
 docs/getting_started/index.md,amplifier-app-cli/README.md,DERIVED,Quick start guide for CLI application
 docs/getting_started/installation.md,amplifier-app-cli/README.md|amplifier-app-cli/pyproject.toml,DERIVED,Installation methods and requirements
-docs/getting_started/providers.md,amplifier-module-provider-*/README.md,REFERENCE,Provider setup and configuration
+docs/getting_started/providers.md,amplifier-module-provider-anthropic/README.md|amplifier-module-provider-openai/README.md|amplifier-module-provider-azure-openai/README.md|amplifier-module-provider-ollama/README.md,REFERENCE,Provider setup and configuration
 docs/user_guide/index.md,amplifier-app-cli/README.md,DERIVED,CLI user guide overview
-docs/user_guide/cli.md,amplifier-app-cli/amplifier_app_cli/main.py|amplifier-app-cli/amplifier_app_cli/commands/*.py,DERIVED,Complete CLI command reference
-docs/user_guide/agents.md,amplifier-foundation/agents/*|amplifier-app-cli/docs/AGENT_DELEGATION_IMPLEMENTATION.md,DERIVED,Agent delegation and usage - built-in agents now in amplifier-foundation
+docs/user_guide/cli.md,amplifier-app-cli/amplifier_app_cli/main.py|amplifier-app-cli/amplifier_app_cli/commands/__init__.py,DERIVED,Complete CLI command reference
+docs/user_guide/agents.md,amplifier-foundation/agents/explorer.md|amplifier-foundation/agents/foundation-expert.md|amplifier-foundation/agents/zen-architect.md|amplifier-app-cli/docs/AGENT_DELEGATION_IMPLEMENTATION.md,DERIVED,Agent delegation and usage - built-in agents now in amplifier-foundation
 docs/user_guide/sessions.md,amplifier-core/amplifier_core/session.py|amplifier-app-cli/amplifier_app_cli/session_spawner.py,DERIVED,Session management and persistence
 docs/developer_guides/foundation/index.md,amplifier-core/README.md|amplifier-core/docs/DESIGN_PHILOSOPHY.md|amplifier-foundation/README.md,DERIVED,Foundation developer guide overview - covers kernel and amplifier-foundation
 docs/developer_guides/foundation/amplifier_foundation/index.md,amplifier-foundation/README.md|amplifier-foundation/docs/CONCEPTS.md|amplifier-foundation/docs/API_REFERENCE.md,DERIVED,amplifier-foundation library overview - bundle composition and utilities
 docs/developer_guides/foundation/amplifier_foundation/getting_started.md,amplifier-foundation/README.md|amplifier-foundation/examples/01_hello_world.py|amplifier-foundation/docs/CONCEPTS.md,DERIVED,Getting started with amplifier-foundation - installation and hello world
 docs/developer_guides/foundation/amplifier_foundation/concepts.md,amplifier-foundation/docs/CONCEPTS.md,DIRECT,Core concepts - bundles composition mount plans (placeholder currently links to GitHub)
 docs/developer_guides/foundation/amplifier_foundation/bundle_system.md,amplifier-foundation/docs/BUNDLE_GUIDE.md|amplifier-foundation/amplifier_foundation/bundle.py|amplifier-foundation/amplifier_foundation/registry.py,DERIVED,Bundle system deep dive - loading composition validation preparation (placeholder currently links to GitHub)
-docs/developer_guides/foundation/amplifier_foundation/utilities.md,amplifier-foundation/docs/API_REFERENCE.md|amplifier-foundation/amplifier_foundation/io/*.py|amplifier-foundation/amplifier_foundation/dicts/*.py|amplifier-foundation/amplifier_foundation/paths/*.py|amplifier-foundation/amplifier_foundation/cache/*.py|amplifier-foundation/amplifier_foundation/mentions/*.py,DERIVED,Utilities reference - I/O dicts paths mentions caching (placeholder currently links to GitHub)
+docs/developer_guides/foundation/amplifier_foundation/utilities.md,amplifier-foundation/docs/API_REFERENCE.md|amplifier-foundation/amplifier_foundation/io/__init__.py|amplifier-foundation/amplifier_foundation/dicts/__init__.py|amplifier-foundation/amplifier_foundation/paths/__init__.py|amplifier-foundation/amplifier_foundation/cache/__init__.py|amplifier-foundation/amplifier_foundation/mentions/__init__.py,DERIVED,Utilities reference - I/O dicts paths mentions caching (placeholder currently links to GitHub)
 docs/developer_guides/foundation/amplifier_foundation/patterns.md,amplifier-foundation/docs/PATTERNS.md,DIRECT,Common patterns and best practices (placeholder currently links to GitHub)
-docs/developer_guides/foundation/amplifier_foundation/api_reference.md,amplifier-foundation/docs/API_REFERENCE.md|amplifier-foundation/amplifier_foundation/*.py,DERIVED,API reference for amplifier-foundation classes and functions (placeholder currently links to GitHub)
-docs/developer_guides/foundation/amplifier_foundation/examples/index.md,amplifier-foundation/examples/README.md|amplifier-foundation/examples/*.py,DERIVED,Examples gallery and catalog - learning paths and running instructions
+docs/developer_guides/foundation/amplifier_foundation/api_reference.md,amplifier-foundation/docs/API_REFERENCE.md|amplifier-foundation/amplifier_foundation/__init__.py|amplifier-foundation/amplifier_foundation/bundle.py|amplifier-foundation/amplifier_foundation/registry.py,DERIVED,API reference for amplifier-foundation classes and functions (placeholder currently links to GitHub)
+docs/developer_guides/foundation/amplifier_foundation/examples/index.md,amplifier-foundation/examples/README.md|amplifier-foundation/examples/01_hello_world.py|amplifier-foundation/examples/09_multi_agent_system.py,DERIVED,Examples gallery and catalog - learning paths and running instructions
 docs/developer_guides/foundation/amplifier_foundation/examples/hello_world.md,amplifier-foundation/examples/01_hello_world.py|amplifier-foundation/docs/CONCEPTS.md,DERIVED,Hello World example - basic bundle workflow with explanations
 docs/developer_guides/foundation/amplifier_foundation/examples/custom_configuration.md,amplifier-foundation/examples/02_custom_configuration.py|amplifier-foundation/docs/PATTERNS.md,DERIVED,Custom Configuration example - composition patterns and adding tools
 docs/developer_guides/foundation/amplifier_foundation/examples/custom_tool.md,amplifier-foundation/examples/03_custom_tool.py|amplifier-core/docs/contracts/TOOL_CONTRACT.md,DERIVED,Custom Tool example - building domain-specific capabilities
 docs/developer_guides/foundation/amplifier_foundation/examples/cli_application.md,amplifier-foundation/examples/08_cli_application.py,DERIVED,CLI Application example - production patterns for building CLI tools
 docs/developer_guides/foundation/amplifier_foundation/examples/multi_agent_system.md,amplifier-foundation/examples/09_multi_agent_system.py|amplifier-foundation/docs/PATTERNS.md,DERIVED,Multi-Agent System example - coordinating specialized agents in workflows
 docs/developer_guides/applications/index.md,amplifier-core/amplifier_core/session.py|amplifier-app-cli/amplifier_app_cli/__init__.py,DERIVED,Building applications on amplifier-core
-docs/developer_guides/applications/cli_case_study.md,amplifier-app-cli/amplifier_app_cli/*.py|amplifier-app-cli/docs/*.md,DERIVED,CLI application architecture case study
+docs/developer_guides/applications/cli_case_study.md,amplifier-app-cli/amplifier_app_cli/main.py|amplifier-app-cli/docs/AGENT_DELEGATION_IMPLEMENTATION.md,DERIVED,CLI application architecture case study
 docs/developer/index.md,amplifier-core/docs/contracts/README.md,DERIVED,Module developer guide overview
-docs/developer/module_development.md,amplifier-core/docs/contracts/*.md|amplifier-module-*/README.md,DERIVED,Creating custom modules
+docs/developer/module_development.md,amplifier-core/docs/contracts/README.md|amplifier-core/docs/contracts/TOOL_CONTRACT.md|amplifier-core/docs/contracts/PROVIDER_CONTRACT.md|amplifier-core/docs/contracts/HOOK_CONTRACT.md,DERIVED,Creating custom modules
 docs/developer/contracts/index.md,amplifier-core/docs/contracts/README.md,DERIVED,Module contracts overview
 docs/developer/contracts/provider.md,amplifier-core/docs/contracts/PROVIDER_CONTRACT.md|amplifier-core/amplifier_core/interfaces.py,DERIVED,Provider contract specification
 docs/developer/contracts/tool.md,amplifier-core/docs/contracts/TOOL_CONTRACT.md|amplifier-core/amplifier_core/interfaces.py,DERIVED,Tool contract specification
@@ -33,7 +33,7 @@ docs/developer/contracts/orchestrator.md,amplifier-core/docs/contracts/ORCHESTRA
 docs/developer/contracts/context.md,amplifier-core/docs/contracts/CONTEXT_CONTRACT.md|amplifier-core/amplifier_core/interfaces.py,DERIVED,Context contract specification
 docs/architecture/index.md,amplifier-core/docs/DESIGN_PHILOSOPHY.md,DERIVED,Architecture documentation overview
 docs/architecture/overview.md,amplifier-core/docs/DESIGN_PHILOSOPHY.md|amplifier-core/README.md,DERIVED,High-level architecture overview
-docs/architecture/kernel.md,amplifier-core/docs/DESIGN_PHILOSOPHY.md|amplifier-core/amplifier_core/*.py,DERIVED,Kernel philosophy and design
+docs/architecture/kernel.md,amplifier-core/docs/DESIGN_PHILOSOPHY.md|amplifier-core/amplifier_core/__init__.py|amplifier-core/amplifier_core/session.py|amplifier-core/amplifier_core/coordinator.py,DERIVED,Kernel philosophy and design
 docs/architecture/modules.md,amplifier-core/docs/contracts/README.md|amplifier-core/amplifier_core/loader.py,DERIVED,Module system architecture
 docs/architecture/mount_plans.md,amplifier-core/docs/specs/MOUNT_PLAN_SPECIFICATION.md|amplifier-core/amplifier_core/models.py,DERIVED,Mount plan specification
 docs/architecture/events.md,amplifier-core/docs/specs/CONTRIBUTION_CHANNELS.md|amplifier-core/amplifier_core/events.py,DERIVED,Event system architecture
@@ -46,28 +46,28 @@ docs/api/core/models.md,amplifier-core/amplifier_core/models.py|amplifier-core/a
 docs/api/core/events.md,amplifier-core/amplifier_core/events.py,DERIVED,Events API reference
 docs/api/cli/index.md,amplifier-app-cli/amplifier_app_cli/main.py,REFERENCE,CLI API reference
 docs/modules/index.md,amplifier-core/docs/contracts/README.md,DERIVED,Modules catalog overview
-docs/modules/providers/index.md,amplifier-module-provider-*/README.md,DERIVED,Providers catalog
+docs/modules/providers/index.md,amplifier-module-provider-anthropic/README.md|amplifier-module-provider-openai/README.md|amplifier-module-provider-azure-openai/README.md|amplifier-module-provider-ollama/README.md,DERIVED,Providers catalog
 docs/modules/providers/anthropic.md,amplifier-module-provider-anthropic/amplifier_module_provider_anthropic/__init__.py|amplifier-module-provider-anthropic/README.md,DERIVED,Anthropic provider documentation
 docs/modules/providers/openai.md,amplifier-module-provider-openai/amplifier_module_provider_openai/__init__.py|amplifier-module-provider-openai/README.md,DERIVED,OpenAI provider documentation
 docs/modules/providers/azure.md,amplifier-module-provider-azure-openai/amplifier_module_provider_azure_openai/__init__.py|amplifier-module-provider-azure-openai/README.md,DERIVED,Azure OpenAI provider documentation
 docs/modules/providers/ollama.md,amplifier-module-provider-ollama/amplifier_module_provider_ollama/__init__.py|amplifier-module-provider-ollama/README.md,DERIVED,Ollama provider documentation
 docs/modules/providers/vllm.md,amplifier-module-provider-vllm/amplifier_module_provider_vllm/__init__.py|amplifier-module-provider-vllm/README.md,DERIVED,vLLM provider documentation
 docs/modules/providers/mock.md,amplifier-module-provider-mock/amplifier_module_provider_mock/__init__.py|amplifier-module-provider-mock/README.md,DERIVED,Mock provider documentation (for testing)
-docs/modules/tools/index.md,amplifier-module-tool-*/README.md,DERIVED,Tools catalog
-docs/modules/tools/filesystem.md,amplifier-module-tool-filesystem/amplifier_module_tool_filesystem/*.py|amplifier-module-tool-filesystem/README.md,DERIVED,Filesystem tool documentation
+docs/modules/tools/index.md,amplifier-module-tool-bash/README.md|amplifier-module-tool-filesystem/README.md|amplifier-module-tool-task/README.md,DERIVED,Tools catalog
+docs/modules/tools/filesystem.md,amplifier-module-tool-filesystem/amplifier_module_tool_filesystem/__init__.py|amplifier-module-tool-filesystem/README.md,DERIVED,Filesystem tool documentation
 docs/modules/tools/bash.md,amplifier-module-tool-bash/amplifier_module_tool_bash/__init__.py|amplifier-module-tool-bash/README.md,DERIVED,Bash tool documentation
 docs/modules/tools/web.md,amplifier-module-tool-web/amplifier_module_tool_web/__init__.py|amplifier-module-tool-web/README.md,DERIVED,Web tool documentation
 docs/modules/tools/search.md,amplifier-module-tool-search/amplifier_module_tool_search/__init__.py|amplifier-module-tool-search/README.md,DERIVED,Search tool documentation
 docs/modules/tools/task.md,amplifier-module-tool-task/amplifier_module_tool_task/__init__.py|amplifier-module-tool-task/README.md,DERIVED,Task tool documentation
 docs/modules/tools/todo.md,amplifier-module-tool-todo/amplifier_module_tool_todo/__init__.py|amplifier-module-tool-todo/README.md,DERIVED,Todo tool documentation
-docs/modules/orchestrators/index.md,amplifier-module-loop-*/README.md,DERIVED,Orchestrators catalog
+docs/modules/orchestrators/index.md,amplifier-module-loop-basic/README.md|amplifier-module-loop-streaming/README.md|amplifier-module-loop-events/README.md,DERIVED,Orchestrators catalog
 docs/modules/orchestrators/loop_basic.md,amplifier-module-loop-basic/amplifier_module_loop_basic/__init__.py|amplifier-module-loop-basic/README.md,DERIVED,Basic orchestrator documentation
 docs/modules/orchestrators/loop_streaming.md,amplifier-module-loop-streaming/amplifier_module_loop_streaming/__init__.py|amplifier-module-loop-streaming/README.md,DERIVED,Streaming orchestrator documentation
 docs/modules/orchestrators/loop_events.md,amplifier-module-loop-events/amplifier_module_loop_events/__init__.py|amplifier-module-loop-events/README.md,DERIVED,Events orchestrator documentation
-docs/modules/contexts/index.md,amplifier-module-context-*/README.md,DERIVED,Contexts catalog
+docs/modules/contexts/index.md,amplifier-module-context-simple/README.md|amplifier-module-context-persistent/README.md,DERIVED,Contexts catalog
 docs/modules/contexts/simple.md,amplifier-module-context-simple/amplifier_module_context_simple/__init__.py|amplifier-module-context-simple/README.md,DERIVED,Simple context documentation
 docs/modules/contexts/persistent.md,amplifier-module-context-persistent/amplifier_module_context_persistent/__init__.py|amplifier-module-context-persistent/README.md,DERIVED,Persistent context documentation
-docs/modules/hooks/index.md,amplifier-module-hooks-*/README.md,DERIVED,Hooks catalog
+docs/modules/hooks/index.md,amplifier-module-hooks-logging/README.md|amplifier-module-hooks-approval/README.md|amplifier-module-hooks-redaction/README.md,DERIVED,Hooks catalog
 docs/modules/hooks/logging.md,amplifier-module-hooks-logging/amplifier_module_hooks_logging/__init__.py|amplifier-module-hooks-logging/README.md,DERIVED,Logging hook documentation
 docs/modules/hooks/approval.md,amplifier-module-hooks-approval/amplifier_module_hooks_approval/__init__.py|amplifier-module-hooks-approval/README.md,DERIVED,Approval hook documentation
 docs/modules/hooks/redaction.md,amplifier-module-hooks-redaction/amplifier_module_hooks_redaction/__init__.py|amplifier-module-hooks-redaction/README.md,DERIVED,Redaction hook documentation
