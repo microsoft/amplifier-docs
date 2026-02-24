@@ -57,308 +57,280 @@ When you invoke an agent:
 
 1. A **sub-session** is created with the agent's configuration
 2. The agent inherits base settings from your current session
-3. Agent-specific tools and instructions are applied
-4. The agent executes your request
-5. Results return to your main session
+3. The agent's specialized tools and instructions are loaded
+4. Your request is processed in the sub-session
+5. Results are returned to your main session
+6. Sub-session state is persisted for potential resumption
 
-```
-Main Session
-    │
-    ├── @explorer "Analyze codebase"
-    │       └── Sub-session with explorer config
-    │           └── Returns analysis
-    │
-    └── Continue main conversation
-```
+### LSP-Enhanced Capabilities
 
-## Agent Descriptions
+Many agents have access to **Language Server Protocol (LSP)** for semantic code intelligence:
 
-### `explorer`
+| Capability | Use Case |
+|------------|----------|
+| `findReferences` | Find all usages of a symbol |
+| `goToDefinition` | Jump to exact definition |
+| `hover` | Get type signatures and documentation |
+| `incomingCalls`/`outgoingCalls` | Trace call graphs |
 
-**Purpose**: Breadth-first exploration of codebases with citations.
+Agents like `explorer`, `zen-architect`, and code-navigation specialists use LSP to understand code relationships beyond text search.
 
-**Capabilities**:
+## Multi-Turn Conversations
 
-- Scans directory structures
-- Reads and summarizes files
-- Identifies patterns and architecture
-- Provides cited references
+Agents support multi-turn conversations through automatic state persistence. You can continue a conversation with an agent across multiple turns:
 
-**Best for**:
+### Initial Delegation
 
-- Understanding new projects
-- Finding specific functionality
-- Architecture overview
-
-**Example**:
 ```bash
-@explorer How does the authentication flow work?
+amplifier> @zen-architect Design a caching system
 ```
 
-### `bug-hunter`
+The agent responds with a design and returns a session ID.
 
-**Purpose**: Systematic debugging and issue identification.
+### Resume Conversation
 
-**Capabilities**:
+To continue the conversation with the same agent:
 
-- Analyzes error messages
-- Traces code paths
-- Identifies root causes
-- Suggests fixes
-
-**Best for**:
-
-- Debugging errors
-- Finding edge cases
-- Security analysis
-
-**Example**:
 ```bash
-@bug-hunter Why is this test failing?
-@bug-hunter Review auth.py for security issues
+amplifier> @zen-architect Add TTL support to the cache
 ```
 
-### `zen-architect`
+The system automatically resumes the previous sub-session, maintaining full conversation history.
 
-**Purpose**: System design with ruthless simplicity.
+### How It Works
 
-**Capabilities**:
+1. **State Persistence**: After each agent execution, state (transcript and configuration) is saved to `~/.amplifier/projects/{project}/sessions/`
+2. **Automatic Resume**: When you invoke the same agent again, the system detects the previous session and resumes it
+3. **Full Context**: The agent has access to the entire conversation history
+4. **Cross-Session**: Sessions survive parent session restarts and crashes
 
-- Evaluates design trade-offs
-- Proposes minimal solutions
-- Questions complexity
-- Creates architecture diagrams
+### Session Storage
 
-**Best for**:
+Sub-session data is stored at:
+- `transcript.jsonl` - Conversation history
+- `metadata.json` - Session configuration and metadata
+- `bundle.md` - Bundle snapshot (if applicable)
 
-- New feature design
-- Refactoring decisions
-- Architecture review
+## Agent Resolution
 
-**Example**:
+Agents are discovered from multiple locations (first-match-wins):
+
+1. **Environment Variables** - `AMPLIFIER_AGENT_<NAME>` for testing
+2. **User Directory** - `~/.amplifier/agents/` for personal overrides
+3. **Project Directory** - `.amplifier/agents/` for project-specific agents
+4. **Bundle Agents** - Agents included with installed bundles
+
+### Testing Agent Changes
+
+Use environment variables to test agent modifications:
+
 ```bash
-@zen-architect Design a notification system
+# Test modified agent without committing
+export AMPLIFIER_AGENT_ZEN_ARCHITECT=~/work/test-zen.md
+amplifier run "design system"  # Uses test version
+
+# Unset to use normal resolution
+unset AMPLIFIER_AGENT_ZEN_ARCHITECT
 ```
 
-### `web-research`
+## Agent Capabilities
 
-**Purpose**: Research and information synthesis.
+### Explorer
 
-**Capabilities**:
+Deep local-context reconnaissance for codebase understanding.
 
-- Web search
-- Document analysis
-- Information synthesis
-- Source citation
+**Activation Triggers:**
+- Broad discovery across code, docs, or content
+- Understanding codebase structure
+- Orientation before implementation or debugging
 
-**Best for**:
+**Capabilities:**
+- Breadth-first exploration
+- LSP semantic analysis
+- Pattern discovery with grep
+- Structured reporting with file references
 
-- Gathering information
-- Comparing options
-- Documentation research
+**Example:**
 
-**Example**:
 ```bash
-@web-research What are the best practices for API versioning?
+amplifier> @explorer What is the event handling flow?
 ```
 
-### `modular-builder`
+### Zen Architect
 
-**Purpose**: Focused code implementation.
+System design agent embodying ruthless simplicity and Wabi-sabi philosophy.
 
-**Capabilities**:
+**Operating Modes:**
+- **ANALYZE**: Break down problems, design solutions, create specifications
+- **ARCHITECT**: System design with module specifications
+- **REVIEW**: Code quality assessment and recommendations
 
-- Writes clean code
-- Follows existing patterns
-- Creates tests
-- Documents code
+**Capabilities:**
+- LSP-enhanced architecture analysis
+- Module specification creation
+- Philosophy compliance review
+- Design decision framework
 
-**Best for**:
+**Example:**
 
-- Implementing features
-- Writing utilities
-- Creating tests
-
-**Example**:
 ```bash
-@modular-builder Create a rate limiter class
+amplifier> @zen-architect Design a caching system
+amplifier> @zen-architect Review this module for complexity
+```
+
+### Foundation Expert
+
+Authoritative expert for Amplifier Foundation applications and agent authoring.
+
+**Expertise:**
+- Bundle composition and the thin bundle pattern
+- Behavior creation and reusability
+- Agent authoring (WHY, WHEN, WHAT, HOW)
+- Working examples and patterns
+- Implementation and modular design philosophy
+
+**Example:**
+
+```bash
+amplifier> @foundation-expert How do I create a bundle?
+amplifier> @foundation-expert Show me the behavior pattern
 ```
 
 ## Creating Custom Agents
 
-Define agents in your profile or a separate agent file.
+Agents are bundles with special frontmatter. To create a custom agent:
 
-### In a Profile
+1. Create a markdown file with YAML frontmatter
+2. Use `meta:` section (not `bundle:`) with `name` and `description`
+3. Write detailed `description` field with:
+   - **WHY**: Value proposition
+   - **WHEN**: Activation triggers
+   - **WHAT**: Domain terms and concepts
+   - **HOW**: Examples with `<example>` blocks
+4. Include agent instructions in the markdown body
 
-```yaml
----
-name: my-profile
-extends: dev
-agents:
-  my-agent:
-    description: My specialized agent
-    tools:
-      - tool-filesystem
-      - tool-bash
-    system:
-      instruction: |
-        You are a specialist in database optimization.
-        Always explain your reasoning.
----
-```
-
-### Standalone Agent File
-
-Create `.amplifier/agents/my-agent.md`:
+### Example Agent Structure
 
 ```yaml
 ---
-name: my-agent
-description: Database optimization specialist
+meta:
+  name: my-agent
+  description: "Purpose and when to use this agent. Include examples showing context, user request, assistant response, and commentary."
+
 tools:
-  - tool-filesystem
-  - tool-bash
-  - tool-search
-providers:
-  - module: provider-anthropic
-    config:
-      default_model: claude-opus-4-6
+  - module: tool-filesystem
+  - module: tool-search
 ---
 
-# Database Optimization Specialist
+# My Agent
 
-You are an expert in database performance optimization.
+You are a specialized agent for [purpose].
 
-## Your Approach
+## When to Activate
 
-1. Analyze the current schema and queries
-2. Identify performance bottlenecks
-3. Suggest specific improvements
-4. Explain trade-offs
+Use this agent when:
+- [Trigger 1]
+- [Trigger 2]
 
-## Guidelines
+## Operating Principles
 
-- Always explain your reasoning
-- Consider read vs write patterns
-- Account for data growth
+- [Principle 1]
+- [Principle 2]
 ```
 
-### Agent Schema
+### Agent File Locations
+
+Save custom agents to:
+- `~/.amplifier/agents/` - Personal agents (all projects)
+- `.amplifier/agents/` - Project-specific agents (committed to git)
+
+## Provider Preferences
+
+Control which provider/model an agent uses:
+
+```python
+# In task tool delegation
+{
+    "agent": "foundation:explorer",
+    "instruction": "Quick analysis",
+    "provider_preferences": [
+        {"provider": "anthropic", "model": "claude-haiku-*"},
+        {"provider": "openai", "model": "gpt-4o-mini"},
+    ]
+}
+```
+
+The system tries each preference in order until finding an available provider. Model names support glob patterns (e.g., `claude-haiku-*` matches the latest haiku model).
+
+## Tool Inheritance
+
+Bundles can control which tools spawned agents inherit using the `spawn` section:
 
 ```yaml
----
-name: agent-name
-description: What this agent does
-
-# Optional - specific tools for this agent
+# In bundle.md
 tools:
-  - tool-filesystem
-  - tool-bash
+  - module: tool-task      # Coordinator can delegate
+  - module: tool-filesystem
+  - module: tool-bash
 
-# Optional - specific provider/model
-providers:
-  - module: provider-anthropic
-    config:
-      default_model: claude-opus-4-6
-      temperature: 0.3
-
-# Optional - override hooks
-hooks:
-  - module: hooks-logging
-
-# System instruction
-system:
-  instruction: |
-    Detailed instructions for the agent...
----
-
-# Markdown content becomes additional system instructions
+spawn:
+  exclude_tools: [tool-task]  # Agents can't delegate further
 ```
 
-## Agent Inheritance
+**Common pattern**: Exclude `tool-task` to prevent delegation recursion.
 
-Agents inherit from the parent session:
+## Best Practices
 
-| Setting | Behavior |
-|---------|----------|
-| Provider | Inherited (can override) |
-| Tools | Replaced if specified |
-| Hooks | Inherited (can add) |
-| Context | Fresh (isolated) |
+### When to Use Agents
 
-### Overriding Provider
+- **Complex analysis tasks** - Delegate to specialized agents to avoid context bloat
+- **Multi-step workflows** - Use agents for focused sub-tasks
+- **Domain expertise** - Leverage agent-specific knowledge and tools
+- **Context management** - Agents serve as "context sinks" for heavy documentation
 
-```yaml
-agents:
-  deep-thinker:
-    providers:
-      - module: provider-anthropic
-        config:
-          default_model: claude-opus-4-6
-```
+### Agent Selection Tips
 
-### Limiting Tools
+| Task | Recommended Agent |
+|------|-------------------|
+| Understanding codebase | `explorer` |
+| System design | `zen-architect` |
+| Implementation | `modular-builder` |
+| Debugging | `bug-hunter` |
+| Bundle creation | `foundation-expert` |
+| Security review | `security-guardian` |
+| Git operations | `git-ops` |
 
-```yaml
-agents:
-  read-only:
-    tools:
-      - tool-filesystem  # Only filesystem, no bash
-```
+### Multi-Turn Strategies
 
-## Agent Search Path
+- **Iterative refinement**: Start with broad request, refine in subsequent turns
+- **Context building**: Each turn builds on previous context
+- **Session IDs**: Save session IDs for resuming specific conversations later
 
-Agents are loaded from (in order):
+## Advanced Topics
 
-1. Current profile's `agents` section
-2. `.amplifier/agents/` (project)
-3. `~/.amplifier/agents/` (user)
-4. Installed collections
-5. Bundled agents
+### Agent as Context Sink
 
-## Multi-Turn Agent Sessions
+Agents serve as **context sinks** - they carry heavy documentation that would bloat the main session if always loaded.
 
-Agents can maintain context across multiple invocations:
+**Benefits:**
+- Main session stays lightweight
+- Agent loads heavy docs only when spawned
+- Results return with minimal context overhead
+- Critical strategy for longer-running sessions
 
-```bash
-amplifier> @explorer Analyze the API layer
-[Agent analyzes...]
+### Agent Composition
 
-amplifier> @explorer Now focus on the authentication endpoints
-[Agent continues with context from previous analysis]
-```
+Agents are bundles, so they support the same composition patterns:
 
-## Agent Best Practices
+- Include other bundles via `includes:`
+- Reference context files via `context.include:`
+- Declare tools, hooks, and providers
+- Use behaviors for reusable capabilities
 
-1. **Focused purpose**: Each agent should do one thing well
-2. **Clear instructions**: Be specific about behavior and approach
-3. **Appropriate tools**: Only include tools the agent needs
-4. **Test thoroughly**: Try various prompts to ensure consistent behavior
+For detailed agent authoring guidance, see the [Bundle Guide](../developer_guides/foundation/amplifier_foundation/bundle_system.md).
 
-## Troubleshooting
+## Next Steps
 
-### Agent Not Found
-
-```bash
-# Check agent exists
-amplifier agents list
-
-# Check agent locations
-ls ~/.amplifier/agents/
-ls .amplifier/agents/
-```
-
-### Agent Behavior Issues
-
-```bash
-# Show agent configuration
-amplifier agents show my-agent
-
-# Check profile includes agent
-amplifier profile show --resolved
-```
-
-## See Also
-
-- [CLI Reference](cli.md) - Agent commands
-- **→ [Agent Authoring Guide](https://github.com/microsoft/amplifier-foundation/blob/main/docs/AGENT_AUTHORING.md)** - Complete reference
+- [CLI Reference](cli.md) - Learn all CLI commands for agent management
+- [Bundle System](../developer_guides/foundation/amplifier_foundation/bundle_system.md) - Create custom agents
+- [Agent Authoring](https://github.com/microsoft/amplifier-foundation/blob/main/docs/AGENT_AUTHORING.md) - Deep dive into agent design

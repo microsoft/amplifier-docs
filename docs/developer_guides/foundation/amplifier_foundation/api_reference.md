@@ -98,6 +98,7 @@ from amplifier_foundation import Bundle, BundleRegistry, load_bundle
 | `parse_uri` | `paths/resolution.py` | Parse source URI |
 | `ParsedURI` | `paths/resolution.py` | Parsed URI dataclass |
 | `normalize_path` | `paths/resolution.py` | Normalize/resolve path |
+| `get_amplifier_home` | `paths/resolution.py` | Get Amplifier home directory |
 | `construct_agent_path` | `paths/construction.py` | Build agent file path |
 | `construct_context_path` | `paths/construction.py` | Build context file path |
 | `find_files` | `paths/discovery.py` | Find files by pattern (async) |
@@ -118,9 +119,7 @@ Utilities for spawning sub-sessions with provider/model preferences.
 | Export | Source | Purpose |
 |--------|--------|---------|
 | `ProviderPreference` | `spawn_utils.py` | Dataclass for provider/model preference (supports glob patterns) |
-| `ModelResolutionResult` | `spawn_utils.py` | Result of model pattern resolution |
 | `apply_provider_preferences` | `spawn_utils.py` | Apply ordered preferences to mount plan |
-| `apply_provider_preferences_with_resolution` | `spawn_utils.py` | Apply provider preferences with model pattern resolution (async) |
 | `resolve_model_pattern` | `spawn_utils.py` | Resolve glob patterns (e.g., `claude-haiku-*`) to concrete model names |
 | `is_glob_pattern` | `spawn_utils.py` | Check if model string contains glob characters |
 
@@ -178,3 +177,10 @@ from amplifier_foundation import load_mentions, BaseMentionResolver
 resolver = BaseMentionResolver(bundles={"foundation": foundation_bundle})
 results = await load_mentions("See @foundation:context/guidelines.md", resolver)
 ```
+
+## Next Steps
+
+- [Core Concepts](concepts.md) - Mental model for bundles
+- [Common Patterns](patterns.md) - Practical usage patterns
+- [Bundle System Deep Dive](bundle_system.md) - Complete bundle authoring guide
+- [Utilities Reference](utilities.md) - Detailed utility documentation

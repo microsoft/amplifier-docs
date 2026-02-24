@@ -70,73 +70,60 @@ tools:
 
 # Control what tools spawned agents inherit
 spawn:
-  exclude_tools: [tool-task]        # Agents inherit all EXCEPT these
-  # OR use explicit list:
-  # tools: [tool-a, tool-b]         # Agents get ONLY these tools
+  exclude_tools: [tool-task]  # Agents inherit all EXCEPT these
+  # OR
+  # tools: [tool-a, tool-b]   # Agents get ONLY these
 
 agents:
   include:
-    - my-bundle:agent-name          # Reference agents in this bundle
-
-# Only declare hooks NOT inherited from includes
-hooks:
-  - module: hooks-custom
-    source: git+https://github.com/...
+    - my-bundle:agent-name    # Loads from agents/ directory
 ---
 
 # System Instructions
 
-Your markdown instructions here. This becomes the system prompt.
+You are an AI assistant with the following capabilities...
 
-Reference documentation with @mentions:
-@my-bundle:docs/GUIDE.md
+[Markdown body becomes system instruction]
 ```
 
-### Loading from CLI
+## The Thin Bundle Pattern (Recommended)
 
-```bash
-# Load from local file
-amplifier run --bundle ./bundle.md "prompt"
+**Most bundles should be thin** - inheriting from foundation and adding only their unique capabilities.
 
-# Load from git URL
-amplifier run --bundle git+https://github.com/org/amplifier-bundle-foo@main "prompt"
-```
+### The Problem
 
-## Composition
-
-Bundles can be **composed** to layer configuration. Later bundles override earlier ones.
-
-### includes Directive
+When creating bundles that include foundation, a common mistake is to **redeclare things foundation already provides**:
 
 ```yaml
+# ❌ BAD: Fat bundle that duplicates foundation
 includes:
-  - bundle: foundation                    # Well-known bundle name
-  - bundle: git+https://github.com/...    # Git URL
-  - bundle: ./bundles/variant.yaml        # Local file
-  - bundle: my-bundle:behaviors/foo       # Behavior within same bundle
+  - bundle: foundation
+
+session:              # ❌ Foundation already defines this!
+  orchestrator:
+    module: loop-streaming
+    source: git+https://github.com/...
+  context:
+    module: context-simple
+
+tools:                # ❌ Foundation already has these!
+  - module: tool-filesystem
+    source: git+https://github.com/...
+  - module: tool-bash
+    source: git+https://github.com/...
 ```
 
-### Merge Rules
+This duplication:
+- Creates maintenance burden (update in two places)
+- Can cause version conflicts
+- Misses foundation updates automatically
 
-| Section | Rule |
-|---------|------|
-| `session` | Deep-merged (nested dicts merged recursively, later wins for scalars) |
-| `spawn` | Deep-merged (later overrides earlier) |
-| `providers` | Merged by module ID (configs for same module are deep-merged) |
-| `tools` | Merged by module ID (configs for same module are deep-merged) |
-| `hooks` | Merged by module ID (configs for same module are deep-merged) |
-| `agents` | Merged by agent name (later wins) |
-| `context` | Accumulates with namespace prefix (each bundle contributes without collision) |
-| Markdown instructions | Replace entirely (later wins) |
+### The Solution: Thin Bundles
 
-**Module ID merge**: Same ID = deep-merge config, new ID = add to list.
-
-### The Thin Bundle Pattern
-
-**Most bundles should be thin** — inheriting from foundation and adding only their unique capabilities:
+A **thin bundle** only declares what it uniquely provides:
 
 ```yaml
-# GOOD: Thin bundle inherits from foundation
+# ✅ GOOD: Thin bundle inherits from foundation
 ---
 bundle:
   name: my-capability
@@ -146,6 +133,7 @@ bundle:
 includes:
   - bundle: git+https://github.com/microsoft/amplifier-foundation@main
   - bundle: my-capability:behaviors/my-capability    # Behavior pattern
+
 ---
 
 # My Capability
@@ -157,11 +145,30 @@ includes:
 @foundation:context/shared/common-system-base.md
 ```
 
-Don't redeclare tools, session config, or hooks that foundation already provides. This duplication creates maintenance burden, can cause version conflicts, and misses foundation updates automatically.
+**That's it.** All tools, session config, and hooks come from foundation.
 
-### The Behavior Pattern
+### Exemplar: amplifier-bundle-recipes
+
+See [amplifier-bundle-recipes](https://github.com/microsoft/amplifier-bundle-recipes) for the canonical example - only 14 lines of YAML!
+
+**Key observations**:
+- No `tools:`, `session:`, or `hooks:` declarations (inherited from foundation)
+- Uses behavior pattern for its unique capabilities
+- References consolidated instructions file
+- Minimal markdown body
+
+## The Behavior Pattern
 
 A **behavior** is a reusable capability add-on that bundles agents + context (and optionally tools/hooks). Behaviors live in `behaviors/` and can be included by any bundle.
+
+### Why Behaviors?
+
+Behaviors enable:
+- **Reusability** - Add capability to any bundle
+- **Modularity** - Separate concerns cleanly
+- **Composition** - Mix and match behaviors
+
+### Behavior File Structure
 
 ```yaml
 # behaviors/my-capability.yaml
@@ -187,6 +194,8 @@ context:
     - my-capability:context/instructions.md
 ```
 
+### Using Behaviors
+
 Include a behavior in your bundle:
 
 ```yaml
@@ -196,17 +205,23 @@ includes:
   - bundle: git+https://github.com/org/bundle@main#subdirectory=behaviors/foo.yaml  # External
 ```
 
-### Agent Definition Patterns
+### Agent Definition Patterns: Include vs Inline
 
-Both **include** and **inline** patterns are supported:
+**Both patterns are fully supported** by the code. Choose based on your needs:
+
+#### Pattern 1: Include (Recommended for most cases)
 
 ```yaml
-# Pattern 1: Include (recommended for most cases)
 agents:
   include:
     - my-bundle:my-agent      # Loads agents/my-agent.md
+```
 
-# Pattern 2: Inline (valid for tool-scoped agents)
+**Use when**: Agent is self-contained with its own instructions in a separate `.md` file.
+
+#### Pattern 2: Inline (Valid for tool-scoped agents)
+
+```yaml
 agents:
   my-agent:
     description: "Agent with bundle-specific tool access"
@@ -216,6 +231,10 @@ agents:
         source: ./modules/tool-special
 ```
 
+**Use when**: Agent needs bundle-specific tool configurations that differ from the parent bundle.
+
+#### When to Use Each
+
 | Scenario | Pattern | Why |
 |----------|---------|-----|
 | Standard agent with own instructions | Include | Cleaner separation, context sink pattern |
@@ -223,429 +242,427 @@ agents:
 | Agent reused across bundles | Include | Separate file is more portable |
 | Agent tightly coupled to bundle | Inline | Keep definition with bundle config |
 
-### context.include vs @mentions
+**Key insight**: The code in `bundle.py:_parse_agents()` explicitly handles both patterns. Neither pattern is deprecated. Both are intentional design choices for different use cases.
 
-These two patterns have **different composition behavior** and are **NOT interchangeable**:
+## Context De-duplication
 
-| Pattern | Composition Behavior | Use When |
-|---------|---------------------|----------|
-| `context.include` | **ACCUMULATES** — content propagates to including bundles | Behaviors that inject context into parents |
-| `@mentions` | **REPLACES** — stays with this instruction only | Direct references in your own instruction |
+**Consolidate instructions into a single file** rather than inline in bundle.md.
 
-**Use `context.include` in behaviors** (`.yaml` files) — context propagates to including bundles.
-**Use `@mentions` in root bundles** (`.md` files) — stays with this instruction.
+### The Problem
 
-If you use `context.include` in a root bundle.md, that context will propagate to any bundle that includes yours. If you use `@mentions` in a behavior, the instruction (containing the @mention) **replaces** during composition and your @mention may get overwritten.
+Inline instructions in bundle.md cause:
+- Duplication if behavior also needs to reference them
+- Large bundle.md files that are hard to maintain
+- Harder to reuse context across bundles
 
-### Load-on-Demand Pattern (Soft References)
+### The Solution: Consolidated Context Files
 
-Not all context needs to load at session start. Use **soft references** (text without `@`) to make content available without consuming tokens until needed.
-
-Every `@mention` loads content eagerly at session creation, consuming tokens immediately. Reference files by path WITHOUT the `@` prefix to let the AI load them on-demand via `read_file`:
+Create `context/instructions.md` with all the instructions:
 
 ```markdown
-**Documentation (load on demand):**
-- Schema: recipes:docs/RECIPE_SCHEMA.md
-- Examples: recipes:examples/code-review-recipe.yaml
-- Guide: foundation:docs/BUNDLE_GUIDE.md
+# My Capability Instructions
+
+You have access to the my-capability tool...
+
+## Usage
+
+[Detailed instructions]
+
+## Agents Available
+
+[Agent descriptions]
 ```
 
-| Pattern | Syntax | Loads | Use When |
-|---------|--------|-------|----------|
-| **@mention** | `@bundle:path` | Immediately | Content is ALWAYS needed |
-| **Soft reference** | `bundle:path` (no @) | On-demand | Content is SOMETIMES needed |
-| **Agent delegation** | Delegate to expert agent | When spawned | Content belongs to a specialist |
-
-For heavy documentation, create specialized "context sink" agents that @mention the docs. The root session stays light; heavy context loads only when that agent is spawned.
-
-### App-Level Runtime Injection
-
-Bundles define **what** capabilities exist. Apps inject **how** they run at runtime:
-
-| Injection | Source | Example |
-|-----------|--------|---------|
-| Provider configs | `settings.yaml` providers | API keys, model selection |
-| Tool configs | `settings.yaml` modules.tools | `allowed_write_paths` for filesystem |
-| Session overrides | Session-scoped settings | Temporary path permissions |
+Reference it from your behavior:
 
 ```yaml
-# ~/.amplifier/settings.yaml
-providers:
-  - module: provider-anthropic
-    config:
-      api_key: ${ANTHROPIC_API_KEY}
-
-modules:
-  tools:
-    - module: tool-filesystem
-      config:
-        allowed_write_paths:
-          - /home/user/projects
-          - ~/.amplifier
+# behaviors/my-capability.yaml
+context:
+  include:
+    - my-capability:context/instructions.md
 ```
 
-Tool configs are **deep-merged by module ID** — your settings extend the bundle's config, not replace it.
+And from your bundle.md:
 
-**Don't declare in bundles:** provider API keys or model preferences, environment-specific paths, or user preferences. These are app-layer concerns.
+```markdown
+---
+bundle:
+  name: my-capability
+includes:
+  - bundle: foundation
+  - bundle: my-capability:behaviors/my-capability
+---
 
-The full composition chain:
+# My Capability
 
+@my-capability:context/instructions.md
+
+---
+
+@foundation:context/shared/common-system-base.md
 ```
-Foundation → Your bundle → App settings → Session overrides
-    ↓            ↓              ↓               ↓
- (tools)     (agents)     (providers,      (temporary
-                          tool configs)     permissions)
-```
-
-### Policy Behaviors
-
-Some behaviors are **app-level policies** that should:
-
-- Only apply to root/interactive sessions (not sub-agents or recipe steps)
-- Be added by the app, not baked into bundles
-- Be configurable per-app context
-
-**Examples of policy behaviors:** notifications (don't notify for every sub-agent), cost tracking alerts, session duration limits.
-
-**Pattern for bundle authors:** If your behavior should be a policy (root-only, app-controlled), don't include it in your bundle.md — provide it as a separate behavior. Check `parent_id` in hooks to skip sub-sessions by default:
-
-```python
-# In your hook
-async def handle_event(self, event: str, data: dict) -> HookResult:
-    # Policy behavior: skip sub-sessions
-    if data.get("parent_id"):
-        return HookResult(action="continue")
-    # ... root session logic
-```
-
-## Validation
-
-Bundles are validated for structure and completeness.
-
-### Programmatic Validation
-
-```python
-from amplifier_foundation import validate_bundle, validate_bundle_or_raise
-
-# Get validation result
-result = validate_bundle(bundle)
-if not result.valid:
-    for error in result.errors:
-        print(f"Error: {error}")
-    for warning in result.warnings:
-        print(f"Warning: {warning}")
-
-# Or raise on error
-validate_bundle_or_raise(bundle)  # Raises BundleValidationError
-```
-
-| Export | Source | Purpose |
-|--------|--------|---------|
-| `BundleValidator` | `validator.py` | Bundle structure validation |
-| `ValidationResult` | `validator.py` | Validation result with errors/warnings |
-| `validate_bundle` | `validator.py` | Validate bundle, return result |
-| `validate_bundle_or_raise` | `validator.py` | Validate bundle, raise on error |
-
-### Module List Validation
-
-Module lists (`providers`, `tools`, `hooks`) are validated during `Bundle.from_dict()` parsing:
-
-- Must be a list (not a dict or string)
-- Each item must be a dict with `module` and `source` keys
-- Relative source paths (starting with `./` or `../`) are resolved at parse time against the bundle's `base_path`
-
-Invalid module lists raise `BundleValidationError` with descriptive messages showing the correct format.
-
-## Preparation
-
-A **PreparedBundle** is a bundle ready for execution with all modules activated.
-
-### Bundle.prepare()
-
-```python
-bundle = await load_bundle("/path/to/bundle.md")
-prepared = await bundle.prepare()  # Downloads and activates modules
-async with prepared.create_session() as session:
-    response = await session.execute("Hello!")
-```
-
-`prepare()` performs:
-
-1. **Compiles mount plan** from bundle configuration via `to_mount_plan()`
-2. **Installs bundle packages** — bundles with `pyproject.toml` are installed first so modules can import from them
-3. **Activates all modules** — downloads from git URLs, installs dependencies, makes importable
-4. **Creates module resolver** — maps module IDs to their local paths for the kernel
-
-### Source Resolution Override
-
-Apps can inject source-resolution policy without foundation knowing about settings:
-
-```python
-def resolve_with_overrides(module_id: str, source: str) -> str:
-    return overrides.get(module_id) or source
-
-prepared = await bundle.prepare(source_resolver=resolve_with_overrides)
-```
-
-### PreparedBundle
-
-The `PreparedBundle` provides:
-
-| Attribute | Purpose |
-|-----------|---------|
-| `mount_plan` | Configuration dict for `AmplifierSession` |
-| `resolver` | Module resolver mapping IDs to local paths |
-| `bundle` | Original Bundle for spawning support |
-| `bundle_package_paths` | Paths to bundle `src/` directories on `sys.path` |
-
-Key methods:
-
-- `create_session()` — Creates an initialized `AmplifierSession` with resolver mounted, working directory capability registered, and system prompt factory configured
-- `spawn()` — Spawns a sub-session with a child bundle, handling composition, module mounting, provider preferences, context inheritance, and working directory propagation
-
-### create_session()
-
-```python
-session = await prepared.create_session(
-    session_id=None,          # Resume existing session
-    parent_id=None,           # Parent session for lineage tracking
-    approval_system=None,     # Approval system for hooks
-    display_system=None,      # Display system for hooks
-    session_cwd=None,         # Working directory for local @-mentions
-    is_resumed=False,         # Whether this is a resumed session
-)
-```
-
-| Parameter | Purpose |
-|-----------|---------|
-| `session_id` | Optional session ID for resuming an existing session |
-| `parent_id` | Optional parent session ID for lineage tracking |
-| `approval_system` | Optional approval system for hooks |
-| `display_system` | Optional display system for hooks |
-| `session_cwd` | Working directory for resolving local @-mentions like `@AGENTS.md`. Apps should pass their project/workspace directory. Defaults to `bundle.base_path` if not provided. |
-| `is_resumed` | Whether this session is being resumed (vs newly created). Controls whether `session:start` or `session:resume` events are emitted. |
-
-### Spawning Sub-Sessions
-
-```python
-from amplifier_foundation.spawn_utils import ProviderPreference
-
-result = await prepared.spawn(
-    child_bundle,
-    "Find the bug in auth.py",
-    provider_preferences=[
-        ProviderPreference(provider="anthropic", model="claude-haiku-*"),
-        ProviderPreference(provider="openai", model="gpt-4o-mini"),
-    ],
-)
-# result: {"output": "...", "session_id": "...", "status": "success", "turn_count": 1}
-```
-
-The `spawn()` method supports:
-
-- `compose` — Whether to compose child with parent bundle (default `True`)
-- `parent_session` — Parent session for lineage tracking and UX inheritance
-- `session_id` — Resume existing sub-session
-- `orchestrator_config` — Override orchestrator settings for this spawn
-- `parent_messages` — Inject parent's conversation history into child context
-- `session_cwd` — Override working directory for the spawned session
-- `provider_preferences` — Ordered list of provider/model preferences with glob pattern support
-- `self_delegation_depth` — Current delegation depth for depth limiting. When > 0, registered as a coordinator capability so depth-limiting tools can read it via `get_capability()`.
-
-## BundleRegistry
-
-The `BundleRegistry` is the central bundle management system for the Amplifier ecosystem. Handles registration, loading, caching, and update checking.
-
-### Initialization
-
-```python
-from amplifier_foundation import BundleRegistry
-
-registry = BundleRegistry()  # Uses ~/.amplifier by default
-registry = BundleRegistry(home=Path("/custom/home"))
-registry = BundleRegistry(strict=True)  # Raise on include failures
-```
-
-Home directory resolves in order:
-
-1. Explicit `home` parameter
-2. `AMPLIFIER_HOME` env var
-3. `~/.amplifier` (default)
-
-Structure under home:
-
-```
-home/
-├── registry.json   # Persisted state
-└── cache/          # Cached remote bundles
-```
-
-### Registration and Discovery
-
-```python
-# Register bundles
-registry.register({"foundation": "git+https://github.com/microsoft/amplifier-foundation@main"})
-
-# Look up URI
-uri = registry.find("foundation")
-
-# List all registered
-names = registry.list_registered()
-
-# Remove
-registry.unregister("my-bundle")
-```
-
-### Loading
-
-```python
-# Load single bundle by name
-bundle = await registry.load("foundation")
-
-# Load by URI (auto-registers by extracted name)
-bundle = await registry.load("git+https://github.com/org/bundle@main")
-
-# Load all registered bundles
-all_bundles = await registry.load()  # Returns dict[str, Bundle]
-```
-
-Loading handles:
-
-- **Include resolution** — recursively loads and composes included bundles
-- **Cycle detection** — detects circular dependencies per loading chain
-- **Diamond deduplication** — concurrent loads of the same URI share a single future
-- **Nested bundle detection** — walks up directory tree to find root bundles and register namespaces
-- **Namespace preloading** — ensures namespace bundles are loaded before resolving `namespace:path` includes
-
-### BundleState
-
-Each registered bundle has tracked state:
-
-```python
-state = registry.get_state("foundation")
-# state.uri, state.name, state.version
-# state.loaded_at, state.checked_at
-# state.local_path, state.is_root, state.root_name
-# state.includes, state.included_by
-# state.explicitly_requested, state.app_bundle
-```
-
-| Field | Purpose |
-|-------|---------|
-| `is_root` | `True` for root bundles, `False` for nested bundles |
-| `root_name` | For nested bundles, the containing root bundle's name |
-| `includes` | Bundles this bundle includes |
-| `included_by` | Bundles that include this bundle |
-| `explicitly_requested` | `True` if user explicitly requested (bundle use/add) |
-| `app_bundle` | `True` if this is an app bundle (always composed) |
-
-### Persistence
-
-Registry state persists to `{home}/registry.json`:
-
-```python
-registry.save()  # Persist current state
-```
-
-On startup, the registry loads persisted state and validates cached paths (clearing stale references to paths that no longer exist).
 
 ## Directory Conventions
 
 Bundle repos follow **conventions** that enable maximum reusability and composition. These are patterns, not code-enforced rules.
 
+> **Structural vs Conventional**: Bundles have two independent classification systems. For **structural** concepts (root bundles, nested bundles, namespace registration), see [Core Concepts](concepts.md). This section covers **conventional** organization patterns.
+
+### Standard Directory Layout
+
 | Directory | Convention Name | Purpose |
 |-----------|-----------------|---------|
 | `/bundle.md` | **Root bundle** | Repo's primary entry point, establishes namespace |
 | `/bundles/*.yaml` | **Standalone bundles** | Pre-composed, ready-to-use variants (e.g., "with-anthropic") |
-| `/behaviors/*.yaml` | **Behavior bundles** | "The value this repo provides" — compose onto YOUR bundle |
+| `/behaviors/*.yaml` | **Behavior bundles** | "The value this repo provides" - compose onto YOUR bundle |
 | `/providers/*.yaml` | **Provider bundles** | Provider configurations to compose |
 | `/agents/*.md` | **Agent files** | Specialized agent definitions |
 | `/context/*.md` | **Context files** | Shared instructions, knowledge |
 | `/modules/` | **Local modules** | Tool implementations specific to this bundle |
 | `/docs/` | **Documentation** | Guides, references, examples |
 
-### Recommended Pattern
+### Directory Purposes
 
-1. **Put your main value in `/behaviors/`** — this is what others compose onto their bundles
-2. **Root bundle includes its own behavior** — DRY, root bundle stays thin
-3. **`/bundles/` offers pre-composed variants** — convenience for users who want ready-to-run combinations
+**Root bundle** (`/bundle.md`): The primary entry point for your bundle. Establishes the namespace (from `bundle.name`) and typically includes its own behavior for DRY. This is both structurally a "root bundle" and conventionally the main entry point.
 
-**Key insight**: Bundles are **configuration**, not Python packages. A bundle repo does not need a root `pyproject.toml`. Only modules inside `modules/` need their own `pyproject.toml`.
+**Standalone bundles** (`/bundles/*.yaml`): Pre-composed variants ready to use as-is. Typically combine the root bundle with a provider choice. Examples: `with-anthropic.yaml`, `minimal.yaml`. These are structurally "nested bundles" (loaded via `namespace:bundles/foo`) but conventionally "standalone" because they're complete and ready to use.
 
-## Anti-Patterns
+**Behavior bundles** (`/behaviors/*.yaml`): The reusable capability this repo provides. When someone wants to add your capability to THEIR bundle, they include your behavior. Contains agents, context, and optionally tools. The root bundle should include its own behavior (DRY pattern).
 
-### Duplicating Foundation
+**Provider bundles** (`/providers/*.yaml`): Provider configurations that can be composed onto other bundles. Allows users to choose which provider to use without the bundle author making that decision.
 
-Don't redeclare tools, session config, or hooks that foundation provides when you include it. Remove duplicated declarations.
+### The Recommended Pattern
 
-### Inline Instructions in bundle.md
-
-Move lengthy instructions to `context/instructions.md` and reference with `@my-bundle:context/instructions.md`.
-
-### Skipping the Behavior Pattern
-
-If your bundle adds agents + context, create a behavior in `behaviors/`. Without a behavior, your capability can't be added to other bundles without including your whole bundle.
-
-### Using @ Prefix in YAML
+1. **Put your main value in `/behaviors/`** - this is what others compose onto their bundles
+2. **Root bundle includes its own behavior** - DRY, root bundle stays thin
+3. **`/bundles/` offers pre-composed variants** - convenience for users who want ready-to-run combinations
 
 ```yaml
-# WRONG — @ prefix is for markdown only
-context:
-  include:
-    - "@my-bundle:context/instructions.md"   # @ doesn't belong here
+# bundle.md (root) - thin, includes own behavior
+bundle:
+  name: my-capability
+  version: 1.0.0
 
-# CORRECT — bare namespace:path in YAML
-context:
-  include:
-    - my-bundle:context/instructions.md      # No @ in YAML
+includes:
+  - bundle: foundation
+  - bundle: my-capability:behaviors/my-capability  # DRY: include own behavior
 ```
 
-The `@` prefix is **only** for markdown text that gets processed during instruction loading. YAML sections use bare `namespace:path` references. Using `@` in YAML causes **silent failure**.
+```yaml
+# bundles/with-anthropic.yaml - standalone variant
+bundle:
+  name: my-capability-anthropic
+  version: 1.0.0
 
-### Using Repository Name as Namespace
+includes:
+  - bundle: my-capability                           # Root already has behavior
+  - bundle: foundation:providers/anthropic-opus     # Add provider choice
+```
 
-The namespace is ALWAYS `bundle.name` from the YAML frontmatter, regardless of the git URL, repository name, or file path.
+### Structural vs Conventional Classification
+
+A bundle can be classified in BOTH systems independently:
+
+| Bundle | Structural | Conventional |
+|--------|------------|--------------|
+| `/bundle.md` | Root (`is_root=True`) | Root bundle |
+| `/bundles/with-anthropic.yaml` | Nested (`is_root=False`) | Standalone bundle |
+| `/behaviors/my-capability.yaml` | Nested (`is_root=False`) | Behavior bundle |
+| `/providers/anthropic-opus.yaml` | Nested (`is_root=False`) | Provider bundle |
+
+**Key insight:** A "standalone bundle" (conventional) is still a "nested bundle" (structural) when loaded via `namespace:bundles/foo.yaml`. These aren't contradictions—they describe different aspects.
+
+## Bundle Directory Structure
+
+### Thin Bundle (Recommended)
+
+```
+my-bundle/
+├── bundle.md                 # Thin: includes + context refs only
+├── behaviors/
+│   └── my-capability.yaml    # Reusable behavior
+├── agents/                   # Agent definitions
+│   ├── agent-one.md
+│   └── agent-two.md
+├── context/
+│   └── instructions.md       # Consolidated instructions
+├── docs/                     # Additional documentation
+├── README.md
+├── LICENSE
+├── SECURITY.md
+└── CODE_OF_CONDUCT.md
+```
+
+### Bundle with Local Modules
+
+```
+my-bundle/
+├── bundle.md
+├── behaviors/
+│   └── my-capability.yaml
+├── agents/
+├── context/
+├── modules/                  # Local modules (when needed)
+│   └── tool-my-capability/
+│       ├── pyproject.toml    # Module's package config
+│       └── my_module/
+├── docs/
+├── README.md
+└── ...
+```
+
+**Note**: No `pyproject.toml` at the root. Only modules inside `modules/` need their own `pyproject.toml`.
+
+## Composition
+
+Bundles compose via the `includes:` field:
+
+```python
+# Programmatic composition
+base = Bundle(name="base", ...)
+overlay = Bundle(name="overlay", ...)
+result = base.compose(overlay)  # Later overrides earlier
+```
+
+### Merge Rules
+
+| Section | Rule |
+|---------|------|
+| `session` | Deep merge (nested dicts merged) |
+| `providers` | Merge by module ID |
+| `tools` | Merge by module ID |
+| `hooks` | Merge by module ID |
+| `spawn` | Deep merge (later overrides) |
+| `instruction` | Replace (later wins) |
+
+**Module ID merge**: Same ID = update config, new ID = add to list.
+
+## Validation
+
+Validate bundles before loading:
+
+```python
+from amplifier_foundation import validate_bundle
+
+result = validate_bundle("./bundle.md")
+
+if not result.is_valid:
+    for error in result.errors:
+        print(f"Error: {error}")
+    for warning in result.warnings:
+        print(f"Warning: {warning}")
+```
+
+## Preparation
+
+Prepare bundles for execution:
+
+```python
+from amplifier_foundation import load_bundle
+
+# Load bundle
+bundle = await load_bundle("./bundle.md")
+
+# Prepare (downloads modules, resolves dependencies)
+prepared = await bundle.prepare()
+
+# Create session
+async with prepared.create_session() as session:
+    response = await session.execute("Hello!")
+```
+
+## Creating a Bundle Step-by-Step
+
+### Step 1: Decide Your Pattern
+
+**Ask yourself**:
+- Does my bundle add capability to foundation? → **Use thin bundle + behavior pattern**
+- Is my bundle standalone (no foundation dependency)? → Declare everything you need
+- Do I want my capability reusable by other bundles? → **Create a behavior**
+
+### Step 2: Create Behavior (if adding to foundation)
+
+Create `behaviors/my-capability.yaml`:
 
 ```yaml
-# If bundle.name in that repo is: "recipes"
+bundle:
+  name: my-capability-behavior
+  version: 1.0.0
+  description: Adds X capability
 
-# WRONG
 agents:
   include:
-    - amplifier-bundle-recipes:recipe-author   # Repo name
+    - my-capability:my-agent
 
-# CORRECT
-agents:
+context:
   include:
-    - recipes:recipe-author                    # bundle.name value
+    - my-capability:context/instructions.md
 ```
 
-### Including Subdirectory in Paths
+### Step 3: Create Consolidated Instructions
+
+Create `context/instructions.md`:
+
+```markdown
+# My Capability Instructions
+
+You have access to the my-capability tool for [purpose].
+
+## Available Agents
+
+- **my-agent** - Does X, useful for Y
+
+## Usage Guidelines
+
+[Instructions for the AI on how to use this capability]
+```
+
+### Step 4: Create Agent Definitions
+
+Place agent files in `agents/` with proper frontmatter:
+
+```markdown
+---
+meta:
+  name: my-agent
+  description: "Description shown when listing agents. Include usage examples..."
+---
+
+# My Agent
+
+You are a specialized agent for [specific purpose].
+
+## Your Capabilities
+
+[Agent-specific instructions]
+```
+
+### Step 5: Create Thin bundle.md
+
+```markdown
+---
+bundle:
+  name: my-capability
+  version: 1.0.0
+  description: Provides X capability
+
+includes:
+  - bundle: git+https://github.com/microsoft/amplifier-foundation@main
+  - bundle: my-capability:behaviors/my-capability
+---
+
+# My Capability
+
+@my-capability:context/instructions.md
+
+---
+
+@foundation:context/shared/common-system-base.md
+```
+
+### Step 6: Add README and Standard Files
+
+Create README.md documenting:
+- What the bundle provides
+- The architecture (thin bundle + behavior pattern)
+- How to load/use it
+
+## Anti-Patterns to Avoid
+
+### ❌ Duplicating Foundation
 
 ```yaml
-# If loading: git+https://...@main#subdirectory=bundles/foo
-# And bundle.name is: "foo"
+# DON'T DO THIS when you include foundation
+includes:
+  - bundle: foundation
 
-# WRONG
-context:
-  include:
-    - foo:bundles/foo/context/instructions.md   # Redundant path
+tools:
+  - module: tool-filesystem     # Foundation has this!
+    source: git+https://...
 
-# CORRECT
-context:
-  include:
-    - foo:context/instructions.md               # Relative to bundle location
+session:
+  orchestrator:                 # Foundation has this!
+    module: loop-streaming
 ```
 
-When loaded via `#subdirectory=X`, the bundle root IS `X/`. Paths are relative to that root, so including the subdirectory in the path duplicates it.
+**Why it's bad**: Creates maintenance burden, version conflicts, misses foundation updates.
 
-### Declaring amplifier-core as Runtime Dependency
+**Fix**: Remove duplicated declarations. Foundation provides them.
 
-Tool modules run inside the host application's process, which already has `amplifier-core` loaded. Don't declare it as a dependency — it's a **peer dependency** provided by the runtime environment.
+### ❌ Inline Instructions in bundle.md
 
-## Reference
+```yaml
+---
+bundle:
+  name: my-bundle
+---
 
-- [BUNDLE_GUIDE.md](https://github.com/microsoft/amplifier-foundation/blob/main/docs/BUNDLE_GUIDE.md) — Complete bundle creation guide
-- [Core Concepts](concepts.md) — Mental model and structural concepts
-- [URI_FORMATS.md](https://github.com/microsoft/amplifier-foundation/blob/main/docs/URI_FORMATS.md) — Source URI reference
-- [Examples](examples/) — Practical usage examples
+# Instructions
+
+[500 lines of instructions here]
+
+## Usage
+
+[More instructions]
+```
+
+**Why it's bad**: Can't be reused by behavior, hard to maintain, can't be referenced separately.
+
+**Fix**: Move to `context/instructions.md` and reference with `@my-bundle:context/instructions.md`.
+
+### ❌ Skipping the Behavior Pattern
+
+```yaml
+# DON'T DO THIS for capability bundles
+---
+bundle:
+  name: my-capability
+
+includes:
+  - bundle: foundation
+
+agents:
+  include:
+    - my-capability:agent-one
+    - my-capability:agent-two
+---
+
+[All instructions inline]
+```
+
+**Why it's bad**: Your capability can't be added to other bundles without including your whole bundle.
+
+**Fix**: Create `behaviors/my-capability.yaml` with agents + context, then include it.
+
+### ❌ Using @ Prefix in YAML
+
+```yaml
+# DON'T DO THIS - @ prefix is for markdown only
+context:
+  include:
+    - "@my-bundle:context/instructions.md"   # ❌ @ doesn't belong here
+
+agents:
+  include:
+    - "@my-bundle:my-agent"                  # ❌ @ doesn't belong here
+```
+
+```yaml
+# DO THIS - bare namespace:path in YAML
+context:
+  include:
+    - my-bundle:context/instructions.md   # ✅ No @ prefix
+
+agents:
+  include:
+    - my-bundle:my-agent                  # ✅ No @ prefix
+```
+
+**Why it's bad**: `@` is markdown syntax for mention resolution. In YAML, use bare `namespace:path`.
+
+## Next Steps
+
+- [Core Concepts](concepts.md) - Mental model for bundles
+- [Common Patterns](patterns.md) - Practical usage patterns
+- [API Reference](api_reference.md) - Complete API documentation
+- [Examples](examples/index.md) - Progressive examples from hello world to production

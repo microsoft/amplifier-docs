@@ -26,7 +26,6 @@ YAML reading/writing, frontmatter parsing, and file I/O with cloud-sync retry lo
 | `parse_frontmatter` | `io/frontmatter.py` | Parse YAML frontmatter from markdown |
 | `read_with_retry` | `io/files.py` | Read with cloud sync retry (async) |
 | `write_with_retry` | `io/files.py` | Write with cloud sync retry (async) |
-| `write_with_backup` | `io/files.py` | Write with backup of previous version |
 
 ## Dict Utilities
 
@@ -48,84 +47,45 @@ URI parsing, path normalization, file discovery, and path construction for agent
 | `parse_uri` | `paths/resolution.py` | Parse source URI |
 | `ParsedURI` | `paths/resolution.py` | Parsed URI dataclass |
 | `normalize_path` | `paths/resolution.py` | Normalize/resolve path |
+| `get_amplifier_home` | `paths/resolution.py` | Get Amplifier home directory |
 | `construct_agent_path` | `paths/construction.py` | Build agent file path |
 | `construct_context_path` | `paths/construction.py` | Build context file path |
 | `find_files` | `paths/discovery.py` | Find files by pattern (async) |
 | `find_bundle_root` | `paths/discovery.py` | Find bundle root upward (async) |
 
-## @Mention System
+## Mention Utilities
 
-Parsing, resolution, loading, and deduplication of `@namespace:path` references in bundle instructions.
-
-### Core Functions
+@mention parsing, resolution, and content loading with deduplication.
 
 | Export | Source | Purpose |
 |--------|--------|---------|
 | `parse_mentions` | `mentions/parser.py` | Extract @mentions from text |
 | `load_mentions` | `mentions/loader.py` | Load @mention content (async) |
-
-### Models
-
-| Export | Source | Purpose |
-|--------|--------|---------|
+| `ContentDeduplicator` | `mentions/deduplicator.py` | SHA-256 content deduplication |
 | `ContextFile` | `mentions/models.py` | Loaded context file data |
 | `MentionResult` | `mentions/models.py` | @mention resolution result |
-| `ContentDeduplicator` | `mentions/deduplicator.py` | SHA-256 content deduplication |
-
-### Protocols and Implementations
-
-| Export | Source | Purpose |
-|--------|--------|---------|
-| `MentionResolverProtocol` | `mentions/protocol.py` | @mention resolution contract |
 | `BaseMentionResolver` | `mentions/resolver.py` | Default @mention resolver |
+| `MentionResolverProtocol` | `mentions/protocol.py` | @mention resolution contract |
 
-### Usage Example
+## Cache Utilities
 
-```python
-from amplifier_foundation import load_mentions, BaseMentionResolver
-
-resolver = BaseMentionResolver(bundles={"foundation": foundation_bundle})
-results = await load_mentions("See @foundation:context/guidelines.md", resolver)
-```
-
-## Caching
-
-In-memory and persistent disk caching with protocol-based extensibility.
+Caching providers for performance optimization.
 
 | Export | Source | Purpose |
 |--------|--------|---------|
-| `CacheProviderProtocol` | `cache/protocol.py` | Cache provider contract |
 | `SimpleCache` | `cache/simple.py` | In-memory cache |
 | `DiskCache` | `cache/disk.py` | Persistent disk cache |
-
-## Source Resolution
-
-URI resolution and source handling for loading bundles from git URLs and local paths.
-
-| Export | Source | Purpose |
-|--------|--------|---------|
-| `SourceResolverProtocol` | `sources/protocol.py` | URI resolution contract |
-| `SourceHandlerProtocol` | `sources/protocol.py` | Source type handler contract |
-| `SourceHandlerWithStatusProtocol` | `sources/protocol.py` | Extended handler with status checking contract |
-| `SourceStatus` | `sources/protocol.py` | Source status for update detection |
-| `SimpleSourceResolver` | `sources/resolver.py` | Git/file source resolver |
+| `CacheProviderProtocol` | `cache/protocol.py` | Cache provider contract |
 
 ## Session Capabilities
 
-Utilities for session working directory management, registered as coordinator capabilities.
+Utilities for session-level capabilities and working directory management.
 
 | Export | Source | Purpose |
 |--------|--------|---------|
 | `get_working_dir` | `session/capabilities.py` | Get session working directory from coordinator |
 | `set_working_dir` | `session/capabilities.py` | Update session working directory dynamically |
 | `WORKING_DIR_CAPABILITY` | `session/capabilities.py` | Capability name constant (`"session.working_dir"`) |
-
-```python
-from amplifier_foundation import get_working_dir
-
-# In mount() or tool execute()
-working_dir = get_working_dir(coordinator)  # Returns Path
-```
 
 ## Spawn Utilities
 
@@ -134,91 +94,91 @@ Utilities for spawning sub-sessions with provider/model preferences.
 | Export | Source | Purpose |
 |--------|--------|---------|
 | `ProviderPreference` | `spawn_utils.py` | Dataclass for provider/model preference (supports glob patterns) |
-| `ModelResolutionResult` | `spawn_utils.py` | Model pattern resolution result |
 | `apply_provider_preferences` | `spawn_utils.py` | Apply ordered preferences to mount plan |
-| `apply_provider_preferences_with_resolution` | `spawn_utils.py` | Apply preferences with model pattern resolution (async) |
 | `resolve_model_pattern` | `spawn_utils.py` | Resolve glob patterns (e.g., `claude-haiku-*`) to concrete model names |
 | `is_glob_pattern` | `spawn_utils.py` | Check if model string contains glob characters |
 
-## Serialization
+## Source Utilities
 
-Sanitization utilities for safely persisting data that may contain non-serializable objects.
-
-| Export | Source | Purpose |
-|--------|--------|---------|
-| `sanitize_for_json` | `serialization.py` | Recursively sanitize value for JSON serialization |
-| `sanitize_message` | `serialization.py` | Sanitize chat message for persistence |
-
-## Tracing
-
-W3C-compatible trace context ID generation for sub-agent tracing.
+URI resolution and source handling.
 
 | Export | Source | Purpose |
 |--------|--------|---------|
-| `generate_sub_session_id` | `tracing.py` | Generate sub-session ID with W3C trace lineage |
-
-## Updates
-
-Bundle update checking and source update utilities.
-
-| Export | Source | Purpose |
-|--------|--------|---------|
-| `BundleStatus` | `updates/__init__.py` | Aggregate bundle update status |
-| `check_bundle_status` | `updates/__init__.py` | Check update status of bundle sources (async) |
-| `update_bundle` | `updates/__init__.py` | Update bundle sources from remote (async) |
-
-## Exceptions
-
-| Export | Source | Purpose |
-|--------|--------|---------|
-| `BundleError` | `exceptions.py` | Base exception |
-| `BundleNotFoundError` | `exceptions.py` | Bundle not found |
-| `BundleLoadError` | `exceptions.py` | Bundle load/parse failed |
-| `BundleValidationError` | `exceptions.py` | Validation failed |
-| `BundleDependencyError` | `exceptions.py` | Dependency resolution failed |
+| `SimpleSourceResolver` | `sources/resolver.py` | Git/file source resolver |
+| `SourceResolverProtocol` | `sources/protocol.py` | URI resolution contract |
+| `SourceHandlerProtocol` | `sources/protocol.py` | Source type handler contract |
 
 ## Reading the Source
 
-Each source file has comprehensive docstrings. To read them:
+Each utility module has comprehensive docstrings. To read them:
 
 ```bash
 # In your editor
-code amplifier_foundation/bundle.py
+code amplifier_foundation/io/yaml.py
 
 # Or via Python
-python -c "from amplifier_foundation import Bundle; help(Bundle)"
+python -c "from amplifier_foundation.io import read_yaml; help(read_yaml)"
 
 # Or via pydoc
-python -m pydoc amplifier_foundation.Bundle
+python -m pydoc amplifier_foundation.io.yaml
 ```
 
-## Common Patterns
+## Usage Examples
 
-### Load and Use a Bundle
+### Deep Merge
 
 ```python
-from amplifier_foundation import load_bundle
+from amplifier_foundation import deep_merge
 
-bundle = await load_bundle("git+https://github.com/org/my-bundle@main")
-mount_plan = bundle.to_mount_plan()
+base = {"a": 1, "b": {"c": 2}}
+overlay = {"b": {"d": 3}, "e": 4}
+result = deep_merge(base, overlay)
+# Result: {"a": 1, "b": {"c": 2, "d": 3}, "e": 4}
 ```
 
-### Compose Bundles
+### Path Resolution
 
 ```python
-from amplifier_foundation import load_bundle
+from amplifier_foundation import parse_uri, normalize_path
 
-base = await load_bundle("foundation")
-overlay = await load_bundle("./local-overlay.md")
-composed = base.compose(overlay)
+# Parse git URI
+uri = parse_uri("git+https://github.com/org/repo@main#subdirectory=foo")
+# uri.scheme = "git+https"
+# uri.host = "github.com"
+# uri.ref = "main"
+# uri.subdirectory = "foo"
+
+# Normalize path
+path = normalize_path("./relative/path", base_path="/base")
+# Returns absolute path
 ```
 
-### Registry Management
+### @Mention Loading
 
 ```python
-from amplifier_foundation import BundleRegistry
+from amplifier_foundation import load_mentions, BaseMentionResolver
 
-registry = BundleRegistry()
-registry.register({"my-bundle": "git+https://github.com/org/bundle@main"})
-bundle = await registry.load("my-bundle")
+resolver = BaseMentionResolver(bundles={"foundation": foundation_bundle})
+results = await load_mentions("See @foundation:context/guidelines.md", resolver)
+
+for result in results:
+    print(f"Loaded: {result.mention} -> {result.content[:100]}...")
 ```
+
+### Working Directory Management
+
+```python
+from amplifier_foundation import get_working_dir, set_working_dir
+
+# Get current working directory
+working_dir = get_working_dir(coordinator)  # Returns Path
+
+# Update working directory mid-session
+set_working_dir(coordinator, Path("/new/working/dir"))
+```
+
+## Next Steps
+
+- [API Reference](api_reference.md) - Complete API documentation
+- [Core Concepts](concepts.md) - Understanding the bundle system
+- [Common Patterns](patterns.md) - Practical usage patterns

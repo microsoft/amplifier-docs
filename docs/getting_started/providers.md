@@ -54,6 +54,33 @@ amplifier provider use anthropic
 amplifier run --model claude-opus-4-6 "Complex analysis task"
 ```
 
+### Advanced Configuration
+
+**Debug Logging:**
+```yaml
+providers:
+  - module: provider-anthropic
+    config:
+      debug: true      # Enable standard debug events
+      raw_debug: true  # Enable ultra-verbose raw API I/O logging
+```
+
+**Rate Limit Control:**
+```yaml
+providers:
+  - module: provider-anthropic
+    config:
+      max_retries: 5  # Number of retry attempts (default: 2)
+```
+
+**Beta Headers (1M Token Context):**
+```yaml
+providers:
+  - module: provider-anthropic
+    config:
+      beta_headers: "context-1m-2025-08-07"  # Enable 1M token context window
+```
+
 ## OpenAI
 
 ### Get an API Key
@@ -81,109 +108,212 @@ amplifier provider use openai
 
 ```bash
 # Use a specific model
-amplifier run --model gpt-5.1 "General task"
+amplifier run --model gpt-5.1 "Analyze this code"
+```
+
+### Advanced Configuration
+
+**Debug Logging:**
+```yaml
+providers:
+  - module: provider-openai
+    config:
+      debug: true      # Enable standard debug events
+      raw_debug: true  # Enable ultra-verbose raw API I/O logging
+```
+
+**Reasoning Control:**
+```yaml
+providers:
+  - module: provider-openai
+    config:
+      reasoning: "high"              # Reasoning effort: minimal|low|medium|high
+      reasoning_summary: "detailed"  # Reasoning verbosity: auto|concise|detailed
+```
+
+**Automatic Context Management:**
+```yaml
+providers:
+  - module: provider-openai
+    config:
+      truncation: "auto"  # Automatic context management (default)
+      # OR
+      truncation: null    # Disable automatic truncation
 ```
 
 ## Azure OpenAI
 
-Azure OpenAI uses your Azure-hosted deployments.
-
 ### Prerequisites
 
-- Azure subscription with OpenAI service enabled
-- Deployed GPT model in your Azure resource
+1. Azure subscription with OpenAI service enabled
+2. Deployed model in Azure OpenAI resource
+3. API key or Azure AD credentials
 
-### Configure
+### Quick Start
 
+**For local development (recommended):**
 ```bash
-export AZURE_OPENAI_ENDPOINT="https://myresource.openai.azure.com"
-export AZURE_OPENAI_API_KEY="your-api-key"
-# OR use Azure CLI authentication
+# Login to Azure
 az login
+
+# Set up endpoint
+export AZURE_OPENAI_ENDPOINT="https://myresource.openai.azure.com"
 export AZURE_USE_DEFAULT_CREDENTIAL="true"
 
-amplifier provider use azure-openai
+# Start amplifier
+amplifier
 ```
 
-### Deployment Mapping
+**For API key authentication:**
+```bash
+export AZURE_OPENAI_ENDPOINT="https://myresource.openai.azure.com"
+export AZURE_OPENAI_API_KEY="your-api-key-here"
+amplifier
+```
 
-Azure uses deployment names instead of model names:
+### Configuration
 
-```toml
-[[providers]]
-name = "azure-openai"
-[providers.config]
-azure_endpoint = "https://myresource.openai.azure.com"
-default_model = "gpt-5.1"
+```yaml
+providers:
+  - module: provider-azure-openai
+    config:
+      azure_endpoint: "https://myresource.openai.azure.com"
+      api_key: "${AZURE_OPENAI_API_KEY}"
+      default_model: "gpt-5.1"
+      
+      # Optional: Map model names to Azure deployment names
+      deployment_mapping:
+        "gpt-5.1": "my-gpt5-deployment"
+        "gpt-5-mini": "my-mini-deployment"
+```
 
-[providers.config.deployment_mapping]
-"gpt-5.1" = "my-gpt5-deployment"
+### Authentication Options
+
+The provider supports multiple authentication methods:
+
+1. **API Key** (simplest)
+2. **Azure AD Token**
+3. **Managed Identity** (for Azure resources)
+4. **DefaultAzureCredential** (recommended - works locally and in Azure)
+
+**DefaultAzureCredential** tries multiple methods in order:
+- Environment variables
+- Managed identity (if running in Azure)
+- Azure CLI (if logged in locally with `az login`)
+- Azure PowerShell
+- Interactive browser authentication
+
+### Advanced Configuration
+
+**Debug Logging:**
+```yaml
+providers:
+  - module: provider-azure-openai
+    config:
+      debug: true      # Enable standard debug events
+      raw_debug: true  # Enable ultra-verbose raw API I/O logging
 ```
 
 ## Ollama
 
-Run models locally with Ollama.
+### Prerequisites
 
-### Install Ollama
-
-```bash
-# Linux
-curl -fsSL https://ollama.com/install.sh | sh
-
-# macOS
-brew install ollama
-```
-
-### Pull a Model
-
-```bash
-ollama pull llama3.2:3b
-```
+1. Install Ollama from [ollama.ai](https://ollama.ai)
+2. Pull a model: `ollama pull llama3.2:3b`
+3. Start Ollama server (usually starts automatically)
 
 ### Configure
 
 ```bash
-# Ollama server runs on localhost:11434 by default
+export OLLAMA_HOST="http://localhost:11434"
 amplifier provider use ollama
 ```
 
-### Popular Models
+### Available Models
 
-- `llama3.2:3b` - Small, fast (3B parameters)
-- `llama3.2:1b` - Tiny, fastest (1B parameters)
-- `mistral` - 7B model, good quality
-- `codellama` - Code generation
-- `deepseek-r1` - Reasoning model
+| Model | Description |
+|-------|-------------|
+| `llama3.2:3b` | Small, fast (recommended) |
+| `llama3.2:1b` | Tiny, fastest |
+| `mistral` | 7B general purpose |
+| `mixtral` | 8x7B mixture of experts |
+| `codellama` | Code generation |
+| `deepseek-r1` | Reasoning/thinking |
+| `qwen3` | Reasoning + tools |
 
-See [ollama.ai/library](https://ollama.ai/library) for all models.
+See [ollama.ai/library](https://ollama.ai/library) for complete list.
+
+### Advanced Configuration
+
+**Debug Logging:**
+```yaml
+providers:
+  - module: provider-ollama
+    config:
+      debug: true      # Enable standard debug events
+      raw_debug: true  # Enable ultra-verbose raw API I/O logging
+```
+
+**Automatic Model Pulling:**
+```yaml
+providers:
+  - module: provider-ollama
+    config:
+      auto_pull: true  # Automatically pull missing models
+```
+
+**Thinking/Reasoning Support:**
+
+For compatible models like DeepSeek R1 and Qwen 3:
+```python
+request = ChatRequest(
+    model="deepseek-r1",
+    messages=[...],
+    enable_thinking=True
+)
+```
+
+The response includes both the thinking process (ThinkingBlock) and the final answer (TextBlock).
 
 ## vLLM
 
-Self-hosted inference server for open-weight models.
-
 ### Prerequisites
 
-- Running vLLM server (version 0.10.1+)
-- Model served via vLLM (e.g., gpt-oss-20b)
-
-### Start vLLM Server
-
-```bash
-vllm serve openai/gpt-oss-20b \
-  --host 0.0.0.0 \
-  --port 8000 \
-  --tensor-parallel-size 2
-```
+1. vLLM server running with OpenAI-compatible API
+2. Model loaded in vLLM
 
 ### Configure
 
 ```bash
-export VLLM_BASE_URL="http://192.168.128.5:8000/v1"
+export VLLM_API_BASE="http://localhost:8000/v1"
 amplifier provider use vllm
+```
+
+### Configuration
+
+```yaml
+providers:
+  - module: provider-vllm
+    config:
+      base_url: "http://localhost:8000/v1"
+      default_model: "meta-llama/Llama-3-8b"
+```
+
+## Switching Providers
+
+```bash
+# List configured providers
+amplifier provider list
+
+# Switch active provider
+amplifier provider use anthropic
+
+# Use specific provider for one command
+amplifier run --provider openai "Task"
 ```
 
 ## Next Steps
 
-- [Configure Tools](../modules/tools/index.md) - Add capabilities to your agents
-- [Provider Configuration](../modules/providers/index.md) - Advanced provider settings
-- [Bundle Configuration](../foundation/bundles.md) - Package configurations for reuse
+- [CLI Reference](../user_guide/cli.md) - Learn all CLI commands
+- [Configuration](../user_guide/configuration.md) - Advanced configuration options
+- [Provider Modules](../modules/providers/index.md) - Deep dive into each provider
