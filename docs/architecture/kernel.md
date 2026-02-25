@@ -26,7 +26,7 @@ The kernel exposes **capabilities** and **stable contracts**. Decisions about be
 
 ### 2. Small, Stable, and Boring
 
-The kernel is intentionally minimal (~2,600 lines) and changes rarely.
+The kernel is intentionally minimal and changes rarely.
 
 - **Small**: Can be audited in an afternoon
 - **Stable**: Backward compatibility is sacred
@@ -60,6 +60,20 @@ mount_plan = {
 }
 ```
 
+### 5. Event-First Observability
+
+- If it's important → emit a canonical event
+- If it's not observable → it didn't happen
+- One JSONL stream = single source of truth
+- Hooks observe without blocking
+
+### 6. Text-First, Inspectable
+
+- Human-readable, diffable, versionable representations
+- JSON schemas for validation
+- No hidden state, no magic globals
+- Explicit > implicit
+
 ## What Belongs in the Kernel
 
 ### Kernel Responsibilities (Mechanisms)
@@ -81,6 +95,52 @@ mount_plan = {
 - Business defaults
 - Context compaction strategies
 - Agent selection
+
+## The Linux Kernel Decision Framework
+
+Use Linux kernel as a metaphor when decisions are unclear.
+
+### Metaphor Mapping
+
+| Linux Concept | Amplifier Analog | Decision Guidance |
+|---------------|------------------|-------------------|
+| **Ring 0 kernel** | `amplifier-core` | Export mechanisms (mount, emit), never policy. Keep tiny & boring. |
+| **Syscalls** | Session operations | Few and sharp: `create_session()`, `mount()`, `emit()`. Stable ABI. |
+| **Loadable drivers** | Modules (providers, tools, hooks, orchestrators) | Compete at edges; comply with protocols; regeneratable. |
+| **Signals/Netlink** | Event bus / hooks | Kernel emits lifecycle events; hooks observe; non-blocking. |
+| **/proc & dmesg** | Unified JSONL log | One canonical stream; redaction before logging. |
+| **Capabilities/LSM** | Approval & capability checks | Least privilege; deny-by-default; policy at edges. |
+| **Scheduler** | Orchestrator modules | Swap strategies by replacing module, not changing kernel. |
+| **VM/Memory** | Context manager | Deterministic compaction; emit `context:*` events. |
+
+### Decision Playbook
+
+When requirements are vague:
+
+1. **Is this kernel work?**
+   - If it selects, optimizes, formats, routes, plans → **module** (policy)
+   - Kernel only adds mechanisms many policies could use
+   - **Litmus test**: Could two teams want different behavior? → Module
+
+2. **Do we have two implementations?**
+   - Prototype at edges first
+   - Extract to kernel only after ≥2 modules converge on the need
+
+3. **Prefer regeneration**
+   - Keep contracts stable
+   - Regenerate modules to new spec (don't line-edit)
+
+4. **Event-first**
+   - Important actions → emit canonical event
+   - Hooks observe without blocking
+
+5. **Text-first**
+   - All diagnostics → JSONL
+   - External views derive from canonical stream
+
+6. **Ruthless simplicity**
+   - Fewer moving parts wins
+   - Clearer failure modes wins
 
 ## Invariants
 
@@ -235,6 +295,37 @@ async def get_messages_for_request(self, provider=None):
     return self._compact_to_budget(budget)
 ```
 
+## Module Design: Bricks & Studs
+
+Think of software as LEGO bricks:
+
+**Brick** = Self-contained module with clear responsibility  
+**Stud** = Interface/protocol where bricks connect  
+**Blueprint** = Specification (docs define target state)  
+**Builder** = AI generates code from spec
+
+### Key Practices
+
+1. **Start with the contract** (the "stud")
+   - Define: purpose, inputs, outputs, side-effects, dependencies
+   - Document in README or top-level docstring
+   - Keep small enough to hold in one prompt
+
+2. **Build in isolation**
+   - Code, tests, fixtures inside module directory
+   - Only expose contract via `__all__` or interface file
+   - No other module imports internals
+
+3. **Regenerate, don't patch**
+   - When change needed inside brick → rewrite whole brick from spec
+   - Contract change → locate consumers, regenerate them too
+   - Prefer clean regeneration over scattered line edits
+
+4. **Human as architect, AI as builder**
+   - Human: Write spec, review behavior, make decisions
+   - AI: Generate brick, run tests, report results
+   - Human rarely reads code unless tests fail
+
 ## Red Flags
 
 Watch for these anti-patterns:
@@ -259,12 +350,86 @@ When evaluating kernel changes, ask:
 4. **Value**: "Does the complexity add proportional value?"
 5. **Maintenance**: "How easy will this be to understand later?"
 
+## Governance & Evolution
+
+### Kernel Changes
+
+**High bar, low velocity**:
+- Kernel PRs: tiny diff, invariant review, tests, docs, rollback plan
+- Releases are small and boring
+- Large ideas prove themselves at edges first
+
+**Acceptance criteria**:
+- ✅ Implements mechanism (not policy)
+- ✅ Evidence from ≥2 modules needing it
+- ✅ Preserves invariants (non-interference, backward compat)
+- ✅ Interface small, explicit, text-first
+- ✅ Tests and docs included
+- ✅ Retires equivalent complexity elsewhere
+
+### Module Changes
+
+**Fast lanes at the edges**:
+- Modules iterate rapidly
+- Kernel doesn't chase module changes
+- Modules adapt to kernel (not vice versa)
+- Compete through better policies
+
+## Quick Reference
+
+### For Kernel Work
+
+**Questions before adding to kernel**:
+1. Is this a mechanism many policies could use?
+2. Do ≥2 modules need this?
+3. Does it preserve backward compatibility?
+4. Is the interface minimal and stable?
+
+**If any "no"** → Prototype as module first
+
+### For Module Work
+
+**Module author checklist**:
+- [ ] Implements protocol only (no kernel internals)
+- [ ] Emits canonical events where appropriate
+- [ ] Uses `context.log` (no private logging)
+- [ ] Handles own failures (non-interference)
+- [ ] Tests include isolation verification
+
+### For Design Decisions
+
+**Use the Linux kernel lens**:
+- Scheduling strategy? → Orchestrator module (userspace)
+- Provider selection? → App layer policy
+- Tool behavior? → Tool module
+- Security policy? → Hook module
+- Logging destination? → Hook module
+
+**Remember**: If two teams might want different behavior → Module, not kernel.
+
 ## North Star
 
 - **Unshakeable center**: A kernel so small and stable it can be maintained by one person
 - **Explosive edges**: A flourishing ecosystem of competing modules
 - **Forever upgradeable**: Ship improvements weekly at edges, kernel updates are rare and boring
 
+## Summary
+
+**Amplifier succeeds by**:
+- Keeping kernel tiny, stable, boring
+- Pushing innovation to competing modules
+- Maintaining strong, text-first contracts
+- Enabling observability without opinion
+- Trusting emergence over central planning
+
+**The center stays still so the edges can move fast.**
+
+Build mechanisms in kernel. Build policies in modules. Use Linux kernel as your decision metaphor. Keep it simple, keep it observable, keep it regeneratable.
+
+**When in doubt**: Could another team want different behavior? If yes → Module. If no → Maybe kernel, but prove with ≥2 implementations first.
+
 ## References
 
-- **→ [DESIGN_PHILOSOPHY.md](https://github.com/microsoft/amplifier-core/blob/main/docs/DESIGN_PHILOSOPHY.md)** - Complete design philosophy document
+- **[DESIGN_PHILOSOPHY.md](https://github.com/microsoft/amplifier-core/blob/main/docs/DESIGN_PHILOSOPHY.md)** - Complete design philosophy document
+- **[Module Contracts](https://github.com/microsoft/amplifier-core/tree/main/docs/contracts)** - Detailed contract specifications
+- **[MOUNT_PLAN_SPECIFICATION.md](https://github.com/microsoft/amplifier-core/blob/main/docs/specs/MOUNT_PLAN_SPECIFICATION.md)** - Configuration contract

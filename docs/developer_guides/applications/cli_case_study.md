@@ -57,474 +57,662 @@ amplifier-app-cli/
 
 ### 1. Configuration Resolution
 
-**Challenge:** Users configure providers, bundles, and settings through multiple sources:
-- Environment variables (`ANTHROPIC_API_KEY`)
-- Config files (`~/.amplifier/config.toml`)
-- CLI arguments (`--provider anthropic`)
-- Bundle defaults
+**Challenge:** Merge bundle configuration, user settings, and CLI flags into a single effective config.
 
-**Solution:** Priority-based resolution with clear precedence:
-
-```
-CLI args > Environment variables > Config file > Bundle defaults
-```
-
-**Implementation:**
-- `KeyManager` loads API keys from `~/.amplifier/keys.env`
-- Configuration files follow TOML format
-- CLI arguments override all other sources
-
-### 2. Bundle Integration
-
-**Challenge:** Load and compose bundles from various sources (git, local, registered).
-
-**Solution:** Uses `amplifier-foundation` library for all bundle operations:
+**Solution:** Layered composition:
 
 ```python
-from amplifier_foundation import load_bundle, BundleRegistry
-
-# Load from registry
-registry = BundleRegistry()
-bundle = await registry.load("foundation")
-
-# Compose with provider
-provider = await load_bundle("git+https://github.com/...")
-composed = bundle.compose(provider)
-
-# Prepare and execute
-prepared = await composed.prepare()
-session = await prepared.create_session()
+# From runtime/config.py
+def resolve_config(bundle_name, app_settings, console):
+    # 1. Load bundle (foundation layer)
+    bundle = await load_bundle(bundle_name)
+    
+    # 2. Prepare bundle (download/activate modules)
+    prepared = await bundle.prepare()
+    
+    # 3. Extract mount plan
+    config = prepared.mount_plan
+    
+    # 4. Apply app-level settings (policy layer)
+    config = apply_settings_overrides(config, app_settings)
+    
+    return config, prepared
 ```
 
-**Key patterns:**
-- Bundle registry for named bundles (`amplifier bundle list`)
-- Automatic module download and caching
-- Composition for provider/tool selection
+**Key insight:** Bundle provides mechanism (what tools exist), settings provide policy (API keys, paths).
+
+### 2. Session Lifecycle
+
+**Challenge:** Handle both new and resumed sessions, interactive and single-shot modes, with proper cleanup.
+
+**Solution:** Unified session creation:
+
+```python
+# From session_runner.py
+async def create_initialized_session(session_config, console):
+    # Create session
+    session = AmplifierSession(
+        config=session_config.config,
+        loader=loader,
+        session_id=session_config.session_id,
+        is_resumed=session_config.is_resume
+    )
+    
+    # Initialize (mount modules)
+    await session.initialize()
+    
+    # Restore transcript if resuming
+    if session_config.initial_transcript:
+        await restore_transcript(session, session_config.initial_transcript)
+    
+    return InitializedSession(session, cleanup_func)
+```
+
+**Key insight:** Single code path for all session creation modes prevents drift.
 
 ### 3. Agent Delegation
 
-**Challenge:** Enable users to delegate tasks to specialized agents without complex configuration.
+**Challenge:** Spawn sub-sessions for agent delegation with proper configuration inheritance.
 
-**Solution:** Multi-layered agent resolution with environment variable overrides:
+**Implementation:** See [Agent Delegation Implementation](https://github.com/microsoft/amplifier-app-cli/blob/main/docs/AGENT_DELEGATION_IMPLEMENTATION.md) for complete details.
 
-**Agent Resolution (first-match-wins):**
-
-```
-1. Environment Variables
-   AMPLIFIER_AGENT_ZEN_ARCHITECT=~/test-zen.md
-   → For testing changes before committing
-
-2. User Directory
-   ~/.amplifier/agents/zen-architect.md
-   → Personal overrides and custom agents
-
-3. Project Directory
-   .amplifier/agents/project-reviewer.md
-   → Project-specific agents (committed to git)
-
-4. Bundle Agents
-   bundles/developer-expertise/agents/zen-architect.md
-   → Agents bundled with bundles
-```
-
-**Implementation:**
+**Key components:**
 
 ```python
-from amplifier_foundation import AgentResolver, AgentLoader
-
-# Build search paths
-search_paths = [
-    Path(".amplifier/agents"),                    # Project
-    Path.home() / ".amplifier" / "agents",        # User
-    # Bundle agents added via bundle discovery
-]
-
-# Create resolver
-resolver = AgentResolver(search_paths=search_paths)
-
-# Check environment variable override first
-agent_name = "zen-architect"
-env_var = f"AMPLIFIER_AGENT_{agent_name.upper().replace('-', '_')}"
-agent_path = os.environ.get(env_var)
-
-if not agent_path:
-    agent_path = resolver.resolve(agent_name)
-
-# Load agent
-loader = AgentLoader(resolver=resolver)
-agent = loader.load_agent(agent_name)
+# From session_spawner.py
+async def spawn_sub_session(parent_session, agent_name, instruction):
+    # 1. Load agent config
+    agent = await load_bundle(agent_path)
+    
+    # 2. Merge parent config with agent overlay
+    merged_config = merge_configs(parent_config, agent.to_mount_plan())
+    
+    # 3. Apply spawn policy (tool inheritance)
+    filtered_config = apply_spawn_tool_policy(merged_config)
+    
+    # 4. Create child session
+    child_session = AmplifierSession(
+        config=filtered_config,
+        parent_id=parent_session.session_id
+    )
+    
+    # 5. Execute and return
+    result = await child_session.execute(instruction)
+    return {"output": result, "session_id": child_session.session_id}
 ```
 
-**Usage in interactive mode:**
+**Features:**
+- Multi-turn sub-session support (sessions persist and can be resumed)
+- Provider preferences for agent delegation
+- Tool inheritance control via spawn policy
 
-```bash
-amplifier
-amplifier> @zen-architect Design a caching system
-```
+### 4. Interactive Commands
 
-### 4. Multi-Turn Sub-Session Resumption
+**Challenge:** Support slash commands in REPL without mixing command and prompt parsing.
 
-**Challenge:** Support iterative conversations with agents across multiple turns.
-
-**Solution:** Automatic state persistence for sub-sessions.
-
-**State Persistence:**
-
-After each sub-session execution, state is saved:
+**Solution:** Command processor with mode support:
 
 ```python
-from amplifier_app_cli.session_store import SessionStore
-
-# Capture current state
-context = child_session.coordinator.get("context")
-transcript = await context.get_messages() if context else []
-
-metadata = {
-    "session_id": sub_session_id,
-    "parent_id": parent_session.session_id,
-    "agent_name": agent_name,
-    "created": datetime.now(UTC).isoformat(),
-    "config": merged_config,  # Full merged mount plan
-    "agent_overlay": agent_config,  # Original agent config
+# From main.py - CommandProcessor
+COMMANDS = {
+    "/mode": "handle_mode",
+    "/modes": "list_modes",
+    "/save": "save_transcript",
+    "/status": "show_status",
+    "/clear": "clear_context",
+    "/help": "show_help",
+    "/config": "show_config",
+    "/tools": "list_tools",
+    "/agents": "list_agents",
+    "/allowed-dirs": "manage_allowed_dirs",
+    "/denied-dirs": "manage_denied_dirs",
+    "/rename": "rename_session",
+    "/fork": "fork_session",
 }
-
-# Persist to storage
-store = SessionStore()  # Project-scoped: ~/.amplifier/projects/{project}/sessions/
-store.save(sub_session_id, transcript, metadata)
 ```
 
-**Storage Location:** `~/.amplifier/projects/{project-slug}/sessions/{session-id}/`
-- `transcript.jsonl` - Conversation history
-- `metadata.json` - Session configuration and metadata
-- `bundle.md` - Bundle snapshot (if applicable)
+**Mode shortcuts:** Dynamic shortcuts populated from mode definitions (e.g., `/plan` → `/mode plan`)
 
-**Resuming Existing Sessions:**
+### 5. Cancellation Handling
+
+**Challenge:** Graceful cancellation (finish current tool) vs immediate (force cancel).
+
+**Solution:** Two-stage Ctrl+C handling:
 
 ```python
-from amplifier_app_cli.session_spawner import resume_sub_session
+# From main.py - interactive_chat
+def sigint_handler(signum, frame):
+    cancellation = session.coordinator.cancellation
+    
+    if cancellation.is_cancelled:
+        # Second Ctrl+C - immediate
+        cancellation.request_immediate()
+        console.print("Cancelling immediately...")
+    else:
+        # First Ctrl+C - graceful
+        cancellation.request_graceful()
+        console.print("Cancelling after current operation completes...")
+```
 
-# Resume by session ID
-result = await resume_sub_session(
-    sub_session_id="parent-123-zen-architect-abc456",
-    instruction="Now add OAuth 2.0 support"
+**Key insight:** Synchronous state updates prevent race conditions with rapid double Ctrl+C.
+
+### 6. Output Formatting
+
+**Challenge:** Support both human-readable and machine-readable output.
+
+**Solution:** Multiple output formats:
+
+```python
+# From main.py - execute_single
+if output_format == "json":
+    output = {
+        "status": "success",
+        "response": response,
+        "session_id": session_id,
+        "bundle": bundle_name,
+        "model": model_name,
+        "timestamp": datetime.now(UTC).isoformat(),
+    }
+    print(json.dumps(output, indent=2))
+elif output_format == "json-trace":
+    output = {
+        ...
+        "execution_trace": trace_collector.get_trace(),
+        "metadata": trace_collector.get_metadata(),
+    }
+    print(json.dumps(output, indent=2))
+else:
+    # Text - markdown rendering
+    console.print(Markdown(response))
+```
+
+**Stream isolation:** In JSON mode, all output redirected to stderr except final JSON to stdout.
+
+### 7. Session Persistence
+
+**Challenge:** Save sessions for resumption without blocking the REPL.
+
+**Solution:** Incremental save hooks:
+
+```python
+# From incremental_save.py
+def register_incremental_save(session, store, session_id, bundle_name, config):
+    """Register hook for incremental saves during tool execution."""
+    hooks = session.coordinator.get("hooks")
+    
+    async def on_tool_post(event, data):
+        # Save after each tool completes (crash recovery)
+        context = session.coordinator.get("context")
+        messages = await context.get_messages()
+        store.save(session_id, messages, metadata)
+    
+    hooks.register("tool:post", on_tool_post)
+```
+
+**Key insight:** Save after tool execution, not after every token, balances performance and crash recovery.
+
+### 8. Session Fork
+
+**Challenge:** Create branches from existing sessions to explore alternatives.
+
+**Solution:** Uses amplifier-foundation's session utilities:
+
+```python
+# From main.py - CommandProcessor._fork_session
+from amplifier_foundation.session import fork_session, count_turns
+
+# Fork at specific turn
+result = fork_session(
+    session_dir,
+    turn=turn,
+    new_session_id=custom_name,
+    include_events=True,
 )
-# Returns: {"output": str, "session_id": str}
+
+# Returns: ForkResult with session_id, message_count, forked_from_turn
 ```
 
-**Resume Process:**
-1. Load transcript and metadata from `SessionStore`
-2. Recreate `AmplifierSession` with stored configuration
-3. Restore transcript to context via `add_message()`
-4. Execute new instruction with full conversation history
-5. Save updated state
-6. Cleanup and return
+**Features:**
+- Preview turns before forking
+- Custom naming for forked sessions
+- Event log preservation
 
-**Key Design Points:**
-- **Stateless**: Each resume loads fresh from disk (no in-memory caching)
-- **Deterministic**: Uses stored merged config (independent of parent changes)
-- **Self-contained**: All state needed for reconstruction persists with session
-- **Resumable**: Survives parent session restarts and crashes
+## Design Patterns
 
-### 5. Session Forking
+### Pattern 1: Mechanism vs Policy Separation
 
-**Challenge:** Create sub-sessions for agent delegation while maintaining parent context.
+**Kernel (amplifier-core):**
+- Provides session lifecycle
+- Emits events
+- Validates contracts
 
-**Solution:** Uses amplifier-core's `session.fork()` with agent config overlay:
+**Foundation (amplifier-foundation):**
+- Provides bundle composition
+- Loads and activates modules
+- Resolves @mentions
+
+**Application (amplifier-app-cli):**
+- Decides which bundles to load
+- Configures providers with API keys
+- Manages session storage location
+- Formats output for users
+
+### Pattern 2: Unified Entry Points
+
+Instead of separate functions for each mode:
 
 ```python
-# In parent session
-parent_session = AmplifierSession(config=parent_mount_plan)
+# ❌ OLD: Separate functions drift over time
+async def interactive_chat(config): ...
+async def interactive_chat_with_session(config, transcript): ...
+async def execute_single(prompt, config): ...
+async def execute_single_with_session(prompt, config, transcript): ...
 
-# Load agent config
-agent = agent_loader.load_agent("zen-architect")
-agent_mount_plan_fragment = agent.to_mount_plan_fragment()
+# ✅ NEW: Unified with optional parameters
+async def interactive_chat(
+    config,
+    initial_transcript=None,  # Resume if provided
+    initial_prompt=None,      # Auto-execute if provided
+):
+    # Single code path handles all modes
+```
 
-# Fork session with agent overlay
-sub_session = await parent_session.fork(
-    config_overlay=agent_mount_plan_fragment,
-    task_description="Design authentication system"
+**Key insight:** Optional parameters better than function proliferation.
+
+### Pattern 3: Progressive Enhancement
+
+**Base experience works, enhancements add features:**
+
+```python
+# Base: File history with InMemoryHistory fallback
+try:
+    history = FileHistory(str(history_path))
+except OSError:
+    history = InMemoryHistory()  # Graceful degradation
+```
+
+**Applied to:**
+- History persistence (fallback to in-memory)
+- Shell completion (manual instructions if auto-install fails)
+- Mode shortcuts (works without mode system)
+
+### Pattern 4: Event-Driven Extensibility
+
+**The CLI hooks into kernel events:**
+
+```python
+# Register hooks
+hooks.register("prompt:complete", on_prompt_complete)
+hooks.register("session:end", on_session_end)
+
+# Hooks handle:
+# - Incremental session saving
+# - Session naming
+# - Notifications
+# - Cost tracking
+```
+
+**Key insight:** Hooks decouple features from core flow.
+
+## Implementation Highlights
+
+### Multi-Line Input Support
+
+```python
+# From main.py - _create_prompt_session
+kb = KeyBindings()
+
+@kb.add("c-j")  # Ctrl-J inserts newline
+def insert_newline(event):
+    event.current_buffer.insert_text("\n")
+
+@kb.add("enter")  # Enter submits
+def accept_input(event):
+    event.current_buffer.validate_and_handle()
+
+prompt_session = PromptSession(
+    history=history,
+    key_bindings=kb,
+    multiline=True,
+    prompt_continuation="  ",  # Clean alignment
 )
-
-# Execute in sub-session
-result = await sub_session.execute("Design the auth system")
 ```
 
-**Spawn Tool Policy:**
+**Philosophy:** Ctrl-J is terminal-reliable (works everywhere), multi-line display for readability.
 
-Bundles can control which tools spawned agents inherit using the `spawn` section:
-
-```yaml
-# In bundle.md
-spawn:
-  exclude_tools: [tool-task]  # Agents inherit all tools EXCEPT these
-  # OR
-  tools: [tool-a, tool-b]     # Agents get ONLY these tools
-```
-
-**Common pattern:** Prevent delegation recursion by excluding `tool-task`:
-
-```yaml
-tools:
-  - module: tool-task      # Coordinator can delegate
-  - module: tool-filesystem
-  - module: tool-bash
-
-spawn:
-  exclude_tools: [tool-task]  # But agents can't delegate further
-```
-
-### 6. Provider Preferences
-
-**Challenge:** Allow flexible provider/model selection for spawned agents.
-
-**Solution:** Ordered fallback chain with glob pattern support:
+### Dynamic Prompt with Mode Indicator
 
 ```python
-result = await task_tool.execute({
-    "agent": "foundation:explorer",
-    "instruction": "Quick analysis",
-    "provider_preferences": [
-        {"provider": "anthropic", "model": "claude-haiku-*"},
-        {"provider": "openai", "model": "gpt-4o-mini"},
-    ]
-})
+# Shows active mode in prompt
+def get_prompt():
+    active_mode = session.coordinator.session_state.get("active_mode")
+    if active_mode:
+        return HTML(f"\n<ansicyan>[{active_mode}]</ansicyan><ansigreen><b>></b></ansigreen> ")
+    return HTML("\n<ansigreen><b>></b></ansigreen> ")
 ```
 
-- System tries each preference in order until finding an available provider
-- Model names support glob patterns (e.g., `claude-haiku-*` → latest haiku)
-- Enables cost optimization (prefer cheaper models) with fallback
+**Visual feedback:** Mode indicator helps user track context.
 
-### 7. Display and User Experience
-
-**Challenge:** Present AI responses and system state in a readable, helpful format.
-
-**Solution:** Rich console formatting with markdown rendering:
+### Runtime @Mention Processing
 
 ```python
-from rich.console import Console
-from rich.panel import Panel
-from rich.markdown import Markdown
-
-console = Console()
-
-# Render markdown responses
-console.print(Markdown(response))
-
-# Display panels for structure
-console.print(Panel("Configuration loaded", title="Status"))
-
-# Progress indicators for long operations
-with console.status("Preparing modules..."):
-    prepared = await bundle.prepare()
+# From main.py - _process_runtime_mentions
+async def _process_runtime_mentions(session, prompt):
+    """Process @mentions in user input at runtime."""
+    if not has_mentions(prompt):
+        return
+    
+    # Load @mentioned files
+    loader = MentionLoader(resolver=mention_resolver)
+    context_messages = loader.load_mentions(prompt, relative_to=Path.cwd())
+    
+    # Add to session context
+    context = session.coordinator.get("context")
+    for msg in context_messages:
+        await context.add_message(msg.model_dump())
 ```
 
-**Key patterns:**
-- Markdown rendering for AI responses
-- Panels for structured information
-- Progress indicators for async operations
-- Color coding for status (success, warning, error)
+**User experience:** Reference files inline with `@path/to/file.md` in prompts.
 
-## Interactive Mode Commands
+### First-Run Initialization
 
-The CLI provides special commands in interactive mode:
+```python
+# From commands/init.py
+def check_first_run():
+    """Check if this is first run (no settings.yaml)."""
+    return not settings_file.exists()
 
-| Command | Description |
-|---------|-------------|
-| `/help` | Show available commands |
-| `/config` | Show current configuration |
-| `/tools` | List available tools |
-| `/agents` | List available agents |
-| `/history` | Show conversation history |
-| `/fork` | Fork current session |
-| `/exit` | Exit interactive mode |
-| `@agent` | Invoke a specific agent |
-
-**Implementation:** Command detection in REPL input handler with routing to appropriate handlers.
-
-## Session Management
-
-### Session Storage
-
-Sessions are stored in project-specific directories:
-
-```
-~/.amplifier/projects/
-└── {project-slug}/
-    └── sessions/
-        └── {session-id}/
-            ├── transcript.jsonl
-            ├── metadata.json
-            └── events.jsonl
+# Auto-init from environment
+def auto_init_from_env(console):
+    """Initialize from ANTHROPIC_API_KEY env var."""
+    api_key = os.getenv("ANTHROPIC_API_KEY")
+    if api_key:
+        save_provider_config("anthropic", api_key)
 ```
 
-**SessionStore** handles:
-- Project slug generation from working directory
-- Session metadata persistence
-- Transcript storage and retrieval
-- Session listing and filtering
+**Pattern:** Interactive prompt for TTY, auto-init from env vars for CI/Docker.
 
-### Session Commands
+## Lessons for Application Builders
 
-Implemented via `commands/session.py`:
+### 1. Use Foundation's Abstractions
 
-- `session list` - List all sessions with filters
-- `session show` - Display session details
-- `session resume` - Resume specific session
-- `session delete` - Delete sessions with various criteria
-- `session history` - Show conversation history
-- `session search` - Search sessions by content
+```python
+# ✅ DO THIS - use foundation
+from amplifier_foundation import load_bundle
 
-## Environment Variable Overrides
+bundle = await load_bundle("foundation")
+prepared = await bundle.prepare()
 
-**Testing Agent Changes:**
+# ❌ DON'T DO THIS - manually construct mount plans
+config = {
+    "session": {"orchestrator": {"module": "loop-streaming", ...}, ...},
+    "providers": [{...}],
+    "tools": [{...}],
+}
+```
+
+**Why:** Foundation handles composition, validation, module activation.
+
+### 2. Separate Mechanism from Policy
+
+**Mechanism (reusable):**
+- Session creation
+- Module loading
+- Event emission
+
+**Policy (app-specific):**
+- Where to store sessions
+- Which bundle to use by default
+- How to format errors
+
+### 3. Progressive Enhancement
+
+Build base experience first, add features incrementally:
+
+1. Basic execution ✅
+2. Session resume ✅
+3. Interactive mode ✅
+4. Slash commands ✅
+5. Mode system ✅
+6. Agent delegation ✅
+
+Each layer works independently.
+
+### 4. Event-Driven Features
+
+Use hooks for cross-cutting concerns:
+
+- Session naming
+- Incremental saves
+- Notifications
+- Cost tracking
+
+**Benefit:** Features don't bloat core execution path.
+
+### 5. Explicit Configuration
+
+```python
+# ✅ Explicit SessionConfig
+session_config = SessionConfig(
+    config=config,
+    search_paths=search_paths,
+    verbose=verbose,
+    session_id=session_id,
+    bundle_name=bundle_name,
+    initial_transcript=initial_transcript,
+    prepared_bundle=prepared_bundle,
+)
+```
+
+**Why:** Single struct better than 7 parameters.
+
+## Code Organization
+
+### Module Structure
+
+```
+amplifier_app_cli/
+├── main.py                    # Entry point, REPL loop
+├── session_runner.py          # Session initialization
+├── session_spawner.py         # Agent delegation
+├── session_store.py           # Session persistence
+├── commands/                  # CLI commands
+│   ├── run.py
+│   ├── session.py
+│   ├── bundle.py
+│   └── ...
+├── ui/                        # Display components
+│   ├── error_display.py
+│   └── render_message.py
+├── lib/                       # Core libraries
+│   ├── settings.py
+│   ├── bundle_loader.py
+│   └── mention_loading.py
+└── utils/                     # Utilities
+    ├── error_format.py
+    └── version.py
+```
+
+**Philosophy:**
+- `commands/` - Click command definitions
+- `lib/` - Reusable logic (no Click dependencies)
+- `ui/` - Display-only (no business logic)
+- Top-level - Composition and orchestration
+
+### Dependency Flow
+
+```
+Click commands → session_runner → amplifier-core
+            ↓
+       lib/ modules → amplifier-foundation
+            ↓
+       ui/ modules → Rich console
+```
+
+**No circular dependencies.** Clean layering.
+
+## Performance Considerations
+
+### Module Activation Caching
+
+**Problem:** Downloading and installing modules on every run is slow.
+
+**Solution:** `prepare()` saves install state:
+
+```python
+prepared = await bundle.prepare()  # First run: downloads/installs
+# Creates ~/.amplifier/cache/ with activated modules
+
+prepared = await bundle.prepare()  # Subsequent: instant (cached)
+```
+
+### Session Store Optimization
+
+**Problem:** Loading large transcripts is slow.
+
+**Solution:** Lazy metadata loading:
+
+```python
+# Fast: Load only metadata
+sessions = store.list_sessions(limit=20)
+
+# Slow: Load full transcript only when needed
+transcript, metadata = store.load(session_id)
+```
+
+## Testing Strategies
+
+### Agent Override Pattern
+
+Test agent changes without committing:
 
 ```bash
-# Test modified agent without committing
-export AMPLIFIER_AGENT_ZEN_ARCHITECT=~/work/test-zen.md
-amplifier run "design system"  # Uses test version
-
-# Unset to use normal resolution
-unset AMPLIFIER_AGENT_ZEN_ARCHITECT
+export AMPLIFIER_AGENT_ZEN_ARCHITECT=~/test-zen.md
+amplifier run "design system"
 ```
 
-**Format:** `AMPLIFIER_AGENT_<NAME>` (uppercase, dashes → underscores)
+**Use case:** Iterate on agent instructions during development.
 
-This enables rapid iteration on agent definitions during development.
+### Mock Provider Pattern
 
-## Integration with amplifier-foundation Library
-
-amplifier-app-cli uses amplifier-foundation library for ALL agent functionality:
-
-**What CLI provides** (policy):
-- CLI-specific search paths (user, project, bundle directories)
-- Environment variable override mechanism
-- CLI commands for listing/showing agents
-- Integration with bundle system
-
-**What library provides** (mechanism):
-- Agent file format parsing (markdown + YAML frontmatter)
-- AgentResolver (path-based resolution)
-- AgentLoader (loading and parsing agent files)
-- Agent schemas (Agent, AgentMeta, SystemConfig)
-- First-match-wins resolution logic
-
-**Boundary**: CLI calls library APIs, library doesn't know about CLI.
-
-## Best Practices Demonstrated
-
-### 1. Separation of Concerns
-
-- **CLI layer**: Command parsing only
-- **Application layer**: Business logic
-- **Display layer**: UI/formatting
-- **Session layer**: Kernel interaction
-
-Each layer has clear responsibilities and dependencies flow downward.
-
-### 2. Configuration Management
-
-- Environment variables for sensitive data (API keys)
-- Config files for user preferences
-- CLI arguments for per-command overrides
-- Clear precedence rules
-
-### 3. Error Handling
+Test without API calls:
 
 ```python
-from amplifier_core import ModuleValidationError
+test_config = {
+    "providers": [{
+        "module": "provider-mock",
+        "config": {"responses": ["Test response"]}
+    }]
+}
+```
 
+### Session Replay
+
+Debug issues by replaying sessions:
+
+```bash
+amplifier continue --replay --replay-speed 1.0
+```
+
+## Common Patterns from CLI Code
+
+### 1. First-Run Detection
+
+```python
+# Check if settings.yaml exists
+def check_first_run():
+    return not (Path.home() / ".amplifier" / "settings.yaml").exists()
+```
+
+### 2. Safe Error Display
+
+```python
+# Never crash on display errors
 try:
-    session = await create_initialized_session(config)
-except ModuleValidationError as e:
-    display_validation_error(e, console)
-    sys.exit(1)
+    console.print(Markdown(response))
+except Exception:
+    console.print(response)  # Fallback to plain text
 ```
 
-**Patterns:**
-- Specific exception types for different errors
-- User-friendly error messages
-- Recovery suggestions
-- Exit codes for scripting
-
-### 4. Session Lifecycle
+### 3. Project-Scoped Storage
 
 ```python
-# Create session with context manager
-async with prepared.create_session(session_cwd=Path.cwd()) as session:
-    response = await session.execute(prompt)
-    # Automatic cleanup on exit
+# Sessions stored per-project
+project_slug = get_project_slug()  # Derived from cwd
+session_dir = Path.home() / ".amplifier" / "projects" / project_slug / "sessions"
 ```
 
-**Benefits:**
-- Automatic resource cleanup
-- Exception safety
-- Clear lifecycle boundaries
+### 4. Configuration Layering
 
-### 5. Observability
-
-**Event handling** for debugging and monitoring:
-
-```python
-# Subscribe to events
-session.coordinator.on("llm:request", handle_request)
-session.coordinator.on("llm:response", handle_response)
-session.coordinator.on("tool:execute", handle_tool)
+```
+Foundation bundle → User settings → CLI flags → Session overrides
+(mechanisms)        (policy)        (runtime)    (temporary)
 ```
 
-**Use cases:**
-- Debug logging
-- Performance monitoring
-- Token usage tracking
-- Error diagnostics
+## Extension Points
 
-## Command Structure
-
-The CLI uses Click for command management:
+### Adding New Commands
 
 ```python
-@click.group(cls=AmplifierGroup)
-def cli():
-    """Amplifier CLI application."""
+# In commands/new_command.py
+@click.group()
+def my_command():
+    """My command description."""
     pass
 
-# Register command groups
-cli.add_command(run)
-cli.add_command(bundle_group)
-cli.add_command(session_group)
-cli.add_command(provider_group)
-cli.add_command(agents_group)
+@my_command.command()
+def subcommand():
+    """Subcommand."""
+    pass
+
+# In main.py
+cli.add_command(my_command)
 ```
 
-**Key files:**
-- `main.py` - Main CLI entry point and interactive mode
-- `commands/run.py` - Run command implementation
-- `commands/session.py` - Session management commands
-- `commands/bundle.py` - Bundle management commands
-- `commands/provider.py` - Provider management commands
-- `commands/agents.py` - Agent management commands
+### Adding New Slash Commands
+
+```python
+# In main.py - CommandProcessor
+COMMANDS["/new"] = {
+    "action": "handle_new",
+    "description": "New command description"
+}
+
+async def handle_command(self, action, data):
+    if action == "handle_new":
+        return await self._handle_new(data)
+```
+
+### Adding New Output Formats
+
+```python
+# In commands/run.py
+@click.option(
+    "--output-format",
+    type=click.Choice(["text", "json", "json-trace", "yaml"]),  # Add yaml
+)
+
+# In main.py - execute_single
+if output_format == "yaml":
+    import yaml
+    print(yaml.dump({"response": response, ...}))
+```
 
 ## Related Documentation
 
-**Agent System:**
-- [Agent Delegation Implementation](https://github.com/microsoft/amplifier-app-cli/blob/main/docs/AGENT_DELEGATION_IMPLEMENTATION.md) - How CLI implements agent delegation
-- [Bundle Guide](https://github.com/microsoft/amplifier-foundation/blob/main/docs/BUNDLE_GUIDE.md) - How to create bundles and agents
-
-**Kernel Mechanism:**
-- [Session Fork Specification](https://github.com/microsoft/amplifier-core/blob/main/docs/SESSION_FORK_SPECIFICATION.md) - Session forking contract
+- **[Agent Delegation Implementation](https://github.com/microsoft/amplifier-app-cli/blob/main/docs/AGENT_DELEGATION_IMPLEMENTATION.md)** - Complete agent delegation details
+- **[amplifier-foundation](https://github.com/microsoft/amplifier-foundation)** - Bundle system
+- **[amplifier-core](https://github.com/microsoft/amplifier-core)** - Kernel contracts
+- **[CLI Reference](../../user_guide/cli.md)** - User-facing documentation
 
 ## Key Takeaways
 
-1. **Leverage libraries:** Use amplifier-foundation for bundle/agent management
-2. **Clear boundaries:** Separate CLI, application, and session concerns
-3. **Mechanism vs Policy:** Library provides mechanism, CLI adds policy
-4. **User experience:** Rich console formatting and helpful error messages
-5. **State persistence:** Project-scoped session storage with resumption
-6. **Multi-turn support:** Agents maintain conversation context across turns
-7. **Testing support:** Environment variable overrides for rapid iteration
+1. **Composition over configuration** - Bundle system enables flexible capability assembly
+2. **Separation of concerns** - Mechanism (kernel/foundation) vs policy (app)
+3. **Unified code paths** - Single implementation for all modes prevents drift
+4. **Progressive enhancement** - Base experience works, features add value
+5. **Event-driven extensibility** - Hooks enable features without coupling
+6. **Explicit over implicit** - Clear data structures better than magic
+7. **Graceful degradation** - Fallbacks ensure reliability
 
-## Next Steps
-
-- [CLI Reference](../../user_guide/cli.md) - Complete CLI command reference
-- [Agents Guide](../../user_guide/agents.md) - Using and creating agents
-- [Bundle System](../foundation/amplifier_foundation/bundle_system.md) - Understanding bundles
-- [amplifier-foundation Examples](../foundation/amplifier_foundation/examples/index.md) - Foundation examples
+The CLI demonstrates how to build production applications on Amplifier's foundation while maintaining simplicity and extensibility.

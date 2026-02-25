@@ -51,6 +51,8 @@ from amplifier_foundation import Bundle, BundleRegistry, load_bundle
 | `MentionResolverProtocol` | `mentions/protocol.py` | @mention resolution contract |
 | `SourceResolverProtocol` | `sources/protocol.py` | URI resolution contract |
 | `SourceHandlerProtocol` | `sources/protocol.py` | Source type handler contract |
+| `SourceHandlerWithStatusProtocol` | `sources/protocol.py` | Source handler with status checking |
+| `SourceStatus` | `sources/protocol.py` | Source status (local, cached, remote, etc.) |
 | `CacheProviderProtocol` | `cache/protocol.py` | Cache provider contract |
 
 ## Reference Implementations
@@ -81,6 +83,7 @@ from amplifier_foundation import Bundle, BundleRegistry, load_bundle
 | `parse_frontmatter` | `io/frontmatter.py` | Parse YAML frontmatter |
 | `read_with_retry` | `io/files.py` | Read with cloud sync retry (async) |
 | `write_with_retry` | `io/files.py` | Write with cloud sync retry (async) |
+| `write_with_backup` | `io/files.py` | Write with backup creation (async) |
 
 ## Dict Utilities
 
@@ -98,7 +101,6 @@ from amplifier_foundation import Bundle, BundleRegistry, load_bundle
 | `parse_uri` | `paths/resolution.py` | Parse source URI |
 | `ParsedURI` | `paths/resolution.py` | Parsed URI dataclass |
 | `normalize_path` | `paths/resolution.py` | Normalize/resolve path |
-| `get_amplifier_home` | `paths/resolution.py` | Get Amplifier home directory |
 | `construct_agent_path` | `paths/construction.py` | Build agent file path |
 | `construct_context_path` | `paths/construction.py` | Build context file path |
 | `find_files` | `paths/discovery.py` | Find files by pattern (async) |
@@ -120,8 +122,31 @@ Utilities for spawning sub-sessions with provider/model preferences.
 |--------|--------|---------|
 | `ProviderPreference` | `spawn_utils.py` | Dataclass for provider/model preference (supports glob patterns) |
 | `apply_provider_preferences` | `spawn_utils.py` | Apply ordered preferences to mount plan |
+| `apply_provider_preferences_with_resolution` | `spawn_utils.py` | Apply preferences with model pattern resolution |
 | `resolve_model_pattern` | `spawn_utils.py` | Resolve glob patterns (e.g., `claude-haiku-*`) to concrete model names |
 | `is_glob_pattern` | `spawn_utils.py` | Check if model string contains glob characters |
+| `ModelResolutionResult` | `spawn_utils.py` | Result of model pattern resolution |
+
+## Tracing Utilities
+
+| Export | Source | Purpose |
+|--------|--------|---------|
+| `generate_sub_session_id` | `tracing.py` | Generate sub-session ID from parent ID and agent name |
+
+## Serialization Utilities
+
+| Export | Source | Purpose |
+|--------|--------|---------|
+| `sanitize_for_json` | `serialization.py` | Sanitize data for JSON serialization |
+| `sanitize_message` | `serialization.py` | Sanitize message dict for JSON (handles ThinkingBlock, etc.) |
+
+## Updates
+
+| Export | Source | Purpose |
+|--------|--------|---------|
+| `BundleStatus` | `updates.py` | Bundle update status |
+| `check_bundle_status` | `updates.py` | Check for available updates |
+| `update_bundle` | `updates.py` | Update bundle to latest version |
 
 ## Reading the Source
 
@@ -178,9 +203,8 @@ resolver = BaseMentionResolver(bundles={"foundation": foundation_bundle})
 results = await load_mentions("See @foundation:context/guidelines.md", resolver)
 ```
 
-## Next Steps
+## Related Documentation
 
-- [Core Concepts](concepts.md) - Mental model for bundles
-- [Common Patterns](patterns.md) - Practical usage patterns
-- [Bundle System Deep Dive](bundle_system.md) - Complete bundle authoring guide
-- [Utilities Reference](utilities.md) - Detailed utility documentation
+- **[Core Concepts](concepts.md)** - Mental model
+- **[Bundle System Deep Dive](bundle_system.md)** - Loading, composition, validation
+- **[Common Patterns](patterns.md)** - Usage examples

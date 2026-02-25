@@ -94,43 +94,22 @@ The project slug is derived from your working directory:
 /home/user/projects/my-app → -home-user-projects-my-app
 ```
 
-This means sessions are project-specific.
+This ensures each project has its own session history.
 
-## Session Lifecycle
+## Session Metadata
 
-```
-┌─────────────────────────────────────────────────────────────┐
-│  1. Session Created                                          │
-│     - Unique ID generated                                    │
-│     - Profile and provider configured                        │
-│     - Storage initialized                                    │
-└─────────────────────────────────────────────────────────────┘
-                             │
-                             ▼
-┌─────────────────────────────────────────────────────────────┐
-│  2. Session Active                                           │
-│     - Messages exchanged                                     │
-│     - Tools executed                                         │
-│     - Events logged                                          │
-└─────────────────────────────────────────────────────────────┘
-                             │
-                             ▼
-┌─────────────────────────────────────────────────────────────┐
-│  3. Session Ended                                            │
-│     - Final state persisted                                  │
-│     - Available for resumption                               │
-└─────────────────────────────────────────────────────────────┘
-                             │
-                             ▼
-┌─────────────────────────────────────────────────────────────┐
-│  4. Session Resumed (optional)                               │
-│     - History loaded                                         │
-│     - Context restored                                       │
-│     - Continues from last state                              │
-└─────────────────────────────────────────────────────────────┘
-```
+Metadata includes:
 
-## Managing Sessions
+- `session_id` - Unique session identifier
+- `created` - ISO timestamp of creation
+- `bundle` - Bundle used for this session
+- `model` - Model/provider information
+- `turn_count` - Number of user messages
+- `working_dir` - Working directory when session was created
+- `name` - Optional human-readable name
+- `description` - Optional session description
+
+## Session Operations
 
 ### Delete a Session
 
@@ -138,151 +117,131 @@ This means sessions are project-specific.
 amplifier session delete abc123
 ```
 
-### Cleanup Old Sessions
+### Fork a Session
+
+Create a new session from a specific turn in an existing session:
 
 ```bash
-# Delete sessions older than 30 days (default)
-amplifier session cleanup
+# Show turns to fork from
+amplifier session fork abc123
 
-# Delete sessions older than 7 days
-amplifier session cleanup --days 7
+# Fork at turn 3
+amplifier session fork abc123 --turn 3
+
+# Fork with custom name
+amplifier session fork abc123 --turn 3 --name my-fix
 ```
 
-## Session Context
+Forking creates a new session with conversation history up to the specified turn, allowing you to explore alternative paths.
 
-### What's Preserved
+### Rename a Session
 
-When you resume a session:
-
-- Conversation history
-- Session ID
-- Project context
-
-### What's Reloaded
-
-- Profile configuration (current, not original)
-- Provider configuration
-- Module state
-
-### What's NOT Preserved
-
-- Tool execution state (files may have changed)
-- In-memory context beyond token limit
-
-## Multi-Turn Workflows
-
-Sessions enable sophisticated multi-turn workflows:
+In interactive mode:
 
 ```bash
-# Start analysis
-amplifier run "Analyze the user authentication module"
-
-# Continue with follow-up
-amplifier continue "What security issues did you find?"
-
-# Act on findings
-amplifier continue "Fix the SQL injection vulnerability you identified"
-
-# Verify fix
-amplifier continue "Now write tests for the fix"
+amplifier> /rename My Feature Work
 ```
 
-## Conversational Single-Shot Workflows
+## Session Replay
 
-You can build context across multiple single-shot commands, combining focused execution with conversational continuity:
+Review past conversations with timing simulation:
 
 ```bash
-# Analyze in one shot
-amplifier run "Review the database schema for performance issues"
+# Replay with default speed (2x)
+amplifier continue --replay
 
-# Build on the analysis with follow-ups
-amplifier continue "Which tables need indexing?"
-amplifier continue "Generate the migration for those indexes"
-amplifier continue "Write tests to verify query performance improved"
+# Replay at custom speed
+amplifier continue --replay --replay-speed 1.0
 ```
 
-Each `continue` picks up the full conversation history, so the assistant remembers all previous analysis and decisions. This is particularly useful for:
+## History Display
 
-- **Scripted workflows**: Chain commands in shell scripts
-- **Incremental refinement**: Build up complex solutions step by step
-- **Context preservation**: Maintain analysis across separate commands without interactive mode
-
-## Session IDs
-
-Session IDs follow the format:
-
-```
-{timestamp}-{random}
-```
-
-For sub-sessions (agent delegation):
-
-```
-{parent-span}-{child-span}_{agent-name}
-```
-
-Example: `a1b2c3-d4e5f6_explorer`
-
-## Debugging Sessions
-
-### View Event Log
+When resuming a session, Amplifier shows recent conversation history:
 
 ```bash
-# Find session log
-ls ~/.amplifier/projects/*/sessions/abc123/
+# Show last 10 messages (default)
+amplifier continue
 
-# View events
-cat ~/.amplifier/projects/*/sessions/abc123/events.jsonl | head
+# Show all messages
+amplifier continue --full-history
+
+# Skip history display
+amplifier continue --no-history
+
+# Show thinking blocks
+amplifier continue --show-thinking
 ```
 
-### Event Types
+## Session Lineage
 
-| Event | Description |
-|-------|-------------|
-| `session:start` | Session initialized |
-| `prompt:submit` | User prompt received |
-| `provider:request` | LLM API call made |
-| `provider:response` | LLM response received |
-| `tool:pre` | Tool execution starting |
-| `tool:post` | Tool execution completed |
-| `session:end` | Session ended |
+Sessions track parent-child relationships for agent delegation:
+
+- **Parent Session** - The main session you're working in
+- **Child Session** - Sub-session created by agent delegation
+- **Session Fork** - New session branched from existing session
+
+Child sessions include `parent_id` in metadata for lineage tracking.
+
+## Session Events
+
+Sessions emit events for observability:
+
+- `session:start` - New session created
+- `session:resume` - Existing session resumed
+- `session:fork` - Child session forked from parent
+- `session:end` - Session completed
+- `prompt:complete` - Prompt execution finished
+
+Events are logged to `events.jsonl` for debugging and analysis.
+
+## Working Directory
+
+Sessions track the working directory where they were created:
+
+- Stored in `metadata.json` as `working_dir`
+- Used for resolving relative file paths
+- Critical for multi-project workflows
+
+## Session Persistence
+
+Sessions are automatically saved:
+
+- **After each turn** in interactive mode
+- **After execution** in single-shot mode
+- **During tool execution** for crash recovery
+- **On session fork** to preserve state
+
+This enables:
+- Resume from any point
+- Crash recovery
+- Multi-turn agent conversations
+- Session analysis and debugging
 
 ## Best Practices
 
-1. **Use `continue` for related work**: Keep context when working on the same task
-2. **New session for new tasks**: Start fresh for unrelated work
-3. **Clean up regularly**: Run `session cleanup` periodically
-4. **Name your sessions**: Use meaningful initial prompts for easy identification
+### Session Naming
 
-## Troubleshooting
-
-### "Session not found"
+Give sessions meaningful names for easier navigation:
 
 ```bash
-# List available sessions
-amplifier session list --all
-
-# Check session exists
-ls ~/.amplifier/projects/*/sessions/
+amplifier> /rename Implement OAuth Support
 ```
 
-### "Context too long" on resume
+### Session Organization
 
-The conversation history may exceed the model's context limit. Solutions:
+- Use bundles to organize sessions by type
+- Delete old sessions periodically
+- Fork sessions to explore alternatives
+- Use descriptive names for important sessions
 
-1. Start a new session
-2. Use a model with larger context
-3. Manually summarize and start fresh
+### Session Limits
 
-### Session resume behaves differently
+- Consider deleting sessions older than 30 days
+- Large sessions (100+ turns) may be slow to load
+- Fork long sessions to start fresh while preserving history
 
-Remember that:
+## Related Documentation
 
-- Profile may have changed
-- Files may have changed since original session
-- Tools execute against current state
-
-## See Also
-
-- [CLI Reference](cli.md) - Session commands
-- [Architecture: Events](../architecture/events.md) - Event system details
+- **[CLI Reference](cli.md)** - Session management commands
+- **[Agents](agents.md)** - Agent sub-sessions
+- **[Session Analysis](https://github.com/microsoft/amplifier-foundation/blob/main/docs/SESSION_ANALYSIS.md)** - Analyzing and debugging sessions

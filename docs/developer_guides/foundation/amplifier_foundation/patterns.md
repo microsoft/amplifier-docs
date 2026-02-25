@@ -226,7 +226,7 @@ In `agents/bug-hunter.md`:
 
 ```markdown
 ---
-meta:
+agent:
   name: bug-hunter
   description: Finds and fixes bugs
 
@@ -282,46 +282,30 @@ result = await prepared.spawn(
 
 ### Controlling Agent Tool Inheritance
 
-By default, spawned agents inherit all tools from their parent. Configure tool inheritance
-in the task tool's config section:
+By default, spawned agents inherit all tools from their parent. Configure tool inheritance using the bundle-level `spawn` section:
 
 ```yaml
 # In your bundle.md
-tools:
-  - module: tool-task
-    source: git+https://github.com/microsoft/amplifier-module-tool-task@main
-    config:
-      exclude_tools: [tool-task]  # Agents inherit all EXCEPT these
-```
-
-Or specify an explicit allowlist:
-
-```yaml
-tools:
-  - module: tool-task
-    config:
-      inherit_tools: [tool-filesystem, tool-bash]  # Agents get ONLY these
+spawn:
+  exclude_tools: [tool-task]  # Agents inherit all EXCEPT these
+  # OR
+  tools: [tool-a, tool-b]     # Agents get ONLY these tools
 ```
 
 **Common pattern**: Prevent agents from delegating further:
 
 ```yaml
-# Coordinator has task tool for orchestration
+# In bundle.md
 tools:
   - module: tool-filesystem
   - module: tool-bash
   - module: tool-task
-    config:
-      exclude_tools: [tool-task]  # Spawned agents can't delegate
+
+spawn:
+  exclude_tools: [tool-task]  # Spawned agents can't delegate
 ```
 
 This ensures agents do the work themselves rather than trying to spawn sub-agents.
-
-**Design rationale**: Tool inheritance config belongs in tool-task's config section because:
-- The task tool is the module that consumes this config
-- Follows the pattern of all other tool configs
-- Without tool-task mounted, this config is meaningless
-- Standard module-config merge rules apply during bundle composition
 
 ### Agent Resolution Pattern
 
@@ -402,8 +386,8 @@ Register commonly-used bundles:
 
 ```python
 registry = BundleRegistry()
-registry.register({"foundation": "git+https://github.com/microsoft/amplifier-foundation-bundle@main"})
-registry.register({"dev": "./bundles/dev.md"})
+registry.register("foundation", "git+https://github.com/microsoft/amplifier-foundation-bundle@main")
+registry.register("dev", "./bundles/dev.md")
 
 # Load by name
 bundle = await registry.load("foundation")
@@ -419,7 +403,7 @@ from pathlib import Path
 def register_bundles(registry: BundleRegistry, directory: Path):
     for path in directory.glob("*.md"):
         name = path.stem  # filename without extension
-        registry.register({name: str(path)})
+        registry.register(name, str(path))
 
 # Register all bundles in directory
 register_bundles(registry, Path("./bundles"))
@@ -492,8 +476,9 @@ for prompt in prompts:
         response = await session.execute(prompt)
 ```
 
-## References
+## See Also
 
-- **→ [CONCEPTS.md](https://github.com/microsoft/amplifier-foundation/blob/main/docs/CONCEPTS.md)** - Core concepts
-- **→ [BUNDLE_GUIDE.md](https://github.com/microsoft/amplifier-foundation/blob/main/docs/BUNDLE_GUIDE.md)** - Complete bundle guide
-- **→ [API_REFERENCE.md](https://github.com/microsoft/amplifier-foundation/blob/main/docs/API_REFERENCE.md)** - API documentation
+- **[Core Concepts](concepts.md)** - Mental model
+- **[Bundle System Deep Dive](bundle_system.md)** - Loading, composition, validation
+- **[API Reference](api_reference.md)** - API overview
+- **[Application Integration Guide](https://github.com/microsoft/amplifier-foundation/blob/main/docs/APPLICATION_INTEGRATION_GUIDE.md)** - Application lifecycle patterns, the protocol boundary pattern, and production anti-patterns
