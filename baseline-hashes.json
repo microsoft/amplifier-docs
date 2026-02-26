@@ -80,7 +80,7 @@
           "repo": "amplifier-app-cli",
           "path": "amplifier_app_cli/main.py",
           "exists": true,
-          "hash": "d31d47abf2a41aac"
+          "hash": "f31a4a8f11ec7878"
         },
         {
           "repo": "amplifier-app-cli",
@@ -446,7 +446,7 @@
           "repo": "amplifier-app-cli",
           "path": "amplifier_app_cli/main.py",
           "exists": true,
-          "hash": "d31d47abf2a41aac"
+          "hash": "f31a4a8f11ec7878"
         },
         {
           "repo": "amplifier-app-cli",
@@ -696,7 +696,7 @@
           "repo": "amplifier-core",
           "path": "amplifier_core/events.py",
           "exists": true,
-          "hash": "fae85103b83dfd25"
+          "hash": "5334e3fbe9fbfb3e"
         }
       ]
     },
@@ -778,7 +778,7 @@
           "repo": "amplifier-core",
           "path": "amplifier_core/events.py",
           "exists": true,
-          "hash": "fae85103b83dfd25"
+          "hash": "5334e3fbe9fbfb3e"
         }
       ]
     },
@@ -789,7 +789,7 @@
           "repo": "amplifier-app-cli",
           "path": "amplifier_app_cli/main.py",
           "exists": true,
-          "hash": "5282577419297c4c"
+          "hash": "f31a4a8f11ec7878"
         }
       ]
     },
@@ -852,7 +852,7 @@
           "repo": "amplifier-module-provider-anthropic",
           "path": "amplifier_module_provider_anthropic/__init__.py",
           "exists": true,
-          "hash": "e124eac75182f61f"
+          "hash": "5cf76d53150193b1"
         },
         {
           "repo": "amplifier-module-provider-anthropic",
@@ -996,30 +996,6 @@
           "path": "amplifier_module_tool_filesystem/__init__.py",
           "exists": true,
           "hash": "b541d2c7d0577777"
-        },
-        {
-          "repo": "amplifier-module-tool-filesystem",
-          "path": "amplifier_module_tool_filesystem/edit.py",
-          "exists": true,
-          "hash": "575b2587a8aa1d97"
-        },
-        {
-          "repo": "amplifier-module-tool-filesystem",
-          "path": "amplifier_module_tool_filesystem/path_validation.py",
-          "exists": true,
-          "hash": "637cb57420fd1ea9"
-        },
-        {
-          "repo": "amplifier-module-tool-filesystem",
-          "path": "amplifier_module_tool_filesystem/read.py",
-          "exists": true,
-          "hash": "a96df4ff9f33fa64"
-        },
-        {
-          "repo": "amplifier-module-tool-filesystem",
-          "path": "amplifier_module_tool_filesystem/write.py",
-          "exists": true,
-          "hash": "edccf1395beafea4"
         },
         {
           "repo": "amplifier-module-tool-filesystem",

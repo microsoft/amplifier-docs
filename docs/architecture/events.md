@@ -21,9 +21,15 @@ Amplifier uses an event-driven architecture for observability. The kernel emits 
 | Event | When | Data |
 |-------|------|------|
 | `session:start` | Session initialized | session_id, mount_plan |
+| `session:start:debug` | Session start (debug level) | debug details |
+| `session:start:raw` | Session start (raw data) | raw initialization data |
 | `session:end` | Session cleanup | session_id, duration |
 | `session:fork` | Sub-session created | parent_id, child_id |
+| `session:fork:debug` | Session fork (debug level) | debug details |
+| `session:fork:raw` | Session fork (raw data) | raw fork data |
 | `session:resume` | Session resumed | session_id |
+| `session:resume:debug` | Session resume (debug level) | debug details |
+| `session:resume:raw` | Session resume (raw data) | raw resume data |
 
 ### Prompt Lifecycle
 
@@ -32,14 +38,39 @@ Amplifier uses an event-driven architecture for observability. The kernel emits 
 | `prompt:submit` | User prompt received | prompt, session_id |
 | `prompt:complete` | Response generated | response, duration |
 
+### Planning Events
+
+| Event | When | Data |
+|-------|------|------|
+| `plan:start` | Planning phase started | session_id |
+| `plan:end` | Planning phase completed | session_id, plan |
+
 ### Provider Events
 
 | Event | When | Data |
 |-------|------|------|
 | `provider:request` | Before LLM call | messages, model |
 | `provider:response` | After LLM response | response, usage |
-| `provider:stream` | During streaming | chunk |
 | `provider:error` | LLM call failed | error, model |
+| `provider:retry` | Retry attempt initiated | attempt, delay, retry_after |
+| `provider:throttle` | Pre-emptive throttling | dimension, remaining, limit, delay |
+| `provider:tool_sequence_repaired` | Tool sequence auto-repaired | repair_count, repairs |
+| `llm:request` | LLM request (alias) | messages, model |
+| `llm:request:debug` | LLM request (debug level) | full request with truncated values |
+| `llm:request:raw` | LLM request (raw data) | complete untruncated request params |
+| `llm:response` | LLM response (alias) | response, usage |
+| `llm:response:debug` | LLM response (debug level) | full response with truncated values |
+| `llm:response:raw` | LLM response (raw data) | complete untruncated response |
+
+### Content Block Events
+
+| Event | When | Data |
+|-------|------|------|
+| `content_block:start` | Content block streaming started | block_index, block_type |
+| `content_block:delta` | Content block chunk received | block_index, delta |
+| `content_block:end` | Content block streaming complete | block_index, block |
+| `thinking:delta` | Thinking content chunk | delta |
+| `thinking:final` | Thinking content complete | thinking_block |
 
 ### Tool Events
 
@@ -55,7 +86,29 @@ Amplifier uses an event-driven architecture for observability. The kernel emits 
 |-------|------|------|
 | `context:pre_compact` | Before compaction | message_count, tokens |
 | `context:post_compact` | After compaction | message_count, tokens |
+| `context:compaction` | Compaction occurred | removed_count, strategy |
 | `context:include` | Context injected | source, content |
+
+### Orchestrator Events
+
+| Event | When | Data |
+|-------|------|------|
+| `orchestrator:complete` | Orchestrator execution complete | session_id |
+| `execution:start` | Orchestrator execution begins | session_id |
+| `execution:end` | Orchestrator execution completes | session_id, duration |
+
+### User Notification Events
+
+| Event | When | Data |
+|-------|------|------|
+| `user:notification` | User notification triggered | message, type |
+
+### Artifact Events
+
+| Event | When | Data |
+|-------|------|------|
+| `artifact:write` | Artifact written | path, type |
+| `artifact:read` | Artifact read | path, type |
 
 ### Approval Events
 
@@ -64,267 +117,74 @@ Amplifier uses an event-driven architecture for observability. The kernel emits 
 | `approval:required` | Approval requested | operation, prompt |
 | `approval:granted` | User approved | operation |
 | `approval:denied` | User denied | operation, reason |
+| `policy:violation` | Policy violation detected | policy, violation |
 
-### Orchestrator Events
+### Cancellation Events
 
 | Event | When | Data |
 |-------|------|------|
-| `orchestrator:complete` | Main loop finished | orchestrator, turn_count, status |
+| `cancel:requested` | Cancellation initiated | mode (graceful/immediate) |
+| `cancel:completed` | Cancellation finalized | session_id |
 
-## Event Schema
+## Hook Integration
 
-Events are logged as JSONL with this schema:
+Hooks subscribe to events and respond:
 
-```json
+```python
+async def on_tool_execution(event_name: str, data: dict):
+    if event_name == "tool:pre":
+        print(f"Starting: {data['tool_name']}")
+
+# Register hook
+coordinator.hooks.register("tool:pre", on_tool_execution)
+```
+
+**Priority**: Higher priority hooks run first (default: 100)
+
+**Blocking vs Non-Blocking**: Hooks are non-blocking by default but can modify event data.
+
+## Event Data
+
+Each event includes:
+
+- **Common fields**: `timestamp`, `session_id`
+- **Event-specific fields**: Varies by event type
+
+Example `tool:post` data:
+
+```python
 {
-  "ts": "2024-01-15T10:30:00.123Z",
-  "lvl": "info",
-  "schema": {"name": "amplifier.log", "ver": "1.0.0"},
-  "session_id": "abc123",
-  "request_id": "def456",
-  "span_id": "ghi789",
-  "event": "provider:request",
-  "component": "orchestrator",
-  "module": "provider-anthropic",
-  "status": "success",
-  "duration_ms": 1234,
-  "data": {
-    "model": "claude-sonnet-4-5",
-    "message_count": 5
-  },
-  "error": null
+    "tool_name": "read_file",
+    "input": {"file_path": "README.md"},
+    "output": "...",
+    "duration_ms": 42,
+    "timestamp": "2025-01-15T10:30:00Z",
+    "session_id": "abc-123"
 }
 ```
 
-### Schema Fields
+## Contribution Channels
 
-| Field | Type | Description |
-|-------|------|-------------|
-| `ts` | ISO8601 | Timestamp |
-| `lvl` | string | Log level (info, warn, error) |
-| `schema` | object | Schema name and version |
-| `session_id` | string | Session identifier |
-| `request_id` | string? | Request identifier |
-| `span_id` | string? | Span identifier for tracing |
-| `event` | string | Event name |
-| `component` | string | Emitting component |
-| `module` | string? | Module name |
-| `status` | string? | success or error |
-| `duration_ms` | number? | Duration in milliseconds |
-| `data` | object | Event-specific data |
-| `error` | object? | Error details if applicable |
+Contribution channels provide pull-based aggregation for module capabilities and metadata. See the [Contribution Channels specification](https://github.com/microsoft/amplifier-core/blob/main/docs/specs/CONTRIBUTION_CHANNELS.md) for details.
 
-## Hooks and Events
+**Common channels**:
 
-### Observing Events
+- `observability.events` - Modules declare lifecycle events
+- `capabilities.catalog` - Aggregate callable capabilities
+- `session.metadata` - Runtime metadata snapshots
 
-Hooks register handlers for events:
+**Usage**:
 
 ```python
-async def my_handler(event: str, data: dict) -> HookResult:
-    if event == "tool:post":
-        print(f"Tool {data['tool_name']} completed")
-    return HookResult(action="continue")
+# Module registration
+coordinator.register_contributor(
+    "observability.events",
+    "tool-filesystem",
+    lambda: ["filesystem:read", "filesystem:write"]
+)
 
-# Register
-coordinator.hooks.register("tool:post", my_handler)
+# Consumer collection
+events = await coordinator.collect_contributions("observability.events")
 ```
 
-### Hook Actions
-
-Handlers return `HookResult` with an action:
-
-| Action | Effect |
-|--------|--------|
-| `continue` | Proceed normally |
-| `deny` | Block the operation |
-| `modify` | Modify event data |
-| `inject_context` | Add to conversation |
-| `ask_user` | Request approval |
-
-### Example: Blocking Dangerous Operations
-
-```python
-async def safety_hook(event: str, data: dict) -> HookResult:
-    if event == "tool:pre" and data["tool_name"] == "bash":
-        command = data["input"].get("command", "")
-        if "rm -rf" in command:
-            return HookResult(
-                action="deny",
-                reason="Destructive command blocked"
-            )
-    return HookResult(action="continue")
-```
-
-### Example: Context Injection
-
-```python
-async def linter_hook(event: str, data: dict) -> HookResult:
-    if event == "tool:post" and data["tool_name"] == "write_file":
-        # Run linter on written file
-        errors = run_linter(data["file_path"])
-        if errors:
-            return HookResult(
-                action="inject_context",
-                context_injection=f"Linter errors:\n{errors}",
-                user_message="Found linting issues"
-            )
-    return HookResult(action="continue")
-```
-
-## Streaming via Events
-
-Streaming output is implemented via events, not callbacks:
-
-```python
-# Orchestrator emits stream events
-async for chunk in provider.stream_complete(request):
-    await hooks.emit("provider:stream", {"chunk": chunk})
-
-# Hook handles streaming UI
-async def streaming_ui_hook(event: str, data: dict) -> HookResult:
-    if event == "provider:stream":
-        chunk = data.get("chunk", {})
-        if text := chunk.get("text"):
-            print(text, end="", flush=True)
-    return HookResult(action="continue")
-```
-
-## Event Logging
-
-### Default Logging
-
-The `hooks-logging` module logs all events to JSONL:
-
-```yaml
-hooks:
-  - module: hooks-logging
-    config:
-      level: info
-      output: ~/.amplifier/logs/
-```
-
-### Log Levels
-
-| Level | Events Logged |
-|-------|---------------|
-| `error` | Errors only |
-| `warn` | Errors + warnings |
-| `info` | Standard events |
-| `debug` | + LLM request/response summaries |
-| `raw` | + Complete API payloads |
-
-### Finding Logs
-
-```bash
-# Session logs
-ls ~/.amplifier/projects/<project>/sessions/<session-id>/events.jsonl
-
-# Search logs
-grep '"event":"tool:error"' events.jsonl
-
-# Pretty print
-cat events.jsonl | jq 'select(.event == "provider:request")'
-```
-
-## Custom Events
-
-Modules can emit custom events:
-
-```python
-async def mount(coordinator, config):
-    # Declare observable events
-    coordinator.register_contributor(
-        "observability.events",
-        "my-module",
-        lambda: [
-            "my-module:initialized",
-            "my-module:processing",
-            "my-module:completed"
-        ]
-    )
-
-    # Emit events
-    await coordinator.hooks.emit("my-module:initialized", {
-        "version": "1.0.0"
-    })
-```
-
-Custom events follow the `namespace:action` convention.
-
-## Validation via Events
-
-Hooks can validate operations before they execute:
-
-```python
-async def validation_hook(event: str, data: dict) -> HookResult:
-    if event == "tool:pre" and data["tool_name"] == "write_file":
-        path = data["input"].get("file_path", "")
-        
-        # Validate path is allowed
-        if not is_allowed_path(path):
-            return HookResult(
-                action="deny",
-                reason=f"Write to {path} not allowed"
-            )
-        
-        # Validate content
-        content = data["input"].get("content", "")
-        if errors := validate_content(content, path):
-            return HookResult(
-                action="deny",
-                reason=f"Validation failed: {errors}"
-            )
-    
-    return HookResult(action="continue")
-```
-
-## Graceful Event Handling
-
-Hooks should handle errors gracefully:
-
-```python
-async def my_hook(event: str, data: dict) -> HookResult:
-    try:
-        # Processing that might fail
-        result = process_event(data)
-    except Exception as e:
-        # Log but don't block
-        log_error(f"Hook error: {e}")
-    
-    # Always return continue unless intentionally blocking
-    return HookResult(action="continue")
-```
-
-## Tracing
-
-### Trace Context
-
-Events include tracing identifiers:
-
-- `session_id`: Identifies the session
-- `request_id`: Identifies a single prompt/response cycle
-- `span_id`: Identifies a specific operation
-
-### Sub-Session Tracing
-
-When agents spawn sub-sessions, IDs are related:
-
-```
-Parent: session_id=abc123
-  └── Child: session_id=abc123-def456_explorer
-```
-
-## Best Practices
-
-1. **Emit events for important operations**
-2. **Include useful data**: Enough to debug, not too much to be noise
-3. **Use canonical event names**: Follow the `component:action` pattern
-4. **Handle hook results**: Check for `deny` and `inject_context`
-5. **Aggregate logs centrally**: For production debugging
-
-## References
-
-- **→ [Hooks API](https://github.com/microsoft/amplifier-core/blob/main/docs/HOOKS_API.md)** - Complete hook API
-- **→ [Hooks Events](https://github.com/microsoft/amplifier-core/blob/main/docs/HOOKS_EVENTS.md)** - Event reference
-- **→ [Hook Patterns](https://github.com/microsoft/amplifier-core/blob/main/docs/guides/HOOK_PATTERNS.md)** - Common patterns
+See [CONTRIBUTION_CHANNELS.md](https://github.com/microsoft/amplifier-core/blob/main/docs/specs/CONTRIBUTION_CHANNELS.md) for the complete specification.

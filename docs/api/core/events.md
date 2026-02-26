@@ -18,9 +18,15 @@ Events follow a `namespace:action` naming convention.
 | Event | Description |
 |-------|-------------|
 | `session:start` | Session initialized |
+| `session:start:debug` | Session start with debug details |
+| `session:start:raw` | Session start with raw data |
 | `session:end` | Session cleanup complete |
 | `session:fork` | Child session created |
+| `session:fork:debug` | Session fork with debug details |
+| `session:fork:raw` | Session fork with raw data |
 | `session:resume` | Session resumed |
+| `session:resume:debug` | Session resume with debug details |
+| `session:resume:raw` | Session resume with raw data |
 
 ### Prompt Events
 
@@ -43,8 +49,15 @@ Events follow a `namespace:action` naming convention.
 | `provider:request` | LLM request initiated |
 | `provider:response` | LLM response received |
 | `provider:error` | LLM request failed |
+| `provider:retry` | Retry attempt before LLM call |
+| `provider:throttle` | Pre-emptive throttling triggered |
+| `provider:tool_sequence_repaired` | Tool call sequence repaired |
 | `llm:request` | LLM request (alias) |
+| `llm:request:debug` | LLM request with debug details |
+| `llm:request:raw` | LLM request with raw untruncated data |
 | `llm:response` | LLM response (alias) |
+| `llm:response:debug` | LLM response with debug details |
+| `llm:response:raw` | LLM response with raw untruncated data |
 
 ### Content Block Events
 
@@ -70,65 +83,56 @@ Events follow a `namespace:action` naming convention.
 |-------|-------------|
 | `context:pre_compact` | Before context compaction |
 | `context:post_compact` | After context compaction |
+| `context:compaction` | Context compaction occurred |
 | `context:include` | Content included in context |
 
 ### Orchestrator Events
 
 | Event | Description |
 |-------|-------------|
-| `orchestrator:complete` | Orchestration loop finished |
+| `orchestrator:complete` | Orchestrator execution complete |
+| `execution:start` | Orchestrator execution begins |
+| `execution:end` | Orchestrator execution completes |
 
 ### User Events
 
 | Event | Description |
 |-------|-------------|
-| `user:notification` | User notification |
+| `user:notification` | User notification triggered |
 
 ### Artifact Events
 
 | Event | Description |
 |-------|-------------|
-| `artifact:write` | Artifact written |
-| `artifact:read` | Artifact read |
+| `artifact:write` | Artifact written to storage |
+| `artifact:read` | Artifact read from storage |
 
-### Policy/Approval Events
+### Policy & Approval Events
 
 | Event | Description |
 |-------|-------------|
 | `policy:violation` | Policy violation detected |
-| `approval:required` | User approval needed |
-| `approval:granted` | User approved action |
-| `approval:denied` | User denied action |
+| `approval:required` | Approval requested |
+| `approval:granted` | User approved |
+| `approval:denied` | User denied |
+
+### Cancellation Events
+
+| Event | Description |
+|-------|-------------|
+| `cancel:requested` | Cancellation initiated (graceful or immediate) |
+| `cancel:completed` | Cancellation finalized, session stopping |
 
 ## Usage
 
-Events are emitted via the coordinator's hook registry:
+Hooks subscribe to events:
 
 ```python
-# In a module
-await coordinator.hooks.emit("tool:pre", {
-    "name": "bash",
-    "input": {"command": "ls -la"}
-})
+async def my_hook(event_name, data):
+    if event_name == "tool:pre":
+        print(f"Tool starting: {data['tool_name']}")
 
-# Execute the tool...
-
-await coordinator.hooks.emit("tool:post", {
-    "name": "bash",
-    "result": {"output": "..."}
-})
+coordinator.hooks.register("tool:pre", my_hook)
 ```
 
-## Observability
-
-The `hooks-logging` module subscribes to all events and writes them to JSONL:
-
-```json
-{
-  "ts": "2024-01-15T10:30:00Z",
-  "event": "tool:pre",
-  "data": {"name": "bash", "input": {"command": "ls"}}
-}
-```
-
-See [Event System](../../architecture/events.md) for architecture details.
+See [Hook Contract](../../developer/contracts/hook.md) for details.
