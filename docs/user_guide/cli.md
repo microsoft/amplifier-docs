@@ -77,13 +77,13 @@ amplifier continue [PROMPT]
 
 ```bash
 # Continue with a new prompt
-amplifier continue "Now add tests for that function"
+amplifier continue "And what about tomorrow?"
 
-# Resume interactively
-amplifier continue
+# Continue via stdin (Unix pipes)
+echo "New instruction" | amplifier continue
 
-# Review full history
-amplifier continue --full-history
+# Replay conversation with timing
+amplifier continue --replay
 ```
 
 ### `resume`
@@ -91,29 +91,16 @@ amplifier continue --full-history
 Interactively select and resume a session.
 
 ```bash
-amplifier resume [SESSION_ID]
-```
-
-| Option | Description |
-|--------|-------------|
-| `--limit, -n` | Number of sessions per page (default: 10) |
-| `--force-bundle, -B` | Force a different bundle for this session (experimental) |
-
-**Examples:**
-
-```bash
-# Interactive selection
 amplifier resume
-
-# Resume specific session (partial ID)
-amplifier resume abc123
 ```
+
+Displays a list of recent sessions with interactive selection.
 
 ## Session Management
 
 ### `session list`
 
-List all sessions.
+List recent sessions.
 
 ```bash
 amplifier session list [OPTIONS]
@@ -121,96 +108,45 @@ amplifier session list [OPTIONS]
 
 | Option | Description |
 |--------|-------------|
-| `--limit, -n` | Maximum number of sessions to show (default: 20) |
-| `--all-projects` | Show sessions from all projects |
-| `--project PATH` | Show sessions for specific project path |
-| `--tree, -t SESSION_ID` | Show lineage tree for a session |
-
-**Examples:**
-
-```bash
-# List recent sessions
-amplifier session list
-
-# Show lineage tree
-amplifier session list --tree abc123
-```
+| `--limit, -n` | Number of sessions to show (default: 20) |
+| `--all` | Show all sessions (no limit) |
+| `--output` | Output format: `table`, `json` (default: table) |
 
 ### `session show`
 
-Show detailed session information.
+Show session details.
 
 ```bash
-amplifier session show SESSION_ID [OPTIONS]
+amplifier session show <session-id>
 ```
-
-| Option | Description |
-|--------|-------------|
-| `--detailed, -d` | Show detailed transcript metadata |
 
 ### `session resume`
 
 Resume a specific session.
 
 ```bash
-amplifier session resume SESSION_ID [OPTIONS]
+amplifier session resume <session-id>
 ```
-
-| Option | Description |
-|--------|-------------|
-| `--force-bundle, -B` | Force a different bundle for this session (experimental) |
-| `--no-history` | Skip displaying conversation history |
-| `--full-history` | Show all messages (default: last 10) |
-| `--replay` | Replay conversation with timing simulation |
-| `--replay-speed, -s` | Replay speed multiplier (default: 2.0) |
-| `--show-thinking` | Show thinking blocks in history |
-
-### `session delete`
-
-Delete a session.
-
-```bash
-amplifier session delete SESSION_ID [OPTIONS]
-```
-
-| Option | Description |
-|--------|-------------|
-| `--force, -f` | Skip confirmation |
 
 ### `session fork`
 
 Fork a session at a specific turn.
 
 ```bash
-amplifier session fork SESSION_ID [OPTIONS]
+amplifier session fork <session-id> <turn> [name]
 ```
 
-| Option | Description |
-|--------|-------------|
-| `--at-turn, -t TURN` | Turn number to fork at (default: latest) |
-| `--name, -n NAME` | Custom name/ID for forked session |
-| `--resume, -r` | Resume forked session immediately |
-| `--no-events` | Skip copying events.jsonl |
+### `session delete`
 
-**Examples:**
+Delete a session.
 
 ```bash
-# Interactive turn selection
-amplifier session fork abc123
-
-# Fork at specific turn
-amplifier session fork abc123 --at-turn 3
-
-# Fork with custom name
-amplifier session fork abc123 --at-turn 3 --name "jwt-approach"
-
-# Fork and resume
-amplifier session fork abc123 --at-turn 3 --resume
+amplifier session delete <session-id>
 ```
 
 ### `session cleanup`
 
-Delete sessions older than N days.
+Clean up old sessions.
 
 ```bash
 amplifier session cleanup [OPTIONS]
@@ -218,8 +154,8 @@ amplifier session cleanup [OPTIONS]
 
 | Option | Description |
 |--------|-------------|
-| `--days, -d DAYS` | Delete sessions older than N days (default: 30) |
-| `--force, -f` | Skip confirmation |
+| `--days` | Delete sessions older than N days (default: 30) |
+| `--dry-run` | Show what would be deleted without deleting |
 
 ## Bundle Management
 
@@ -228,52 +164,34 @@ amplifier session cleanup [OPTIONS]
 List available bundles.
 
 ```bash
-amplifier bundle list [OPTIONS]
+amplifier bundle list
 ```
-
-| Option | Description |
-|--------|-------------|
-| `--all, -a` | Show all bundles including dependencies and nested bundles |
 
 ### `bundle show`
 
-Show bundle configuration.
+Show bundle details.
 
 ```bash
-amplifier bundle show BUNDLE_NAME
+amplifier bundle show <name>
 ```
 
 ### `bundle use`
 
-Set the active bundle.
+Set active bundle.
 
 ```bash
-amplifier bundle use BUNDLE_NAME [OPTIONS]
+amplifier bundle use <name> [OPTIONS]
 ```
 
 | Option | Description |
 |--------|-------------|
-| `--local` | Configure locally (just you) |
-| `--project` | Configure for project (team) |
-| `--global` | Configure globally (all projects) |
-
-### `bundle clear`
-
-Clear the active bundle selection.
-
-```bash
-amplifier bundle clear [OPTIONS]
-```
-
-| Option | Description |
-|--------|-------------|
-| `--local` | Clear local configuration |
-| `--project` | Clear project configuration |
-| `--global` | Clear global configuration |
+| `--local` | Set for current directory only |
+| `--project` | Set for current project |
+| `--global` | Set globally (default) |
 
 ### `bundle current`
 
-Show currently active bundle.
+Show active bundle.
 
 ```bash
 amplifier bundle current
@@ -281,111 +199,41 @@ amplifier bundle current
 
 ### `bundle add`
 
-Add a bundle from a source URI.
+Register a bundle.
 
 ```bash
-amplifier bundle add SOURCE_URI [OPTIONS]
+amplifier bundle add <git-url> [OPTIONS]
 ```
 
 | Option | Description |
 |--------|-------------|
-| `--name, -n NAME` | Bundle name (auto-detected if not provided) |
-| `--app` | Register as an app bundle (always composed onto sessions) |
-| `--local` | Add locally (just you) |
-| `--project` | Add for project (team) |
-| `--global` | Add globally (all projects) |
+| `--name` | Alias for the bundle (auto-derived if not provided) |
 
 ### `bundle remove`
 
-Remove a previously added bundle.
+Unregister a bundle.
 
 ```bash
-amplifier bundle remove BUNDLE_NAME [OPTIONS]
+amplifier bundle remove <name>
 ```
 
-| Option | Description |
-|--------|-------------|
-| `--local` | Remove from local configuration |
-| `--project` | Remove from project configuration |
-| `--global` | Remove from global configuration |
+### `bundle clear`
+
+Reset to default bundle (foundation).
+
+```bash
+amplifier bundle clear
+```
 
 ### `bundle update`
 
-Update bundles from their sources.
+Update bundles to latest versions.
 
 ```bash
-amplifier bundle update [BUNDLE_NAME] [OPTIONS]
+amplifier bundle update
 ```
-
-| Option | Description |
-|--------|-------------|
-| `--all` | Update all bundles |
-| `--force, -f` | Force update even if no changes detected |
 
 ## Provider Management
-
-### `provider install`
-
-Install provider modules.
-
-```bash
-amplifier provider install [PROVIDER_IDS...] [OPTIONS]
-```
-
-| Option | Description |
-|--------|-------------|
-| `--all` | Install all known providers |
-| `--quiet, -q` | Suppress progress output (for CI/CD) |
-| `--force` | Reinstall even if already installed |
-
-**Examples:**
-
-```bash
-# Install all providers
-amplifier provider install
-
-# Install specific providers
-amplifier provider install anthropic openai
-
-# Silent install for CI/CD
-amplifier provider install -q
-```
-
-### `provider use`
-
-Configure provider.
-
-```bash
-amplifier provider use PROVIDER_NAME [OPTIONS]
-```
-
-| Option | Description |
-|--------|-------------|
-| `--model MODEL` | Model name (Anthropic/OpenAI/Ollama) |
-| `--deployment NAME` | Deployment name (Azure OpenAI) |
-| `--endpoint URL` | Azure endpoint URL |
-| `--use-azure-cli` | Use Azure CLI auth (Azure OpenAI) |
-| `--local` | Configure locally (just you) |
-| `--project` | Configure for project (team) |
-| `--global` | Configure globally (all projects) |
-| `--yes, -y` | Non-interactive mode (use env vars, skip prompts) |
-
-**Examples:**
-
-```bash
-amplifier provider use anthropic --model claude-opus-4-6 --local
-amplifier provider use openai --model gpt-5.1 --project
-amplifier provider use azure-openai --endpoint https://... --deployment gpt-5.1-codex --use-azure-cli
-amplifier provider use ollama --model llama3
-```
-
-### `provider current`
-
-Show currently active provider.
-
-```bash
-amplifier provider current
-```
 
 ### `provider list`
 
@@ -395,9 +243,39 @@ List available providers.
 amplifier provider list
 ```
 
+### `provider use`
+
+Set active provider.
+
+```bash
+amplifier provider use <name> [OPTIONS]
+```
+
+| Option | Description |
+|--------|-------------|
+| `--local` | Set for current directory only |
+| `--project` | Set for current project |
+| `--global` | Set globally (default) |
+
+### `provider current`
+
+Show active provider.
+
+```bash
+amplifier provider current
+```
+
+### `provider models`
+
+List available models for a provider.
+
+```bash
+amplifier provider models <provider-name>
+```
+
 ### `provider reset`
 
-Remove provider override.
+Reset provider configuration.
 
 ```bash
 amplifier provider reset [OPTIONS]
@@ -405,27 +283,7 @@ amplifier provider reset [OPTIONS]
 
 | Option | Description |
 |--------|-------------|
-| `--local` | Reset local configuration |
-| `--project` | Reset project configuration |
-| `--global` | Reset global configuration |
-
-### `provider models`
-
-List available models for a provider.
-
-```bash
-amplifier provider models [PROVIDER_ID]
-```
-
-If PROVIDER_ID is omitted, uses the currently active provider.
-
-**Examples:**
-
-```bash
-amplifier provider models anthropic
-amplifier provider models openai
-amplifier provider models  # uses current provider
-```
+| `--scope` | Configuration scope: `local`, `project`, `global` |
 
 ## Module Management
 
@@ -434,165 +292,147 @@ amplifier provider models  # uses current provider
 List installed modules.
 
 ```bash
-amplifier module list [OPTIONS]
+amplifier module list
 ```
-
-| Option | Description |
-|--------|-------------|
-| `--type, -t TYPE` | Module type to list: `all`, `orchestrator`, `provider`, `tool`, `agent`, `context`, `hook` (default: all) |
 
 ### `module show`
 
 Show module details.
 
 ```bash
-amplifier module show MODULE_NAME
+amplifier module show <name>
 ```
 
 ### `module add`
 
-Add a module override to settings.
+Add a module.
 
 ```bash
-amplifier module add MODULE_ID [OPTIONS]
+amplifier module add <name> [OPTIONS]
 ```
 
 | Option | Description |
 |--------|-------------|
-| `--source, -s URI` | Source URI (git+https://... or file path) |
-| `--local` | Add locally (just you) |
-| `--project` | Add for project (team) |
-| `--global` | Add globally (all projects) |
+| `--local` | Add for current directory only |
+| `--project` | Add for current project |
+| `--global` | Add globally (default) |
 
 ### `module remove`
 
-Remove a module override.
+Remove a module.
 
 ```bash
-amplifier module remove MODULE_ID [OPTIONS]
+amplifier module remove <name> [OPTIONS]
 ```
 
 | Option | Description |
 |--------|-------------|
-| `--local` | Remove from local configuration |
-| `--project` | Remove from project configuration |
-| `--global` | Remove from global configuration |
+| `--scope` | Configuration scope: `local`, `project`, `global` |
 
 ### `module current`
 
-Show current module configuration.
+Show active modules.
 
 ```bash
 amplifier module current
 ```
 
-### `module update`
+### `module refresh`
 
-Update module from its source.
+Refresh module sources.
 
 ```bash
-amplifier module update MODULE_ID
+amplifier module refresh [name] [OPTIONS]
+```
+
+| Option | Description |
+|--------|-------------|
+| `--mutable-only` | Only refresh mutable sources (branches, not tags) |
+
+### `module check-updates`
+
+Check for module updates.
+
+```bash
+amplifier module check-updates
 ```
 
 ### `module validate`
 
-Validate module structure.
+Validate a module.
 
 ```bash
-amplifier module validate MODULE_PATH
+amplifier module validate <name>
 ```
 
 ### `module override`
 
-Manage module source overrides.
+Override module source.
 
 ```bash
-amplifier module override COMMAND [OPTIONS]
+amplifier module override <name> <source>
 ```
-
-**Commands:**
-- `set MODULE_ID SOURCE_URI` - Set source override
-- `remove MODULE_ID` - Remove source override
-- `list` - List all source overrides
 
 ## Source Management
 
 ### `source add`
 
-Add a source override for a module or bundle.
+Add a source override.
 
 ```bash
-amplifier source add IDENTIFIER SOURCE_URI [OPTIONS]
+amplifier source add <id> <uri> [OPTIONS]
 ```
 
 | Option | Description |
 |--------|-------------|
-| `--local` | Store in local settings |
-| `--project` | Store in project settings |
-| `--global` | Store in user settings |
-| `--module` | Force treating as module (skip auto-detect) |
-| `--bundle` | Force treating as bundle (skip auto-detect) |
-
-**Examples:**
-
-```bash
-# Auto-detect type
-amplifier source add provider-anthropic ~/dev/provider-anthropic
-
-# Force bundle type
-amplifier source add foundation ~/dev/foundation --bundle
-```
+| `--local` | Add for current directory only |
+| `--project` | Add for current project |
+| `--global` | Add globally (default) |
 
 ### `source remove`
 
 Remove a source override.
 
 ```bash
-amplifier source remove IDENTIFIER [OPTIONS]
+amplifier source remove <id> [OPTIONS]
 ```
 
 | Option | Description |
 |--------|-------------|
-| `--local` | Remove from local settings |
-| `--project` | Remove from project settings |
-| `--global` | Remove from user settings |
+| `--scope` | Configuration scope: `local`, `project`, `global` |
 
 ### `source list`
 
-List configured source overrides.
+List source overrides.
 
 ```bash
 amplifier source list
 ```
 
-### `source current`
+### `source show`
 
-Show current source configuration.
+Show source details.
 
 ```bash
-amplifier source current
+amplifier source show <id>
 ```
 
 ## Agent Management
 
 ### `agents list`
 
-List available agents from bundles.
+List available agents.
 
 ```bash
-amplifier agents list [OPTIONS]
+amplifier agents list
 ```
-
-| Option | Description |
-|--------|-------------|
-| `--bundle, -b BUNDLE` | Bundle to list agents from |
 
 ### `agents show`
 
 Show agent configuration.
 
 ```bash
-amplifier agents show AGENT_NAME
+amplifier agents show <name>
 ```
 
 ### `agents dirs`
@@ -605,49 +445,59 @@ amplifier agents dirs
 
 ## Directory Access Control
 
-### `allowed-dirs`
+### `allowed-dirs list`
 
-Manage allowed write directories.
-
-```bash
-amplifier allowed-dirs COMMAND [OPTIONS]
-```
-
-**Commands:**
-- `list` - List allowed write directories
-- `add PATH` - Add directory to allowed list (session scope)
-- `remove PATH` - Remove directory from allowed list (session scope)
-
-| Option | Description |
-|--------|-------------|
-| `--local` | Configure locally |
-| `--project` | Configure for project |
-| `--global` | Configure globally |
-
-### `denied-dirs`
-
-Manage denied write directories.
+List allowed write directories.
 
 ```bash
-amplifier denied-dirs COMMAND [OPTIONS]
+amplifier allowed-dirs list
 ```
 
-**Commands:**
-- `list` - List denied write directories
-- `add PATH` - Add directory to denied list (session scope)
-- `remove PATH` - Remove directory from denied list (session scope)
+### `allowed-dirs add`
 
-| Option | Description |
-|--------|-------------|
-| `--local` | Configure locally |
-| `--project` | Configure for project |
-| `--global` | Configure globally |
+Add an allowed write directory.
+
+```bash
+amplifier allowed-dirs add <path>
+```
+
+### `allowed-dirs remove`
+
+Remove an allowed write directory.
+
+```bash
+amplifier allowed-dirs remove <path>
+```
+
+### `denied-dirs list`
+
+List denied write directories.
+
+```bash
+amplifier denied-dirs list
+```
+
+### `denied-dirs add`
+
+Add a denied write directory.
+
+```bash
+amplifier denied-dirs add <path>
+```
+
+### `denied-dirs remove`
+
+Remove a denied write directory.
+
+```bash
+amplifier denied-dirs remove <path>
+```
 
 ## Tool Management
 
 ### `tool list`
 
-List available tools.
+List tools available in the active bundle.
 
 ```bash
 amplifier tool list [OPTIONS]
@@ -655,91 +505,116 @@ amplifier tool list [OPTIONS]
 
 | Option | Description |
 |--------|-------------|
-| `--bundle BUNDLE` | Bundle to list tools from (default: active bundle) |
+| `--modules` | Show module names (fast, no mount) |
+| `--bundle` | Specify bundle to query |
+| `--output` | Output format: `table`, `json` (default: table) |
 
-### `tool show`
+### `tool info`
 
-Show tool details.
+Show details about a specific tool.
 
 ```bash
-amplifier tool show TOOL_NAME [OPTIONS]
+amplifier tool info <tool-name> [OPTIONS]
 ```
 
 | Option | Description |
 |--------|-------------|
-| `--bundle BUNDLE` | Bundle context (default: active bundle) |
+| `--bundle` | Specify bundle |
+| `--module` | Show module info (fast) |
 
 ### `tool invoke`
 
-Invoke a tool from CLI.
+Invoke a tool directly with arguments.
 
 ```bash
-amplifier tool invoke TOOL_NAME [OPTIONS]
+amplifier tool invoke <tool-name> <arg1>=<value1> [arg2=value2...]
+```
+
+**Examples:**
+
+```bash
+amplifier tool invoke read_file file_path=/tmp/test.txt
+amplifier tool invoke bash command="ls -la"
+amplifier tool invoke web_fetch url="https://example.com"
+```
+
+## Notification Configuration
+
+### `notify status`
+
+Show current notification settings.
+
+```bash
+amplifier notify status
+```
+
+### `notify desktop`
+
+Configure desktop/terminal notifications.
+
+```bash
+amplifier notify desktop --enable [OPTIONS]
+amplifier notify desktop --disable [OPTIONS]
 ```
 
 | Option | Description |
 |--------|-------------|
-| `--args JSON` | Tool arguments as JSON |
-| `--bundle BUNDLE` | Bundle context (default: active bundle) |
+| `--scope` | Configuration scope: `local`, `project`, `global` |
 
-## Configuration
+### `notify ntfy`
+
+Configure ntfy.sh push notifications.
+
+```bash
+amplifier notify ntfy --enable --topic <topic> [OPTIONS]
+amplifier notify ntfy --disable [OPTIONS]
+```
+
+| Option | Description |
+|--------|-------------|
+| `--scope` | Configuration scope: `local`, `project`, `global` |
+
+### `notify reset`
+
+Clear notification settings.
+
+```bash
+amplifier notify reset --all [OPTIONS]
+```
+
+| Option | Description |
+|--------|-------------|
+| `--scope` | Configuration scope: `local`, `project`, `global` |
+
+## Utility Commands
 
 ### `init`
 
-Initialize Amplifier configuration.
+First-time setup wizard.
 
 ```bash
 amplifier init
 ```
 
-Interactive setup for API keys and providers.
-
-### `reset`
-
-Reset Amplifier configuration.
-
-```bash
-amplifier reset
-```
-
-Clears all configuration and returns to first-run state.
-
-### `notify`
-
-Configure notification settings.
-
-```bash
-amplifier notify COMMAND
-```
-
-**Commands:**
-- `status` - Show current notification settings
-- `desktop` - Configure desktop (terminal) notifications
-- `ntfy` - Configure push notifications (ntfy.sh)
-- `reset` - Reset notification configuration
-
-**Examples:**
-
-```bash
-# Check status
-amplifier notify status
-
-# Enable desktop notifications
-amplifier notify desktop --enable
-
-# Configure ntfy.sh notifications
-amplifier notify ntfy --enable
-```
-
-## Utilities
+Guides you through:
+- API key configuration
+- Provider selection
+- Default model settings
 
 ### `update`
 
-Check for updates.
+Update Amplifier and modules.
 
 ```bash
-amplifier update
+amplifier update [OPTIONS]
 ```
+
+| Option | Description |
+|--------|-------------|
+| `--check-only` | Check for updates without installing |
+| `--force` | Force update all sources (skip update detection) |
+| `-y, --yes` | Skip confirmation prompts |
+| `--verbose` | Show detailed multi-line output per source |
 
 ### `version`
 
@@ -749,118 +624,142 @@ Show version information.
 amplifier version
 ```
 
-## Interactive Mode
+### `reset`
 
-Running `amplifier` without a command starts interactive mode:
+Reset Amplifier configuration.
 
 ```bash
-amplifier
+amplifier reset
 ```
 
-**Interactive Commands:**
+## Interactive Mode
+
+When running without a command (`amplifier`), the CLI enters interactive mode with these features:
+
+### Slash Commands
 
 | Command | Description |
 |---------|-------------|
 | `/help` | Show available commands |
 | `/mode <name>` | Set or toggle a mode |
 | `/modes` | List available modes |
-| `/status` | Show session status |
 | `/config` | Show current configuration |
 | `/tools` | List available tools |
 | `/agents` | List available agents |
-| `/allowed-dirs` | Manage allowed write directories |
-| `/denied-dirs` | Manage denied write directories |
+| `/status` | Show session status |
 | `/save [filename]` | Save conversation transcript |
 | `/clear` | Clear conversation context |
+| `/allowed-dirs <action>` | Manage allowed write directories |
+| `/denied-dirs <action>` | Manage denied write directories |
 | `/rename <name>` | Rename current session |
-| `/fork [turn]` | Fork session at turn N |
+| `/fork [turn] [name]` | Fork session at specific turn |
 
-**Mode Shortcuts:**
+### Keyboard Shortcuts
 
-Dynamic shortcuts from mode definitions (e.g., `/plan` → `/mode plan on`)
+| Shortcut | Action |
+|----------|--------|
+| `Ctrl-J` | Insert newline (multi-line input) |
+| `Enter` | Submit prompt |
+| `Ctrl-D` | Exit interactive mode |
+| `Ctrl-C` | Cancel current operation (during execution) |
+| `Ctrl-R` | Search history |
 
-**Key Bindings:**
-- `Ctrl-J` - Insert newline (multi-line input)
-- `Enter` - Submit prompt
-- `Ctrl-D` - Exit
-- `Ctrl-C` - Cancel execution (or confirm exit at prompt)
-- `Ctrl-R` - Search history
+### Mode System
+
+Modes are runtime behavioral modifiers that change how the agent responds:
+
+```bash
+# Activate a mode
+/mode architect
+
+# Deactivate current mode
+/mode off
+
+# List available modes
+/modes
+
+# Mode with immediate prompt
+/mode architect Design a caching system
+```
+
+## Configuration Scopes
+
+Amplifier uses a three-level configuration system:
+
+| Scope | Location | Priority | Use Case |
+|-------|----------|----------|----------|
+| **Local** | `./.amplifier/` | Highest | Directory-specific overrides |
+| **Project** | Project root `.amplifier/` | Medium | Project-wide settings |
+| **Global** | `~/.amplifier/` | Lowest | User defaults |
+
+Settings cascade with local > project > global precedence.
+
+## Session Storage
+
+Sessions are stored in:
+
+```
+~/.amplifier/projects/<project-slug>/sessions/<session-id>/
+├── transcript.jsonl    # Conversation history
+├── metadata.json       # Session metadata
+└── events.jsonl        # Event log
+```
 
 ## Environment Variables
 
-### Agent Overrides
-
-Override agent resolution for testing:
-
-```bash
-export AMPLIFIER_AGENT_ZEN_ARCHITECT=~/test-zen.md
-amplifier run "design system"
-```
-
-Format: `AMPLIFIER_AGENT_<NAME>` (uppercase, dashes → underscores)
-
-### Provider Configuration
-
-See individual provider documentation for provider-specific environment variables.
-
-## Output Formats
-
-### Text Format (Default)
-
-Human-readable markdown output.
-
-### JSON Format
-
-```bash
-amplifier run --output-format json "prompt"
-```
-
-Returns:
-```json
-{
-  "status": "success",
-  "response": "...",
-  "session_id": "...",
-  "bundle": "...",
-  "model": "...",
-  "timestamp": "..."
-}
-```
-
-### JSON-Trace Format
-
-```bash
-amplifier run --output-format json-trace "prompt"
-```
-
-Includes full execution trace with tool calls, timing, and metadata:
-
-```json
-{
-  "status": "success",
-  "response": "...",
-  "session_id": "...",
-  "bundle": "...",
-  "model": "...",
-  "timestamp": "...",
-  "execution_trace": [...],
-  "metadata": {...}
-}
-```
+| Variable | Description |
+|----------|-------------|
+| `ANTHROPIC_API_KEY` | Anthropic API key |
+| `OPENAI_API_KEY` | OpenAI API key |
+| `AZURE_OPENAI_API_KEY` | Azure OpenAI API key |
+| `AZURE_OPENAI_ENDPOINT` | Azure OpenAI endpoint |
+| `GOOGLE_API_KEY` | Google API key |
+| `OLLAMA_HOST` | Ollama server URL |
 
 ## Exit Codes
 
 | Code | Meaning |
-|---------|
+|------|---------|
 | 0 | Success |
-| 1 | Error (validation, runtime, etc.) |
+| 1 | General error |
+| 2 | Invalid arguments |
+| 130 | Interrupted by user (Ctrl+C) |
 
-## Shell Completion
+## Tips
 
-Install shell completion:
+**Unix Piping:**
 
 ```bash
-amplifier --install-completion
+# Send file content as prompt
+cat README.md | amplifier run "Summarize this"
+
+# Chain with other commands
+git diff | amplifier continue
 ```
 
-Auto-detects your shell (bash, zsh, fish) and configures completion.
+**Conversational Single-Shot Workflows:**
+
+```bash
+# Question 1: Start conversation
+$ amplifier run "What's the weather in Seattle?"
+Session ID: a1b2c3d4
+[Response]
+
+# Question 2: Follow-up with context
+$ amplifier continue "And what about tomorrow?"
+✓ Resuming most recent session: a1b2c3d4
+[Response with context from previous question]
+```
+
+**Background Processing:**
+
+```bash
+# Long-running command with timeout increase
+amplifier run --max-tokens 8000 "Analyze this large codebase"
+```
+
+## See Also
+
+- [Installation Guide](../getting_started/installation.md) - Setup instructions
+- [Provider Configuration](../modules/providers/index.md) - Provider-specific settings
+- [Bundle Guide](../developer_guides/foundation/amplifier_foundation/bundle_guide.md) - Creating bundles

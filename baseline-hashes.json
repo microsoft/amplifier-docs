@@ -29,7 +29,7 @@
           "repo": "amplifier-app-cli",
           "path": "pyproject.toml",
           "exists": true,
-          "hash": "a8fbf4132a86c17c"
+          "hash": "7e5b6ce8d5fe7a42"
         }
       ]
     },
@@ -80,7 +80,7 @@
           "repo": "amplifier-app-cli",
           "path": "amplifier_app_cli/main.py",
           "exists": true,
-          "hash": "f31a4a8f11ec7878"
+          "hash": "25045f2f53262c07"
         },
         {
           "repo": "amplifier-app-cli",
@@ -446,7 +446,7 @@
           "repo": "amplifier-app-cli",
           "path": "amplifier_app_cli/main.py",
           "exists": true,
-          "hash": "f31a4a8f11ec7878"
+          "hash": "25045f2f53262c07"
         },
         {
           "repo": "amplifier-app-cli",
@@ -789,7 +789,7 @@
           "repo": "amplifier-app-cli",
           "path": "amplifier_app_cli/main.py",
           "exists": true,
-          "hash": "f31a4a8f11ec7878"
+          "hash": "25045f2f53262c07"
         }
       ]
     },
@@ -852,7 +852,7 @@
           "repo": "amplifier-module-provider-anthropic",
           "path": "amplifier_module_provider_anthropic/__init__.py",
           "exists": true,
-          "hash": "5cf76d53150193b1"
+          "hash": "a404b8fa3b8a0a03"
         },
         {
           "repo": "amplifier-module-provider-anthropic",
@@ -869,7 +869,7 @@
           "repo": "amplifier-module-provider-openai",
           "path": "amplifier_module_provider_openai/__init__.py",
           "exists": true,
-          "hash": "abd58c8e2c42dfa1"
+          "hash": "e4c9630f948634d8"
         },
         {
           "repo": "amplifier-module-provider-openai",
@@ -920,7 +920,7 @@
           "repo": "amplifier-module-provider-vllm",
           "path": "amplifier_module_provider_vllm/__init__.py",
           "exists": true,
-          "hash": "ae7e0d21580860cc"
+          "hash": "0a76ab9714290072"
         },
         {
           "repo": "amplifier-module-provider-vllm",

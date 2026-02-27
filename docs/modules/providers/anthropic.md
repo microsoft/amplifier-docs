@@ -53,23 +53,16 @@ providers:
 | `retry_jitter` | float | 0.2 | Randomness to add to delays (0.0-1.0) |
 | `max_retry_delay` | float | 60.0 | Maximum wait between retries (seconds) |
 | `min_retry_delay` | float | 1.0 | Minimum delay if no retry-after header |
-| `throttle_threshold` | float | 0.02 | Capacity threshold for pre-emptive throttling (0.02 = 2%) |
-| `throttle_delay` | float | 1.0 | Fallback delay when throttling without reset timestamp |
+| `throttle_threshold` | float | 0.02 | Capacity threshold for pre-emptive throttling (2%) |
+| `throttle_delay` | float | 1.0 | Fallback delay when no reset timestamp |
 
-### Extended Thinking
-
-| Option | Type | Default | Description |
-|--------|------|---------|-------------|
-| `thinking_type` | string | `adaptive` | Thinking mode: `adaptive` or `enabled` |
-| `thinking_budget_tokens` | int | (model default) | Token budget for thinking (when type is `enabled`) |
-| `thinking_budget_buffer` | int | 4096 | Buffer tokens for response after thinking |
-
-### Web Search
+### Debug Options
 
 | Option | Type | Default | Description |
 |--------|------|---------|-------------|
-| `web_search_max_uses` | int | (none) | Limit number of searches per request |
-| `web_search_user_location` | object | (none) | User location for location-aware results |
+| `debug` | bool | `false` | Enable standard debug events |
+| `raw_debug` | bool | `false` | Enable ultra-verbose raw API I/O logging |
+| `debug_truncate_length` | int | 180 | Max string length in debug logs |
 
 ### Beta Headers
 
@@ -77,98 +70,194 @@ providers:
 |--------|------|---------|-------------|
 | `beta_headers` | string or list | (none) | Anthropic beta feature headers |
 
-**Example:**
-
-```yaml
-providers:
-  - module: provider-anthropic
-    config:
-      default_model: claude-sonnet-4-5
-      beta_headers: "context-1m-2025-08-07"  # Single header
-      # OR
-      beta_headers:
-        - "context-1m-2025-08-07"
-        - "interleaved-thinking-2025-05-14"
-```
-
-**Note**: The `enable_1m_context` boolean automatically adds the `context-1m-2025-08-07` beta header.
-
-### Debug & Observability
-
-| Option | Type | Default | Description |
-|--------|------|---------|-------------|
-| `debug` | bool | `false` | Enable standard debug events (`llm:request:debug`, `llm:response:debug`) |
-| `raw_debug` | bool | `false` | Enable ultra-verbose raw API I/O logging (`llm:request:raw`, `llm:response:raw`) |
-| `debug_truncate_length` | int | 180 | Maximum string length in debug logs |
-
 ## Supported Models
 
 - `claude-sonnet-4-5` - Claude Sonnet 4.5 (recommended, default)
-- `claude-opus-4-6` - Claude Opus 4.6 (most capable, 128K output)
+- `claude-opus-4-6` - Claude Opus 4.6 (most capable)
 - `claude-haiku-4-5` - Claude Haiku 4.5 (fastest, cheapest)
-
-### Model Capabilities
-
-| Family | Context | Max Output | 1M Context | Thinking | Adaptive Thinking |
-|--------|---------|------------|------------|----------|-------------------|
-| Opus 4.6+ | 200K (1M with beta) | 128K | ✓ | ✓ | ✓ |
-| Sonnet 4.5+ | 200K (1M with beta) | 64K | ✓ | ✓ | ✗ |
-| Haiku 4.5+ | 200K | 64K | ✗ | ✓ | ✗ |
 
 ## Features
 
 ### Streaming Support
 
-Uses streaming API by default to support large context windows. Anthropic requires streaming for operations that may take > 10 minutes (e.g., 300k+ token contexts).
-
-### Tool Calling
-
-Full support for function calling with automatic validation and repair of broken tool call sequences.
-
-### Extended Thinking
-
-Supports Anthropic's extended thinking mode (equivalent to OpenAI's reasoning):
-
-- **Adaptive mode**: Model controls its own thinking budget (Opus 4.6+ only)
-- **Enabled mode**: Explicit token budget for thinking
-- **Interleaved thinking**: Automatically enabled when extended thinking is active
+Streaming is enabled by default (`use_streaming: true`) and is required for large context windows. Anthropic requires streaming for operations that may take > 10 minutes.
 
 ### Prompt Caching
 
-When enabled (default), automatically adds cache control markers to:
-- Last system message block
-- Last tool definition
-- Last message in conversation
+Enabled by default (`enable_prompt_caching: true`). Reduces cost by 90% on cached tokens.
 
-Provides 90% cost reduction on cached tokens.
+**How it works:**
+- Cache breakpoints added to last system message and last tool definition
+- Subsequent requests with identical prefixes reuse cached tokens
+- Automatic cache management by Anthropic API
 
 ### Native Web Search
 
-When `enable_web_search: true`, adds Anthropic's native `web_search_20250305` tool for current information retrieval.
+Enable Claude's built-in web search capability:
 
-### Graceful Error Recovery
+```yaml
+config:
+  enable_web_search: true
+  web_search_max_uses: 5  # Optional: limit searches per request
+```
 
-Automatically detects and repairs missing tool results in conversation history by injecting synthetic error results. Emits `provider:tool_sequence_repaired` events for monitoring.
+### 1M Context Window
 
-## Events
+Enable 1M token context window for Sonnet 4.5 and Opus 4.6:
 
-### Standard Events
+```yaml
+config:
+  enable_1m_context: true
+  # Automatically sets beta_headers: "context-1m-2025-08-07"
+```
 
-- `llm:request` - API call initiated (summary)
-- `llm:response` - API response received (with usage and rate limit info)
-- `provider:retry` - Retry attempt (with delay and error details)
-- `provider:throttle` - Pre-emptive throttling triggered
-- `provider:tool_sequence_repaired` - Tool call sequence repaired
+**Note:** This uses Anthropic's beta header `context-1m-2025-08-07`.
 
-### Debug Events
+### Extended Thinking
 
-When `debug: true`:
-- `llm:request:debug` - Full request with truncated values
-- `llm:response:debug` - Full response with truncated values
+Support for Claude's extended thinking (reasoning) mode:
 
-When `debug: true` and `raw_debug: true`:
-- `llm:request:raw` - Complete untruncated request params
-- `llm:response:raw` - Complete untruncated response object
+```yaml
+# Via config
+config:
+  thinking_type: "adaptive"  # or "enabled"
+  thinking_budget_tokens: 32000
+
+# Or via runtime request
+request = ChatRequest(
+    messages=[...],
+    reasoning_effort="high"  # Portable interface
+)
+```
+
+### Beta Headers
+
+Enable experimental Anthropic features:
+
+```yaml
+# Single header
+config:
+  beta_headers: "context-1m-2025-08-07"
+
+# Multiple headers
+config:
+  beta_headers:
+    - "context-1m-2025-08-07"
+    - "interleaved-thinking-2025-05-14"
+```
+
+Available beta headers:
+- `context-1m-2025-08-07` - 1M token context window
+- `interleaved-thinking-2025-05-14` - Thinking between tool calls
+
+## Rate Limiting
+
+### Automatic Retry
+
+The provider uses exponential backoff with jitter for rate limit (429) and server (5xx) errors:
+
+```yaml
+config:
+  max_retries: 5           # Retry attempts (default: 5)
+  retry_jitter: 0.2        # Randomness in delays (default: 0.2)
+  min_retry_delay: 1.0     # Minimum delay (default: 1.0s)
+  max_retry_delay: 60.0    # Maximum delay (default: 60.0s)
+```
+
+### Pre-emptive Throttling
+
+When rate limit capacity falls below threshold, the provider automatically throttles requests:
+
+```yaml
+config:
+  throttle_threshold: 0.02  # Throttle at 2% remaining (default)
+  throttle_delay: 1.0       # Fallback delay if no reset time
+```
+
+**How it works:**
+- Tracks rate limit headers from every response
+- Monitors three dimensions: requests, input tokens, output tokens
+- Injects delay when most constrained dimension falls below threshold
+- Emits `provider:throttle` event for observability
+
+## Debugging
+
+### Standard Debug
+
+Enable summary logging with moderate detail:
+
+```yaml
+config:
+  debug: true
+```
+
+Emits:
+- `llm:request:debug` - Request summaries with truncated values
+- `llm:response:debug` - Response summaries with usage stats
+
+### Raw Debug
+
+Enable complete API I/O logging:
+
+```yaml
+config:
+  debug: true
+  raw_debug: true
+```
+
+Emits:
+- `llm:request:raw` - Complete unmodified request params
+- `llm:response:raw` - Complete unmodified response objects
+
+**Warning:** Extreme log volume. Use only for deep debugging.
+
+## Graceful Error Recovery
+
+The provider automatically repairs incomplete tool call sequences:
+
+**The Problem**: Missing tool results (from context bugs) cause API rejection.
+
+**The Solution**: Automatic detection and synthetic result injection.
+
+**How it works:**
+1. Detects missing tool_results before API call
+2. Injects synthetic results with `[SYSTEM ERROR: Tool result missing]` message
+3. API accepts repaired messages, session continues
+4. LLM acknowledges error and can ask user to retry
+5. Emits `provider:tool_sequence_repaired` event
+
+**Observability**: Repairs logged as warnings with tool call IDs.
+
+## Environment Variables
+
+```bash
+export ANTHROPIC_API_KEY="your-api-key-here"
+```
+
+## Usage Example
+
+```python
+from amplifier_core import AmplifierSession
+
+config = {
+    "session": {
+        "orchestrator": "loop-basic",
+        "context": "context-simple"
+    },
+    "providers": [{
+        "module": "provider-anthropic",
+        "config": {
+            "api_key": "your-key",
+            "default_model": "claude-sonnet-4-5",
+            "enable_prompt_caching": True
+        }
+    }]
+}
+
+async with AmplifierSession(config=config) as session:
+    response = await session.execute("Hello!")
+    print(response)
+```
 
 ## Repository
 

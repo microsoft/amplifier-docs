@@ -27,12 +27,22 @@ providers:
 | Option | Type | Default | Description |
 |--------|------|---------|-------------|
 | `base_url` | string | (required) | vLLM server URL |
-| `default_model` | string | - | Model name from vLLM |
+| `default_model` | string | `openai/gpt-oss-20b` | Model name from vLLM |
 | `max_tokens` | int | `4096` | Maximum output tokens |
-| `temperature` | float | `0.7` | Sampling temperature |
-| `reasoning` | string | `high` | Reasoning effort: minimal, low, medium, high |
-| `reasoning_summary` | string | `detailed` | Summary verbosity: auto, concise, detailed |
-| `timeout` | float | `300.0` | API timeout (seconds) |
+| `temperature` | float | null | Sampling temperature; null = not sent (some models don't support it) |
+| `reasoning` | string | null | Reasoning effort: `minimal\|low\|medium\|high`; null = not sent |
+| `reasoning_summary` | string | `detailed` | Summary verbosity: `auto\|concise\|detailed` |
+| `truncation` | string | `auto` | Automatic context management |
+| `enable_state` | boolean | `false` | Enable stateful conversations (requires vLLM config) |
+| `timeout` | float | `600.0` | API timeout (seconds) |
+| `priority` | int | 100 | Provider priority for selection |
+| `debug` | boolean | `false` | Enable standard debug events |
+| `raw_debug` | boolean | `false` | Enable ultra-verbose raw API I/O logging |
+| `debug_truncate_length` | int | 180 | Max string length in debug logs |
+| `max_retries` | int | 5 | Retry attempts before failing |
+| `retry_jitter` | float | 0.2 | Randomness in retry delays (0.0-1.0) |
+| `min_retry_delay` | float | 1.0 | Minimum delay between retries |
+| `max_retry_delay` | float | 60.0 | Maximum delay between retries |
 
 ## Features
 

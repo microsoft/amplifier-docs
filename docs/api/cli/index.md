@@ -57,17 +57,25 @@ amplifier-app-cli/
 │   ├── bundle.py       # Bundle commands
 │   ├── provider.py     # Provider commands
 │   ├── module.py       # Module commands
-│   ├── source.py       # Source override commands
+│   ├── source.py       # Source commands
 │   ├── agents.py       # Agent commands
-│   ├── allowed_dirs.py # Allowed directory commands
-│   ├── denied_dirs.py  # Denied directory commands
 │   ├── tool.py         # Tool commands
 │   ├── notify.py       # Notification commands
-│   ├── init.py         # Init command
+│   ├── init.py         # Initialization wizard
 │   ├── update.py       # Update command
 │   ├── version.py      # Version command
 │   └── reset.py        # Reset command
-└── utils/              # CLI utilities
+├── session_runner.py    # Session initialization
+├── session_spawner.py   # Agent delegation
+├── session_store.py     # Session persistence
+└── console.py           # Rich console utilities
 ```
 
-For implementation details, see the [source repository](https://github.com/microsoft/amplifier-app-cli).
+## Key Modules
+
+- **Commands** - Command-line interface implementations
+- **Session Management** - Session creation, persistence, and resumption
+- **Agent Delegation** - Sub-session spawning and resumption
+- **Display** - Rich console formatting and output
+
+See [CLI Case Study](../../developer_guides/applications/cli_case_study.md) for architectural details.

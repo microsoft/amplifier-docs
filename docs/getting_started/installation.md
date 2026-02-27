@@ -100,11 +100,7 @@ amplifier provider use openai
 ```bash
 export AZURE_OPENAI_API_KEY="your-key"
 export AZURE_OPENAI_ENDPOINT="https://your-resource.openai.azure.com"
-
-# Or use Azure CLI authentication instead of API key
-export AZURE_USE_DEFAULT_CREDENTIAL="true"
-
-amplifier provider use azure
+amplifier provider use azure-openai
 ```
 
 ### Google Gemini
@@ -114,123 +110,37 @@ export GOOGLE_API_KEY="your-key"
 amplifier provider use google
 ```
 
-### Ollama (Local)
-
-No API key needed - runs locally:
+### Ollama (Local, No API Key)
 
 ```bash
 # Install Ollama first: https://ollama.ai
 ollama pull llama3.2:3b
-
 amplifier provider use ollama
 ```
 
-For remote Ollama servers:
+## Supported Providers
+
+- **Anthropic Claude** - Recommended, most tested (Sonnet, Opus models)
+- **OpenAI** - Good alternative (GPT-4o, GPT-4o-mini, o1 models)
+- **Azure OpenAI** - Enterprise users with Azure subscriptions
+- **Google Gemini** - Google's AI models with large context windows (Gemini 2.5 Flash, Pro)
+- **Ollama** - Local, free, no API key needed
+
+## Update Amplifier
 
 ```bash
-export OLLAMA_HOST="http://your-server:11434"
-amplifier provider use ollama
-```
-
-The kernel validates module configurations at load time, ensuring your setup is correct before execution.
-
-## Context Window Management
-
-Providers report their model's context window size and max output tokens at runtime, enabling automatic token budget management. Amplifier automatically manages context, compacting older messages when conversations approach limits while preserving system instructions and recent exchanges.
-
-## Updating
-
-```bash
-# Check for updates
-amplifier update --check-only
-
-# Update Amplifier and all modules
+# Check for updates and install
 amplifier update
 
-# Force update (skip version detection)
-amplifier update --force
-```
+# Check only (don't install)
+amplifier update --check-only
 
-## Verifying Installation
-
-```bash
-# Check version
-amplifier --version
-
-# Check current configuration
-amplifier provider current
-amplifier bundle current
-
-# Test with a simple prompt
-amplifier run "Hello, world!"
-```
-
-## Troubleshooting
-
-### "Command not found"
-
-Ensure UV tools are in your PATH:
-
-```bash
-# Add to ~/.bashrc or ~/.zshrc
-export PATH="$HOME/.local/bin:$PATH"
-```
-
-### API Key Issues
-
-```bash
-# Verify key is set
-echo $ANTHROPIC_API_KEY
-
-# Re-run init to reconfigure
-amplifier init
-```
-
-### Module Loading Errors
-
-```bash
-# Refresh modules
-amplifier module refresh
-
-# Check module status
-amplifier module list
-```
-
-### Permission Issues
-
-```bash
-# Check file permissions
-ls -la ~/.amplifier/
-
-# Reset configuration
-rm -rf ~/.amplifier/config.yaml
-amplifier init
-```
-
-## Development Setup
-
-For contributing to Amplifier:
-
-```bash
-# Clone repository
-git clone https://github.com/microsoft/amplifier.git
-cd amplifier
-
-# Install in development mode
-uv pip install -e .
-
-# Run tests
-uv run pytest
+# Skip confirmation prompts
+amplifier update -y
 ```
 
 ## Next Steps
 
-- **[Getting Started](index.md)** - Basic usage guide
-- **[CLI User Guide](../user_guide/)** - Complete command reference
-- **[Configuration](../user_guide/configuration.md)** - Advanced configuration
-
-## References
-
-> **Note**: The Amplifier CLI is a **reference implementation**. You can use it as-is, fork it, or build your own CLI using amplifier-core.
-
-- **→ [CLI README](https://github.com/microsoft/amplifier/blob/main/README.md)** - Full CLI documentation
+- [CLI Reference](../user_guide/cli.md) - Complete command documentation
+- [Provider Configuration](../modules/providers/index.md) - Detailed provider setup
+- [Getting Started Tutorial](../tutorials/getting_started.md) - First steps with Amplifier
