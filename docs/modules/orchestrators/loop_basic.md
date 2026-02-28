@@ -19,7 +19,6 @@ orchestrators:
     source: git+https://github.com/microsoft/amplifier-module-loop-basic@main
     config:
       max_iterations: -1
-      timeout: 300
 ```
 
 ## Configuration
@@ -27,7 +26,8 @@ orchestrators:
 | Option | Type | Default | Description |
 |--------|------|---------|-------------|
 | `max_iterations` | int | `-1` | Maximum iterations (-1 = unlimited) |
-| `timeout` | int | `300` | Timeout in seconds |
+| `extended_thinking` | bool | `false` | Enable extended thinking for compatible providers |
+| `reasoning_effort` | string | - | Reasoning effort passed to ChatRequest (`low`/`medium`/`high`) |
 
 ## Behavior
 

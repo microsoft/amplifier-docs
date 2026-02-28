@@ -53,8 +53,9 @@ providers:
 | `retry_jitter` | float | 0.2 | Randomness to add to delays (0.0-1.0) |
 | `max_retry_delay` | float | 60.0 | Maximum wait between retries (seconds) |
 | `min_retry_delay` | float | 1.0 | Minimum delay if no retry-after header |
-| `throttle_threshold` | float | 0.02 | Capacity threshold for pre-emptive throttling (2%) |
-| `throttle_delay` | float | 1.0 | Fallback delay when no reset timestamp |
+| `throttle_threshold` | float | 0.02 | Pre-emptive throttle threshold (2% remaining capacity) |
+| `throttle_delay` | float | 1.0 | Fallback throttle delay (seconds) |
+| `overloaded_delay_multiplier` | float | 10.0 | Multiplier for 529 Overloaded errors |
 
 ### Debug Options
 
@@ -64,200 +65,202 @@ providers:
 | `raw_debug` | bool | `false` | Enable ultra-verbose raw API I/O logging |
 | `debug_truncate_length` | int | 180 | Max string length in debug logs |
 
-### Beta Headers
+**Standard Debug** (`debug: true`):
+- Emits `llm:request:debug` and `llm:response:debug` events
+- Contains request/response summaries with message counts, model info, usage stats
+- Moderate log volume, suitable for development
 
-| Option | Type | Default | Description |
-|--------|------|---------|-------------|
-| `beta_headers` | string or list | (none) | Anthropic beta feature headers |
+**Raw Debug** (`debug: true, raw_debug: true`):
+- Emits `llm:request:raw` and `llm:response:raw` events
+- Contains complete, unmodified request params and response objects
+- Extreme log volume, use only for deep provider integration debugging
+- Captures the exact data sent to/from Anthropic API before any processing
+
+## Retry and Error Handling
+
+The provider disables SDK built-in retries (`max_retries=0`) and manages retries itself via `amplifier_core.utils.retry.retry_with_backoff()`. This gives the provider full control over backoff timing, retry-after header honoring, and per-error-class delay scaling.
+
+### Error Translation
+
+SDK exceptions are translated to kernel errors before the retry loop sees them. All translations preserve the original exception as `__cause__` for debugging.
+
+| SDK Exception | Condition | Kernel Error | Status | Retryable |
+| --- | --- | --- | --- | --- |
+| `RateLimitError` | 429 | `RateLimitError` | 429 | Yes |
+| `OverloadedError` | 529 | `ProviderUnavailableError` | 529 | Yes (10× backoff) |
+| `InternalServerError` | 5xx | `ProviderUnavailableError` | 5xx | Yes |
+| `AuthenticationError` | 401 | `AuthenticationError` | 401 | No |
+| `BadRequestError` | context length / too many tokens | `ContextLengthError` | 400 | No |
+| `BadRequestError` | safety / content filter / blocked | `ContentFilterError` | 400 | No |
+| `BadRequestError` | other | `InvalidRequestError` | 400 | No |
+| `APIStatusError` | 403 | `AccessDeniedError` | 403 | No |
+| `APIStatusError` | 404 | `NotFoundError` | 404 | No |
+| `APIStatusError` | other non-5xx | `LLMError` | — | No |
+| `asyncio.TimeoutError` | — | `LLMTimeoutError` | — | Yes |
+| Other | — | `LLMError` | — | Yes |
+
+### Backoff Formula
+
+Each retry delay is computed as follows:
+
+```
+base_delay   = min_retry_delay × 2^(attempt - 1)
+capped_delay = min(base_delay, max_retry_delay)
+scaled_delay = capped_delay × delay_multiplier          # 1.0 for most errors, 10.0 for 529
+final_delay  = max(scaled_delay, retry_after)            # server retry-after as floor
+sleep        = final_delay ± (final_delay × jitter)      # randomised ± jitter fraction
+```
+
+**Example: 529 Overloaded (10× multiplier, defaults)**
+
+| Attempt | base_delay | capped | ×10 | Sleep |
+| --- | --- | --- | --- | --- |
+| 1 | 1s | 1s | 10s | 10s |
+| 2 | 2s | 2s | 20s | 20s |
+| 3 | 4s | 4s | 40s | 40s |
+| 4 | 8s | 8s | 80s | 80s |
+| 5 | 16s | 16s | 160s | 160s |
+
+Total wait ≈ 310s (~5 min) before the request is abandoned.
+
+### Retry Configuration
+
+```yaml
+providers:
+  - module: provider-anthropic
+    config:
+      max_retries: 5
+      min_retry_delay: 1.0
+      max_retry_delay: 60.0
+      retry_jitter: 0.2
+      overloaded_delay_multiplier: 10.0
+```
+
+### Events
+
+A `provider:retry` event is emitted before each retry sleep with the following fields:
+
+| Field | Description |
+| --- | --- |
+| `provider` | Provider name (`"anthropic"`) |
+| `model` | Model being called |
+| `attempt` | Current retry attempt number |
+| `max_retries` | Configured maximum retries |
+| `delay` | Computed sleep duration in seconds |
+| `retry_after` | Server retry-after value (or `null`) |
+| `error_type` | Kernel error class name |
+| `error_message` | Error description |
+
+## Beta Headers
+
+Anthropic provides experimental features through beta headers. Enable these features by adding the `beta_headers` configuration field.
+
+### Configuration
+
+**Single beta header:**
+```yaml
+providers:
+  - module: provider-anthropic
+    config:
+      default_model: claude-sonnet-4-5
+      beta_headers: "context-1m-2025-08-07"  # Enable 1M token context window
+```
+
+**Multiple beta headers:**
+```yaml
+providers:
+  - module: provider-anthropic
+    config:
+      default_model: claude-sonnet-4-5
+      beta_headers:
+        - "context-1m-2025-08-07"
+        - "future-feature-header"
+```
+
+### 1M Token Context Window
+
+Claude Sonnet 4.5 supports a 1M token context window when the `context-1m-2025-08-07` beta header is enabled:
+
+```yaml
+providers:
+  - module: provider-anthropic
+    config:
+      default_model: claude-sonnet-4-5
+      beta_headers: "context-1m-2025-08-07"
+      max_tokens: 8192  # Output tokens remain separate from context window
+```
+
+With this configuration:
+- **Context window**: Up to 1M tokens of input (messages, tools, system prompt)
+- **Output tokens**: Controlled by `max_tokens` (separate from context window)
+- **Use case**: Process large codebases, extensive documentation, or long conversation histories
+
+### Notes
+
+- Beta features are experimental and subject to change
+- Check [Anthropic's documentation](https://docs.anthropic.com) for available beta headers
+- Beta headers are optional - existing configurations work unchanged
+- Invalid beta headers will cause API errors (fail fast)
+- Beta header usage is logged at initialization for observability
+
+## Graceful Error Recovery
+
+The provider implements automatic repair for incomplete tool call sequences:
+
+**The Problem**: If tool results are missing from conversation history (due to context compaction bugs, parsing errors, or state corruption), the Anthropic API rejects the entire request, breaking the user's session.
+
+**The Solution**: The provider automatically detects and repairs missing tool_results by injecting synthetic results:
+
+1. **Repair before validation** - Detects missing tool_results and injects synthetic ones
+2. **Make failures visible** - Synthetic results contain `[SYSTEM ERROR: Tool result missing]` messages
+3. **Maintain conversation validity** - API accepts repaired messages, session continues
+4. **Enable recovery** - LLM acknowledges error and can ask user to retry
+5. **Provide observability** - Emits `provider:tool_sequence_repaired` event with repair details
+6. **Validate remaining** - After repair, strict validation catches any remaining inconsistencies
+
+**Example**:
+```python
+# Anthropic format (after _convert_messages)
+messages = [
+    {
+        "role": "assistant",
+        "content": [
+            {"type": "tool_use", "id": "toolu_123", "name": "get_weather", "input": {...}}
+        ]
+    },
+    # MISSING: {"role": "user", "content": [{"type": "tool_result", "tool_use_id": "toolu_123", ...}]}
+    {"role": "user", "content": "Thanks"}
+]
+
+# Provider repairs by injecting synthetic result:
+# Either appends to existing user message or inserts new one
+{
+    "role": "user",
+    "content": [{
+        "type": "tool_result",
+        "tool_use_id": "toolu_123",
+        "content": "[SYSTEM ERROR: Tool result missing]\n\nTool: get_weather\n..."
+    }]
+}
+```
+
+**Observability**: Repairs are logged as warnings and emit `provider:tool_sequence_repaired` events for monitoring.
+
+**Philosophy**: This is **graceful degradation** following kernel philosophy - errors in other modules (context management) don't crash the provider or kill the user's session.
+
+## Features
+
+- Streaming support
+- Tool use (function calling)
+- Vision capabilities (on supported models)
+- Token counting and management
+- Message validation before API calls (defense in depth)
 
 ## Supported Models
 
 - `claude-sonnet-4-5` - Claude Sonnet 4.5 (recommended, default)
 - `claude-opus-4-6` - Claude Opus 4.6 (most capable)
 - `claude-haiku-4-5` - Claude Haiku 4.5 (fastest, cheapest)
-
-## Features
-
-### Streaming Support
-
-Streaming is enabled by default (`use_streaming: true`) and is required for large context windows. Anthropic requires streaming for operations that may take > 10 minutes.
-
-### Prompt Caching
-
-Enabled by default (`enable_prompt_caching: true`). Reduces cost by 90% on cached tokens.
-
-**How it works:**
-- Cache breakpoints added to last system message and last tool definition
-- Subsequent requests with identical prefixes reuse cached tokens
-- Automatic cache management by Anthropic API
-
-### Native Web Search
-
-Enable Claude's built-in web search capability:
-
-```yaml
-config:
-  enable_web_search: true
-  web_search_max_uses: 5  # Optional: limit searches per request
-```
-
-### 1M Context Window
-
-Enable 1M token context window for Sonnet 4.5 and Opus 4.6:
-
-```yaml
-config:
-  enable_1m_context: true
-  # Automatically sets beta_headers: "context-1m-2025-08-07"
-```
-
-**Note:** This uses Anthropic's beta header `context-1m-2025-08-07`.
-
-### Extended Thinking
-
-Support for Claude's extended thinking (reasoning) mode:
-
-```yaml
-# Via config
-config:
-  thinking_type: "adaptive"  # or "enabled"
-  thinking_budget_tokens: 32000
-
-# Or via runtime request
-request = ChatRequest(
-    messages=[...],
-    reasoning_effort="high"  # Portable interface
-)
-```
-
-### Beta Headers
-
-Enable experimental Anthropic features:
-
-```yaml
-# Single header
-config:
-  beta_headers: "context-1m-2025-08-07"
-
-# Multiple headers
-config:
-  beta_headers:
-    - "context-1m-2025-08-07"
-    - "interleaved-thinking-2025-05-14"
-```
-
-Available beta headers:
-- `context-1m-2025-08-07` - 1M token context window
-- `interleaved-thinking-2025-05-14` - Thinking between tool calls
-
-## Rate Limiting
-
-### Automatic Retry
-
-The provider uses exponential backoff with jitter for rate limit (429) and server (5xx) errors:
-
-```yaml
-config:
-  max_retries: 5           # Retry attempts (default: 5)
-  retry_jitter: 0.2        # Randomness in delays (default: 0.2)
-  min_retry_delay: 1.0     # Minimum delay (default: 1.0s)
-  max_retry_delay: 60.0    # Maximum delay (default: 60.0s)
-```
-
-### Pre-emptive Throttling
-
-When rate limit capacity falls below threshold, the provider automatically throttles requests:
-
-```yaml
-config:
-  throttle_threshold: 0.02  # Throttle at 2% remaining (default)
-  throttle_delay: 1.0       # Fallback delay if no reset time
-```
-
-**How it works:**
-- Tracks rate limit headers from every response
-- Monitors three dimensions: requests, input tokens, output tokens
-- Injects delay when most constrained dimension falls below threshold
-- Emits `provider:throttle` event for observability
-
-## Debugging
-
-### Standard Debug
-
-Enable summary logging with moderate detail:
-
-```yaml
-config:
-  debug: true
-```
-
-Emits:
-- `llm:request:debug` - Request summaries with truncated values
-- `llm:response:debug` - Response summaries with usage stats
-
-### Raw Debug
-
-Enable complete API I/O logging:
-
-```yaml
-config:
-  debug: true
-  raw_debug: true
-```
-
-Emits:
-- `llm:request:raw` - Complete unmodified request params
-- `llm:response:raw` - Complete unmodified response objects
-
-**Warning:** Extreme log volume. Use only for deep debugging.
-
-## Graceful Error Recovery
-
-The provider automatically repairs incomplete tool call sequences:
-
-**The Problem**: Missing tool results (from context bugs) cause API rejection.
-
-**The Solution**: Automatic detection and synthetic result injection.
-
-**How it works:**
-1. Detects missing tool_results before API call
-2. Injects synthetic results with `[SYSTEM ERROR: Tool result missing]` message
-3. API accepts repaired messages, session continues
-4. LLM acknowledges error and can ask user to retry
-5. Emits `provider:tool_sequence_repaired` event
-
-**Observability**: Repairs logged as warnings with tool call IDs.
-
-## Environment Variables
-
-```bash
-export ANTHROPIC_API_KEY="your-api-key-here"
-```
-
-## Usage Example
-
-```python
-from amplifier_core import AmplifierSession
-
-config = {
-    "session": {
-        "orchestrator": "loop-basic",
-        "context": "context-simple"
-    },
-    "providers": [{
-        "module": "provider-anthropic",
-        "config": {
-            "api_key": "your-key",
-            "default_model": "claude-sonnet-4-5",
-            "enable_prompt_caching": True
-        }
-    }]
-}
-
-async with AmplifierSession(config=config) as session:
-    response = await session.execute("Hello!")
-    print(response)
-```
 
 ## Repository
 

@@ -51,8 +51,12 @@ providers:
 - **Tool calling** - Complete tool integration
 - **No API key required** - Works with local vLLM servers
 - **OpenAI-compatible** - Uses OpenAI SDK under the hood
+- **Automatic continuation** - Handles incomplete responses transparently
+- **Graceful error recovery** - Automatic repair of missing tool results
 
 ## vLLM Server Setup
+
+Requires a running vLLM server (v0.10.1+):
 
 ```bash
 # Start vLLM server
@@ -60,31 +64,6 @@ vllm serve openai/gpt-oss-20b \
   --host 0.0.0.0 \
   --port 8000 \
   --tensor-parallel-size 2
-```
-
-**Requirements:**
-
-- vLLM version: ≥0.10.1
-- Any model compatible with vLLM (gpt-oss, Llama, Qwen, etc.)
-
-## Usage
-
-```bash
-# Configure in profile
-providers:
-  - module: provider-vllm
-    config:
-      base_url: "http://localhost:8000/v1"
-      default_model: "openai/gpt-oss-20b"
-      reasoning: "high"
-```
-
-## Debugging
-
-```yaml
-config:
-  debug: true        # Summary logging
-  raw_debug: true    # Complete API I/O
 ```
 
 ## Repository

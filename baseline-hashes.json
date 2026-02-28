@@ -40,7 +40,7 @@
           "repo": "amplifier-module-provider-anthropic",
           "path": "README.md",
           "exists": true,
-          "hash": "b242c750111b0ac3"
+          "hash": "055e5112eb545b90"
         },
         {
           "repo": "amplifier-module-provider-openai",
@@ -852,13 +852,13 @@
           "repo": "amplifier-module-provider-anthropic",
           "path": "amplifier_module_provider_anthropic/__init__.py",
           "exists": true,
-          "hash": "a404b8fa3b8a0a03"
+          "hash": "50f738bcdce23f3c"
         },
         {
           "repo": "amplifier-module-provider-anthropic",
           "path": "README.md",
           "exists": true,
-          "hash": "b242c750111b0ac3"
+          "hash": "055e5112eb545b90"
         }
       ]
     },
@@ -920,7 +920,7 @@
           "repo": "amplifier-module-provider-vllm",
           "path": "amplifier_module_provider_vllm/__init__.py",
           "exists": true,
-          "hash": "0a76ab9714290072"
+          "hash": "5afaa3df033ce1eb"
         },
         {
           "repo": "amplifier-module-provider-vllm",
@@ -951,34 +951,16 @@
       "doc_path": "docs/modules/tools/index.md",
       "sources": [
         {
-          "repo": "amplifier-module-tool-search",
-          "path": "README.md",
-          "exists": true,
-          "hash": "0743af1d1c7312da"
-        },
-        {
           "repo": "amplifier-module-tool-bash",
           "path": "README.md",
           "exists": true,
           "hash": "a71cfb966d602034"
         },
         {
-          "repo": "amplifier-module-tool-web",
-          "path": "README.md",
-          "exists": true,
-          "hash": "1181ec2c696cd001"
-        },
-        {
           "repo": "amplifier-module-tool-filesystem",
           "path": "README.md",
           "exists": true,
           "hash": "8b3777ec256498f5"
-        },
-        {
-          "repo": "amplifier-module-tool-todo",
-          "path": "README.md",
-          "exists": true,
-          "hash": "7ee055a0d528a88a"
         },
         {
           "repo": "amplifier-module-tool-task",
@@ -1120,7 +1102,7 @@
           "repo": "amplifier-module-loop-basic",
           "path": "amplifier_module_loop_basic/__init__.py",
           "exists": true,
-          "hash": "e2373a7a72d9c420"
+          "hash": "7af2e5929fdfe5b3"
         },
         {
           "repo": "amplifier-module-loop-basic",
@@ -1137,7 +1119,7 @@
           "repo": "amplifier-module-loop-streaming",
           "path": "amplifier_module_loop_streaming/__init__.py",
           "exists": true,
-          "hash": "8600e3001fc6ed57"
+          "hash": "7895d45d44c39090"
         },
         {
           "repo": "amplifier-module-loop-streaming",
@@ -1219,58 +1201,22 @@
       "doc_path": "docs/modules/hooks/index.md",
       "sources": [
         {
-          "repo": "amplifier-module-hooks-approval",
-          "path": "README.md",
-          "exists": true,
-          "hash": "83c41ad4a86cc235"
-        },
-        {
-          "repo": "amplifier-module-hooks-backup",
-          "path": "README.md",
-          "exists": true,
-          "hash": "c8cf08212d0d2f77"
-        },
-        {
           "repo": "amplifier-module-hooks-logging",
           "path": "README.md",
           "exists": true,
           "hash": "4de9f77054c39ea9"
         },
         {
+          "repo": "amplifier-module-hooks-approval",
+          "path": "README.md",
+          "exists": true,
+          "hash": "83c41ad4a86cc235"
+        },
+        {
           "repo": "amplifier-module-hooks-redaction",
           "path": "README.md",
           "exists": true,
           "hash": "ef231434c07dd338"
-        },
-        {
-          "repo": "amplifier-module-hooks-scheduler-cost-aware",
-          "path": "README.md",
-          "exists": true,
-          "hash": "4fab5032e18042ff"
-        },
-        {
-          "repo": "amplifier-module-hooks-scheduler-heuristic",
-          "path": "README.md",
-          "exists": true,
-          "hash": "c85baadc2c612c4a"
-        },
-        {
-          "repo": "amplifier-module-hooks-status-context",
-          "path": "README.md",
-          "exists": true,
-          "hash": "392b4e01398d4b4c"
-        },
-        {
-          "repo": "amplifier-module-hooks-streaming-ui",
-          "path": "README.md",
-          "exists": true,
-          "hash": "15d57ffaa32fe493"
-        },
-        {
-          "repo": "amplifier-module-hooks-todo-reminder",
-          "path": "README.md",
-          "exists": true,
-          "hash": "00c5f1cf919cdd08"
         }
       ]
     },

@@ -49,6 +49,77 @@ hooks:
 | `inject_context` | Add to conversation |
 | `ask_user` | Request approval |
 
+## Logging Hook
+
+Provides visibility into agent execution through lifecycle event logging.
+
+**Features:**
+- Zero code changes required - pure configuration
+- Auto-discovery of module events via `observability.events` capability
+- Standard Python logging (no external dependencies)
+- Configurable levels: DEBUG, INFO, WARNING, ERROR
+- Flexible output: console, file, or both
+
+**Auto-Discovery:**
+```python
+# Modules declare observable events (in mount())
+coordinator.register_contributor(
+    "observability.events",
+    "module-name",
+    lambda: ["module:event1", "module:event2"]
+)
+```
+
+**Configuration:**
+```yaml
+hooks:
+  - module: hooks-logging
+    config:
+      level: "INFO"           # DEBUG, INFO, WARNING, ERROR
+      auto_discover: true     # Auto-discover module events (default)
+      additional_events:      # Manual additions
+        - "custom:event"
+```
+
+**Debug Levels:**
+- `debug: false` (default) - INFO events only, no debug details
+- `debug: true` - Standard debug events with summaries and previews
+- `debug: true, raw_debug: true` - Ultra-verbose with complete raw API I/O
+
+**Log Location**: `~/.amplifier/projects/<project>/sessions/<session_id>/events.jsonl`
+
+## Approval Hook
+
+Intercepts tool execution requests and coordinates user approval before dangerous operations.
+
+**Features:**
+- Hook-based interception via `tool:pre` events
+- Pluggable approval providers (CLI, GUI, headless)
+- Rule-based auto-approval configuration
+- Audit trail logging (JSONL format)
+- Risk-level based approval requirements
+
+**Configuration:**
+```yaml
+hooks:
+  - module: hooks-approval
+    config:
+      patterns:
+        - rm -rf
+        - sudo
+        - dd if=
+      auto_approve: false
+```
+
+## Redaction Hook
+
+Masks secrets/PII before logging.
+
+**Overview:**
+Scans messages for patterns like email addresses, phone numbers, credit card numbers, and custom regex patterns, replacing them with `[REDACTED]`.
+
+**Important:** Register with higher priority than logging.
+
 ## Contract
 
 See [Hook Contract](../../developer/contracts/hook.md) for implementation details.

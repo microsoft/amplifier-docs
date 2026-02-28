@@ -45,7 +45,59 @@ config = {
         block = []               # Patterns to block (even if normally allowed)
     }
 }
+
+[[tools]]
+module = "tool-task"
+config = {
+    max_recursion_depth = 1  # Maximum recursion depth (default: 1)
+}
 ```
+
+## Filesystem Tool
+
+Provides file operations:
+
+- `read_file` - Read with line numbering and pagination
+- `write_file` - Write/overwrite files
+- `edit_file` - Exact string replacements
+
+**Security:**
+- Reads permissive by default (`allowed_read_paths = null`)
+- Writes restrictive by default (`allowed_write_paths = ["."]`)
+
+## Bash Tool
+
+Execute shell commands with platform-appropriate safety.
+
+**Platform Behavior:**
+- **Linux/macOS/WSL**: Full bash shell with pipes, redirects, variables
+- **Windows**: Limited to simple commands
+
+**Safety Profiles:**
+
+| Profile | `sudo` | `rm -rf /` | Use Case |
+|---------|--------|------------|----------|
+| `strict` (default) | ✗ | ✗ | Workstations, shared environments |
+| `standard` | ✗ | ✗ | Trusted environments |
+| `permissive` | ✓ | ✗ | Containers, VMs |
+| `unrestricted` | ✓ | ✓ | Dedicated hardware |
+
+## Task Tool
+
+Delegate complex subtasks to specialized sub-agents:
+
+```python
+{
+    "agent": "zen-architect",
+    "instruction": "Analyze the authentication system"
+}
+```
+
+**Features:**
+- Multi-turn conversations via `session_id`
+- Context inheritance control
+- Provider preferences
+- Depth limiting
 
 ## Contract
 
