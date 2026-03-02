@@ -36,15 +36,14 @@ jobs:
           fi
 
       # ── Cache + Install ────────────────────────────────────────────────────
-      - name: Cache UV + Amplifier modules
+      - name: Cache Amplifier modules
         if: steps.preflight.outputs.skip != 'true'
         uses: actions/cache@v4
         with:
           path: |
-            ~/.local/share/uv
             ~/.amplifier/cache
             ~/.amplifier/bundles
-          key: amplifier-${{ runner.os }}-v1
+          key: amplifier-${{ runner.os }}-v2
           restore-keys: amplifier-${{ runner.os }}-
 
       - name: Install UV + Amplifier
@@ -55,9 +54,20 @@ jobs:
           echo "$HOME/.local/bin" >> $GITHUB_PATH
           uv tool install git+https://github.com/microsoft/amplifier
 
-      - name: Init Amplifier
+      - name: Configure Amplifier
         if: steps.preflight.outputs.skip != 'true'
-        run: amplifier init --yes
+        run: |
+          mkdir -p ~/.amplifier
+          cat > ~/.amplifier/settings.yaml << 'EOF'
+          config:
+            providers:
+            - config:
+                api_key: ${ANTHROPIC_API_KEY}
+                priority: 1
+              module: provider-anthropic
+              source: git+https://github.com/microsoft/amplifier-module-provider-anthropic@main
+          EOF
+          amplifier provider install --all --quiet
 
       # ── One-time setup ─────────────────────────────────────────────────────
       - name: Ensure docs-warning label exists
