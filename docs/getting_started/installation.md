@@ -110,37 +110,74 @@ export GOOGLE_API_KEY="your-key"
 amplifier provider use google
 ```
 
-### Ollama (Local, No API Key)
+### Ollama (Local)
 
 ```bash
-# Install Ollama first: https://ollama.ai
-ollama pull llama3.2:3b
+# No API key needed
 amplifier provider use ollama
 ```
 
-## Supported Providers
-
-- **Anthropic Claude** - Recommended, most tested (Sonnet, Opus models)
-- **OpenAI** - Good alternative (GPT-4o, GPT-4o-mini, o1 models)
-- **Azure OpenAI** - Enterprise users with Azure subscriptions
-- **Google Gemini** - Google's AI models with large context windows (Gemini 2.5 Flash, Pro)
-- **Ollama** - Local, free, no API key needed
-
-## Update Amplifier
+## Verifying Installation
 
 ```bash
-# Check for updates and install
-amplifier update
+# Check version
+amplifier --version
 
-# Check only (don't install)
+# Test with a simple prompt
+amplifier run "Hello! Can you help me with Python?"
+```
+
+## Upgrading
+
+```bash
+# Check for updates
 amplifier update --check-only
 
-# Skip confirmation prompts
-amplifier update -y
+# Update Amplifier and modules
+amplifier update
+```
+
+## Troubleshooting
+
+### Command Not Found
+
+If `amplifier` command is not found after installation:
+
+```bash
+# Verify UV installation
+uv --version
+
+# Reinstall
+uv tool install --force git+https://github.com/microsoft/amplifier
+```
+
+### Python Version
+
+Amplifier requires Python 3.11+. Check your version:
+
+```bash
+python --version
+# or
+python3 --version
+```
+
+### API Key Issues
+
+Verify your API keys are set:
+
+```bash
+echo $ANTHROPIC_API_KEY
+echo $OPENAI_API_KEY
+```
+
+Test provider connectivity:
+
+```bash
+amplifier provider test <provider-name>
 ```
 
 ## Next Steps
 
-- [CLI Reference](../user_guide/cli.md) - Complete command documentation
-- [Provider Configuration](../modules/providers/index.md) - Detailed provider setup
-- [Getting Started Tutorial](../tutorials/getting_started.md) - First steps with Amplifier
+- [Getting Started Guide](index.md) - Quick introduction
+- [CLI Reference](../user_guide/cli.md) - Complete command reference
+- [Configuration](../user_guide/configuration.md) - Advanced configuration options

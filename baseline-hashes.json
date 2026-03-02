@@ -12,7 +12,7 @@
           "repo": "amplifier-app-cli",
           "path": "README.md",
           "exists": true,
-          "hash": "effca9d1f5714459"
+          "hash": "3af848d057d4e7c4"
         }
       ]
     },
@@ -23,13 +23,13 @@
           "repo": "amplifier-app-cli",
           "path": "README.md",
           "exists": true,
-          "hash": "effca9d1f5714459"
+          "hash": "3af848d057d4e7c4"
         },
         {
           "repo": "amplifier-app-cli",
           "path": "pyproject.toml",
           "exists": true,
-          "hash": "7e5b6ce8d5fe7a42"
+          "hash": "c1d8c929c11aada9"
         }
       ]
     },
@@ -69,7 +69,7 @@
           "repo": "amplifier-app-cli",
           "path": "README.md",
           "exists": true,
-          "hash": "effca9d1f5714459"
+          "hash": "3af848d057d4e7c4"
         }
       ]
     },

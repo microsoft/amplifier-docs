@@ -77,10 +77,10 @@ amplifier provider use ollama
 amplifier run "Create a Python function to calculate fibonacci numbers"
 
 # Use specific provider/model
-amplifier run -p anthropic -m claude-sonnet-4-5 "Your prompt"
+amplifier run --provider anthropic --model claude-opus-4 "Complex task"
 
-# Pipe input
-echo "Summarize this" | amplifier run
+# Single command via stdin (useful for scripts/pipelines)
+echo "Summarize this spec" | amplifier run
 ```
 
 ### Interactive Mode
@@ -89,98 +89,88 @@ echo "Summarize this" | amplifier run
 # Start interactive session
 amplifier
 
-# You'll see a prompt like:
-# amplifier> Type your message...
+# Or resume last session
+amplifier continue
 ```
 
-### Sessions
+In interactive mode:
+- Type naturally, press Enter to send
+- Use `Ctrl-J` for multi-line input
+- Use `Ctrl-D` to exit
+- Use `/help` for slash commands
 
-Amplifier automatically saves conversation state:
+### Session Management
 
 ```bash
-# Continue most recent session
-amplifier continue
-
-# Continue with new prompt
-amplifier continue "Follow up question"
-
-# List sessions
+# List recent sessions
 amplifier session list
 
 # Resume specific session
 amplifier session resume <session-id>
+
+# Continue most recent session
+amplifier continue
 ```
 
-## Context Window Awareness
-
-Amplifier automatically manages context windows. Providers report their model's context window size, enabling automatic token budget management.
-
-| Model | Context Window | Behavior |
-|-------|----------------|----------|
-| Claude Sonnet | 200K tokens | Full context available |
-| GPT-4o | 128K tokens | Full context available |
-| Smaller models | 8K-32K | Auto-compacts when needed |
-
-When conversations exceed limits, Amplifier gracefully compacts older messages while preserving:
-- System instructions
-- Recent conversation
-- Tool call/result pairs
-
-## Bundles
-
-Bundles are composable configuration packages:
-
-```bash
-# See current bundle
-amplifier bundle current
-
-# List available bundles
-amplifier bundle list
-
-# Switch bundles
-amplifier bundle use my-custom-bundle
-```
-
-The default **foundation** bundle provides:
-- Common development tools (filesystem, bash, web)
-- Streaming output
-- Session persistence
-
-## Common Commands
+## Key Commands
 
 ```bash
 # Configuration
-amplifier init                    # First-time setup
-amplifier provider use anthropic  # Set provider
-amplifier bundle use foundation   # Set bundle
+amplifier init                           # First-time setup
+amplifier bundle list                    # List available bundles
+amplifier provider list                  # List providers
+amplifier module list                    # List modules
 
-# Running
-amplifier                         # Interactive mode
-amplifier run "prompt"            # Single command
-amplifier continue               # Resume last session
+# Running tasks
+amplifier run "your prompt"              # Single command
+amplifier                                # Interactive mode
+amplifier continue                       # Resume last session
+
+# Session management
+amplifier session list                   # List sessions
+amplifier session resume <id>            # Resume session
 
 # Tools
-amplifier tool list              # List available tools
-amplifier tool info <tool-name>  # Tool details
+amplifier tool list                      # List available tools
+amplifier tool invoke <tool> <args>      # Invoke tool directly
 
-# Sessions
-amplifier session list           # List sessions
-amplifier session show <id>      # Session details
-
-# Utilities
-amplifier update                 # Update Amplifier
-amplifier --version              # Show version
+# Updates
+amplifier update                         # Update Amplifier and modules
 ```
 
 ## Next Steps
 
-- **[Installation](installation.md)** - Detailed installation options
-- **[CLI User Guide](../user_guide/)** - Complete command reference
-- **[Architecture](../architecture/)** - Understand the system design
+- [Installation Guide](installation.md) - Detailed installation instructions
+- [CLI Reference](../user_guide/cli.md) - Complete command reference
+- [Bundles Guide](../user_guide/bundles.md) - Composable configuration
+- [Agents Guide](../user_guide/agents.md) - Specialized sub-agents
 
-## References
+## Getting Help
 
-> **Note**: The Amplifier CLI is a **reference implementation**. You can use it as-is, fork it, or build your own CLI using amplifier-core.
+```bash
+# CLI help
+amplifier --help
+amplifier <command> --help
 
-- **→ [CLI README](https://github.com/microsoft/amplifier/blob/main/README.md)** - Full CLI documentation
-- **→ [User Onboarding](https://github.com/microsoft/amplifier/blob/main/docs/USER_ONBOARDING.md)** - Complete user guide
+# Shell completion
+amplifier --install-completion
+
+# Documentation
+https://github.com/microsoft/amplifier
+```
+
+## Example Workflow
+
+```bash
+# 1. Initial setup
+amplifier init
+
+# 2. Start a task
+amplifier run "Analyze the authentication flow in src/auth.py"
+
+# 3. Continue the conversation
+amplifier continue "Now add error handling"
+
+# 4. Review session
+amplifier session list
+```
