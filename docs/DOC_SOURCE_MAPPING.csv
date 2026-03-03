@@ -6,7 +6,7 @@ docs/getting_started/providers.md,amplifier-module-provider-anthropic/README.md|
 docs/user_guide/index.md,amplifier-app-cli/README.md,DERIVED,CLI user guide overview
 docs/user_guide/cli.md,amplifier-app-cli/amplifier_app_cli/main.py|amplifier-app-cli/amplifier_app_cli/commands/__init__.py,DERIVED,Complete CLI command reference
 docs/user_guide/agents.md,amplifier-foundation/agents/explorer.md|amplifier-foundation/agents/foundation-expert.md|amplifier-foundation/agents/zen-architect.md|amplifier-app-cli/docs/AGENT_DELEGATION_IMPLEMENTATION.md,DERIVED,Agent delegation and usage - built-in agents now in amplifier-foundation
-docs/user_guide/sessions.md,amplifier-core/amplifier_core/session.py|amplifier-app-cli/amplifier_app_cli/session_spawner.py,DERIVED,Session management and persistence
+docs/user_guide/sessions.md,amplifier-core/python/amplifier_core/session.py|amplifier-app-cli/amplifier_app_cli/session_spawner.py,DERIVED,Session management and persistence
 docs/developer_guides/foundation/index.md,amplifier-core/README.md|amplifier-core/docs/DESIGN_PHILOSOPHY.md|amplifier-foundation/README.md,DERIVED,Foundation developer guide overview - covers kernel and amplifier-foundation
 docs/developer_guides/foundation/amplifier_foundation/index.md,amplifier-foundation/README.md|amplifier-foundation/docs/CONCEPTS.md|amplifier-foundation/docs/API_REFERENCE.md,DERIVED,amplifier-foundation library overview - bundle composition and utilities
 docs/developer_guides/foundation/amplifier_foundation/getting_started.md,amplifier-foundation/README.md|amplifier-foundation/examples/01_hello_world.py|amplifier-foundation/docs/CONCEPTS.md,DERIVED,Getting started with amplifier-foundation - installation and hello world
@@ -21,29 +21,29 @@ docs/developer_guides/foundation/amplifier_foundation/examples/custom_configurat
 docs/developer_guides/foundation/amplifier_foundation/examples/custom_tool.md,amplifier-foundation/examples/03_custom_tool.py|amplifier-core/docs/contracts/TOOL_CONTRACT.md,DERIVED,Custom Tool example - building domain-specific capabilities
 docs/developer_guides/foundation/amplifier_foundation/examples/cli_application.md,amplifier-foundation/examples/08_cli_application.py,DERIVED,CLI Application example - production patterns for building CLI tools
 docs/developer_guides/foundation/amplifier_foundation/examples/multi_agent_system.md,amplifier-foundation/examples/09_multi_agent_system.py|amplifier-foundation/docs/PATTERNS.md,DERIVED,Multi-Agent System example - coordinating specialized agents in workflows
-docs/developer_guides/applications/index.md,amplifier-core/amplifier_core/session.py|amplifier-app-cli/amplifier_app_cli/__init__.py,DERIVED,Building applications on amplifier-core
+docs/developer_guides/applications/index.md,amplifier-core/python/amplifier_core/session.py|amplifier-app-cli/amplifier_app_cli/__init__.py,DERIVED,Building applications on amplifier-core
 docs/developer_guides/applications/cli_case_study.md,amplifier-app-cli/amplifier_app_cli/main.py|amplifier-app-cli/docs/AGENT_DELEGATION_IMPLEMENTATION.md,DERIVED,CLI application architecture case study
 docs/developer/index.md,amplifier-core/docs/contracts/README.md,DERIVED,Module developer guide overview
 docs/developer/module_development.md,amplifier-core/docs/contracts/README.md|amplifier-core/docs/contracts/TOOL_CONTRACT.md|amplifier-core/docs/contracts/PROVIDER_CONTRACT.md|amplifier-core/docs/contracts/HOOK_CONTRACT.md,DERIVED,Creating custom modules
 docs/developer/contracts/index.md,amplifier-core/docs/contracts/README.md,DERIVED,Module contracts overview
-docs/developer/contracts/provider.md,amplifier-core/docs/contracts/PROVIDER_CONTRACT.md|amplifier-core/amplifier_core/interfaces.py,DERIVED,Provider contract specification
-docs/developer/contracts/tool.md,amplifier-core/docs/contracts/TOOL_CONTRACT.md|amplifier-core/amplifier_core/interfaces.py,DERIVED,Tool contract specification
-docs/developer/contracts/hook.md,amplifier-core/docs/contracts/HOOK_CONTRACT.md|amplifier-core/amplifier_core/hooks.py,DERIVED,Hook contract specification
-docs/developer/contracts/orchestrator.md,amplifier-core/docs/contracts/ORCHESTRATOR_CONTRACT.md|amplifier-core/amplifier_core/interfaces.py,DERIVED,Orchestrator contract specification
-docs/developer/contracts/context.md,amplifier-core/docs/contracts/CONTEXT_CONTRACT.md|amplifier-core/amplifier_core/interfaces.py,DERIVED,Context contract specification
+docs/developer/contracts/provider.md,amplifier-core/docs/contracts/PROVIDER_CONTRACT.md|amplifier-core/python/amplifier_core/interfaces.py,DERIVED,Provider contract specification
+docs/developer/contracts/tool.md,amplifier-core/docs/contracts/TOOL_CONTRACT.md|amplifier-core/python/amplifier_core/interfaces.py,DERIVED,Tool contract specification
+docs/developer/contracts/hook.md,amplifier-core/docs/contracts/HOOK_CONTRACT.md|amplifier-core/python/amplifier_core/hooks.py,DERIVED,Hook contract specification
+docs/developer/contracts/orchestrator.md,amplifier-core/docs/contracts/ORCHESTRATOR_CONTRACT.md|amplifier-core/python/amplifier_core/interfaces.py,DERIVED,Orchestrator contract specification
+docs/developer/contracts/context.md,amplifier-core/docs/contracts/CONTEXT_CONTRACT.md|amplifier-core/python/amplifier_core/interfaces.py,DERIVED,Context contract specification
 docs/architecture/index.md,amplifier-core/docs/DESIGN_PHILOSOPHY.md,DERIVED,Architecture documentation overview
 docs/architecture/overview.md,amplifier-core/docs/DESIGN_PHILOSOPHY.md|amplifier-core/README.md,DERIVED,High-level architecture overview
-docs/architecture/kernel.md,amplifier-core/docs/DESIGN_PHILOSOPHY.md|amplifier-core/amplifier_core/__init__.py|amplifier-core/amplifier_core/session.py|amplifier-core/amplifier_core/coordinator.py,DERIVED,Kernel philosophy and design
-docs/architecture/modules.md,amplifier-core/docs/contracts/README.md|amplifier-core/amplifier_core/loader.py,DERIVED,Module system architecture
-docs/architecture/mount_plans.md,amplifier-core/docs/specs/MOUNT_PLAN_SPECIFICATION.md|amplifier-core/amplifier_core/models.py,DERIVED,Mount plan specification
-docs/architecture/events.md,amplifier-core/docs/specs/CONTRIBUTION_CHANNELS.md|amplifier-core/amplifier_core/events.py,DERIVED,Event system architecture
+docs/architecture/kernel.md,amplifier-core/docs/DESIGN_PHILOSOPHY.md|amplifier-core/python/amplifier_core/__init__.py|amplifier-core/python/amplifier_core/session.py|amplifier-core/python/amplifier_core/coordinator.py,DERIVED,Kernel philosophy and design
+docs/architecture/modules.md,amplifier-core/docs/contracts/README.md|amplifier-core/python/amplifier_core/loader.py,DERIVED,Module system architecture
+docs/architecture/mount_plans.md,amplifier-core/docs/specs/MOUNT_PLAN_SPECIFICATION.md|amplifier-core/python/amplifier_core/models.py,DERIVED,Mount plan specification
+docs/architecture/events.md,amplifier-core/docs/specs/CONTRIBUTION_CHANNELS.md|amplifier-core/python/amplifier_core/events.py,DERIVED,Event system architecture
 docs/api/index.md,N/A,DERIVED,API reference overview
-docs/api/core/index.md,amplifier-core/amplifier_core/__init__.py,DERIVED,Core API overview
-docs/api/core/session.md,amplifier-core/amplifier_core/session.py,DERIVED,Session API reference
-docs/api/core/coordinator.md,amplifier-core/amplifier_core/coordinator.py,DERIVED,Coordinator API reference
-docs/api/core/hooks.md,amplifier-core/amplifier_core/hooks.py|amplifier-core/docs/HOOKS_API.md,DERIVED,Hooks API reference
-docs/api/core/models.md,amplifier-core/amplifier_core/models.py|amplifier-core/amplifier_core/message_models.py,DERIVED,Data models reference
-docs/api/core/events.md,amplifier-core/amplifier_core/events.py,DERIVED,Events API reference
+docs/api/core/index.md,amplifier-core/python/amplifier_core/__init__.py,DERIVED,Core API overview
+docs/api/core/session.md,amplifier-core/python/amplifier_core/session.py,DERIVED,Session API reference
+docs/api/core/coordinator.md,amplifier-core/python/amplifier_core/coordinator.py,DERIVED,Coordinator API reference
+docs/api/core/hooks.md,amplifier-core/python/amplifier_core/hooks.py|amplifier-core/docs/HOOKS_API.md,DERIVED,Hooks API reference
+docs/api/core/models.md,amplifier-core/python/amplifier_core/models.py|amplifier-core/python/amplifier_core/message_models.py,DERIVED,Data models reference
+docs/api/core/events.md,amplifier-core/python/amplifier_core/events.py,DERIVED,Events API reference
 docs/api/cli/index.md,amplifier-app-cli/amplifier_app_cli/main.py,REFERENCE,CLI API reference
 docs/modules/index.md,amplifier-core/docs/contracts/README.md,DERIVED,Modules catalog overview
 docs/modules/providers/index.md,amplifier-module-provider-anthropic/README.md|amplifier-module-provider-openai/README.md|amplifier-module-provider-azure-openai/README.md|amplifier-module-provider-ollama/README.md,DERIVED,Providers catalog
