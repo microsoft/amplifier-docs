@@ -94,154 +94,290 @@ The project slug is derived from your working directory:
 /home/user/projects/my-app → -home-user-projects-my-app
 ```
 
-This ensures each project has its own session history.
+This enables project-scoped session management - each project has its own session history.
+
+## Session Lifecycle
+
+1. **Creation** - Session initialized with configuration
+2. **Execution** - Messages exchanged, tools executed
+3. **Persistence** - Transcript and events written to disk
+4. **Resumption** - Previous state restored from storage
+
+### Sub-Sessions
+
+When you delegate to agents, sub-sessions are created:
+
+- **Parent session** - Your main conversation
+- **Sub-session** - Agent's isolated workspace
+- **State inheritance** - Configuration flows from parent to child
+- **Result return** - Agent results merged back to parent
+
+Sub-sessions support:
+- **Configuration overlay** - Agents add specialized tools and instructions
+- **Tool filtering** - Control which tools agents inherit
+- **Independent transcripts** - Each sub-session has its own history
+- **Automatic persistence** - Sub-session state saved for resumption
 
 ## Session Metadata
 
-Metadata includes:
+Each session stores metadata for tracking and resumption:
 
-- `session_id` - Unique session identifier
-- `created` - ISO timestamp of creation
-- `bundle` - Bundle used for this session
-- `model` - Model/provider information
-- `turn_count` - Number of user messages
-- `working_dir` - Working directory when session was created
-- `name` - Optional human-readable name
-- `description` - Optional session description
-
-## Session Operations
-
-### Delete a Session
-
-```bash
-amplifier session delete abc123
+```json
+{
+  "session_id": "abc123",
+  "parent_id": null,
+  "created": "2024-01-15T10:30:00Z",
+  "project_slug": "-home-user-projects-my-app",
+  "bundle": "dev",
+  "provider": "anthropic",
+  "model": "claude-opus-4",
+  "config": { ... }
+}
 ```
 
-### Fork a Session
+Sub-sessions include additional metadata:
 
-Create a new session from a specific turn in an existing session:
-
-```bash
-# Show turns to fork from
-amplifier session fork abc123
-
-# Fork at turn 3
-amplifier session fork abc123 --turn 3
-
-# Fork with custom name
-amplifier session fork abc123 --turn 3 --name my-fix
+```json
+{
+  "session_id": "abc123-sub-001",
+  "parent_id": "abc123",
+  "agent_name": "zen-architect",
+  "created": "2024-01-15T10:35:00Z",
+  "config": { ... },
+  "agent_overlay": { ... }
+}
 ```
 
-Forking creates a new session with conversation history up to the specified turn, allowing you to explore alternative paths.
+## Multi-Turn Conversations
 
-### Rename a Session
-
-In interactive mode:
+Sessions maintain conversation context across multiple turns:
 
 ```bash
-amplifier> /rename My Feature Work
+amplifier
+amplifier> Create a user authentication module
+# ... AI responds ...
+
+amplifier> Now add password reset functionality
+# ... AI has context from previous turn ...
+
+amplifier> Write tests for the reset flow
+# ... AI remembers the authentication module and reset functionality ...
 ```
 
-## Session Replay
-
-Review past conversations with timing simulation:
-
-```bash
-# Replay with default speed (2x)
-amplifier continue --replay
-
-# Replay at custom speed
-amplifier continue --replay --replay-speed 1.0
-```
-
-## History Display
-
-When resuming a session, Amplifier shows recent conversation history:
-
-```bash
-# Show last 10 messages (default)
-amplifier continue
-
-# Show all messages
-amplifier continue --full-history
-
-# Skip history display
-amplifier continue --no-history
-
-# Show thinking blocks
-amplifier continue --show-thinking
-```
-
-## Session Lineage
-
-Sessions track parent-child relationships for agent delegation:
-
-- **Parent Session** - The main session you're working in
-- **Child Session** - Sub-session created by agent delegation
-- **Session Fork** - New session branched from existing session
-
-Child sessions include `parent_id` in metadata for lineage tracking.
-
-## Session Events
-
-Sessions emit events for observability:
-
-- `session:start` - New session created
-- `session:resume` - Existing session resumed
-- `session:fork` - Child session forked from parent
-- `session:end` - Session completed
-- `prompt:complete` - Prompt execution finished
-
-Events are logged to `events.jsonl` for debugging and analysis.
-
-## Working Directory
-
-Sessions track the working directory where they were created:
-
-- Stored in `metadata.json` as `working_dir`
-- Used for resolving relative file paths
-- Critical for multi-project workflows
-
-## Session Persistence
-
-Sessions are automatically saved:
-
-- **After each turn** in interactive mode
-- **After execution** in single-shot mode
-- **During tool execution** for crash recovery
-- **On session fork** to preserve state
-
-This enables:
-- Resume from any point
-- Crash recovery
-- Multi-turn agent conversations
-- Session analysis and debugging
+Context includes:
+- All previous messages
+- Tool execution results
+- Agent delegation outcomes
+- Session configuration
 
 ## Best Practices
 
-### Session Naming
+### Session Management
 
-Give sessions meaningful names for easier navigation:
-
+**Keep sessions focused:**
 ```bash
-amplifier> /rename Implement OAuth Support
+# ✅ Good: Focused session
+amplifier run "Implement user authentication"
+
+# ❌ Less effective: Kitchen sink session
+amplifier run "Build the entire app"
 ```
 
-### Session Organization
+**Resume for continuity:**
+```bash
+# Continue previous work
+amplifier continue "Add tests for the auth module"
+```
 
-- Use bundles to organize sessions by type
-- Delete old sessions periodically
-- Fork sessions to explore alternatives
-- Use descriptive names for important sessions
+**Clean up old sessions:**
+```bash
+# Remove sessions older than 30 days
+amplifier session cleanup --days 30
+```
 
-### Session Limits
+### Working Across Projects
 
-- Consider deleting sessions older than 30 days
-- Large sessions (100+ turns) may be slow to load
-- Fork long sessions to start fresh while preserving history
+Sessions are project-scoped:
 
-## Related Documentation
+```bash
+cd ~/projects/api-server
+amplifier run "Explain the API structure"
 
-- **[CLI Reference](cli.md)** - Session management commands
-- **[Agents](agents.md)** - Agent sub-sessions
-- **[Session Analysis](https://github.com/microsoft/amplifier-foundation/blob/main/docs/SESSION_ANALYSIS.md)** - Analyzing and debugging sessions
+cd ~/projects/web-client  
+amplifier run "Explain the client code"  # Different session history
+```
+
+### Session Naming
+
+Session IDs are auto-generated. To identify sessions later:
+
+```bash
+# Use descriptive prompts
+amplifier run "Implement authentication module"  # Clear purpose
+
+# Check session list for context
+amplifier session list
+```
+
+## Troubleshooting
+
+### Session Not Found
+
+```bash
+# List all sessions
+amplifier session list --all
+
+# Check if you're in the right project directory
+pwd  # Sessions are project-scoped
+```
+
+### Session Won't Resume
+
+**Symptoms:**
+- "Session not found" errors
+- Corrupted transcript or events
+
+**Solutions:**
+```bash
+# Verify session exists
+amplifier session show abc123
+
+# Check session files
+ls ~/.amplifier/projects/<project-slug>/sessions/abc123/
+
+# If corrupted, start fresh
+amplifier run "Continue the work from session abc123"
+```
+
+### Session Performance
+
+**Large sessions slow down:**
+
+Sessions accumulate context over time. If resumption becomes slow:
+
+```bash
+# Start a fresh session
+amplifier run "Continue work on authentication"
+
+# Reference specific outcomes from previous session if needed
+amplifier run "Using the auth design from abc123, implement the login flow"
+```
+
+### Sub-Session Issues
+
+**Agent delegation failures:**
+
+```bash
+# Check available agents
+amplifier agents list
+
+# Verify agent configuration
+amplifier agents show zen-architect
+
+# Check session events for error details
+amplifier session show abc123
+```
+
+## Advanced: Session Configuration
+
+### Tool Inheritance
+
+Control which tools sub-sessions inherit:
+
+```yaml
+# In bundle configuration
+spawn:
+  exclude_tools: [tool-task]  # Agents can't delegate further
+```
+
+This prevents infinite delegation loops while allowing agents full access to other tools.
+
+### Hook Inheritance
+
+Similarly, control hook inheritance:
+
+```yaml
+# In bundle configuration
+spawn:
+  exclude_hooks: [hook-custom-logging]  # Agents don't inherit custom hooks
+```
+
+### Bundle Context Preservation
+
+Sub-sessions preserve bundle context from parent:
+- Module resolution paths
+- Mention mappings (`@namespace:path`)
+- Tool source locations
+
+This ensures agents can access the same resources as the parent session.
+
+## Session Export
+
+Export session transcripts for analysis or sharing:
+
+```bash
+# Export as JSON
+amplifier session export abc123 --format json --output session.json
+
+# Export as Markdown
+amplifier session export abc123 --format markdown --output session.md
+```
+
+Exports include:
+- Full conversation history
+- Tool execution results
+- Session metadata
+- Agent delegation outcomes
+
+## Session Cleanup
+
+Regular cleanup prevents disk usage growth:
+
+```bash
+# Preview what will be deleted
+amplifier session cleanup --days 30 --dry-run
+
+# Delete old sessions
+amplifier session cleanup --days 30
+
+# Delete specific session
+amplifier session delete abc123
+```
+
+**Note:** Active sessions (recently resumed) are protected from cleanup.
+
+## Tips
+
+### Effective Session Usage
+
+**Use sessions for:**
+- Multi-turn conversations requiring context
+- Complex tasks spanning multiple steps
+- Iterative refinement and review cycles
+
+**Start fresh sessions for:**
+- Unrelated tasks
+- When context becomes too large
+- After major changes in direction
+
+### Session History
+
+```bash
+# View recent conversation
+amplifier continue --no-history  # Resume without showing history
+
+# Show full history
+amplifier continue --full-history  # Show all messages
+
+# Replay conversation
+amplifier continue --replay  # Simulate typing
+```
+
+### Project Isolation
+
+Sessions are automatically isolated by project:
+- Each project directory has its own session history
+- No cross-project context pollution
+- Easy to switch between projects
+
+This enables clean context boundaries when working on multiple projects.

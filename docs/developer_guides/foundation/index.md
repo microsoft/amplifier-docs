@@ -30,251 +30,383 @@ This guide is for you if you want to:
 Amplifier is built in layers, inspired by the Linux kernel model:
 
 ```
-┌─────────────────────────────────────────────┐
-│        Applications Layer                   │
-│  (amplifier-app-cli, your-app, etc.)       │
-│                                             │
-│  • User interaction                         │
-│  • Configuration resolution                 │
-│  • Mount Plan creation                      │
-│  • Uses libraries                           │
-└──────────────┬──────────────────────────────┘
-               │
-               ▼
-┌──────────────────────────────────────────────┐
-│        Libraries Layer                       │
-│  (amplifier-foundation)                      │
-│                                              │
-│  • Bundle composition                        │
-│  • Configuration management                 │
-│  • Module resolution strategies             │
-│  • NOT used by runtime modules              │
-└──────────────┬───────────────────────────────┘
-               │
-               ▼
-┌──────────────────────────────────────────────┐
-│        Kernel Layer                          │
-│  (amplifier-core ~2,600 lines)              │
-│                                              │
-│  • Session lifecycle                         │
-│  • Mount Plan validation                     │
-│  • Module discovery and loading             │
-│  • Event emission                            │
-│  • Coordinator infrastructure               │
-│  • Mechanism, not policy                    │
-└──────────────┬───────────────────────────────┘
-               │
-               ▼
-┌──────────────────────────────────────────────┐
-│        Modules Layer                         │
-│  (providers, tools, orchestrators, contexts, │
-│   hooks - loaded at runtime)                │
-│                                              │
-│  • Only depend on amplifier-core            │
-│  • Implement specific capabilities          │
-│  • Swappable at runtime                     │
-└──────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────┐
+│        Applications Layer                       │
+│  (amplifier-app-cli, your-app, etc.)            │
+│                                                  │
+│  • User interaction                             │
+│  • Configuration resolution                     │
+│  • Mount Plan creation                          │
+│  • Uses libraries                               │
+├─────────────────────────────────────────────────┤
+│        Libraries Layer                          │
+│  (amplifier-foundation, amplifier-*-lib)        │
+│                                                  │
+│  • Bundle system (composition & loading)        │
+│  • @Mention resolution                          │
+│  • Utilities (I/O, merging, caching)            │
+│  • Reference content (agents, behaviors)        │
+├─────────────────────────────────────────────────┤
+│        Kernel Layer (amplifier-core)            │
+│                                                  │
+│  ┌───────────────────────────────────────────┐  │
+│  │  Rust Kernel (crates/amplifier-core/)    │  │
+│  │  • Session lifecycle                      │  │
+│  │  • Coordinator                            │  │
+│  │  • Event system                           │  │
+│  │  • Hook registry                          │  │
+│  │  • Type-safe contracts                    │  │
+│  └───────────────┬───────────────────────────┘  │
+│                  │ PyO3 bridge                   │
+│                  ↓                               │
+│  ┌───────────────────────────────────────────┐  │
+│  │  Python Bindings                          │  │
+│  │  • Pydantic models                        │  │
+│  │  • Module loader                          │  │
+│  │  • Backward-compatible API                │  │
+│  └───────────────────────────────────────────┘  │
+├─────────────────────────────────────────────────┤
+│        Modules Layer (Userspace)                │
+│  (Providers, Tools, Hooks, Orchestrators)       │
+│                                                  │
+│  • Providers: LLM backends                      │
+│  • Tools: Agent capabilities                    │
+│  • Orchestrators: Execution loops               │
+│  • Contexts: Memory management                  │
+│  • Hooks: Observability                         │
+└─────────────────────────────────────────────────┘
 ```
 
-### Key Principle: Separation of Concerns
+### Layer Responsibilities
 
-- **Kernel (amplifier-core)**: Provides mechanisms, not policy. Small, stable, boring.
-- **Libraries**: Application-layer concerns. Bundle composition, config resolution, etc.
-- **Applications**: Build on kernel + libraries. Decide what gets loaded and when.
-- **Modules**: Extend capabilities. No dependencies on libraries.
+**Applications Layer** (amplifier-app-cli, your-app):
+- User interaction (CLI, web, API)
+- Configuration management
+- Bundle composition
+- Session initialization
 
-## Foundation Components
+**Libraries Layer** (amplifier-foundation):
+- Bundle loading and composition
+- @Mention resolution (@namespace:path)
+- Reference content (agents, providers, behaviors)
+- Utilities (YAML I/O, dict merging, caching)
 
-### amplifier-foundation (Bundle Composition Library)
+**Kernel Layer** (amplifier-core):
+- **Rust kernel**: Session lifecycle, event system, coordinator
+- **Python bindings**: Pydantic models, module loader, API surface
+- Module discovery and loading
+- Hook dispatch
+- Stable contracts
 
-Foundational library for the Amplifier ecosystem: bundle composition, utilities, and reference content.
+**Modules Layer** (Userspace):
+- Providers: LLM backend implementations
+- Tools: Agent capabilities (filesystem, bash, web)
+- Orchestrators: Execution strategies
+- Contexts: Memory management
+- Hooks: Observability and control
 
-**What it does:**
-- Load, compose, validate, and resolve bundles from local and remote sources
-- @Mention system: parse and resolve `@namespace:path` references in instructions
-- Utilities: YAML/frontmatter I/O, dict merging, path handling, caching
-- Reference content: reusable providers, agents, behaviors, and context files
+## The Rust Kernel
 
-**When to use:**
-- Building applications with reusable configurations
-- You want human-readable YAML + Markdown bundles
-- You need bundle composition (base + overlays)
+amplifier-core is **implemented in Rust** for performance and type safety, with Python bindings via PyO3:
 
-**Repository:** [microsoft/amplifier-foundation](https://github.com/microsoft/amplifier-foundation)
+### Why Rust?
 
-**Documentation:** See [amplifier-foundation Library](amplifier_foundation/) for detailed guide with examples
+- **Performance**: Native speed for session lifecycle and event dispatch
+- **Type safety**: Compile-time guarantees for kernel contracts
+- **Memory safety**: No runtime errors from memory issues
+- **Zero-cost abstractions**: High-level code, low-level performance
 
-### amplifier-core (The Kernel)
+### Transparent to Consumers
 
-The heart of Amplifier. ~2,600 lines of mechanism-only code.
+**Existing Python code requires zero changes**:
 
-**What it does:**
-- Discovers and loads modules
-- Validates and loads Mount Plans
-- Manages session lifecycle
-- Hook system and event emission
-- Provides coordinator infrastructure
-- Enforces stable contracts and APIs
+```python
+# Same imports work identically
+from amplifier_core import AmplifierSession
 
-**What it doesn't do:**
-- Choose which modules to load (applications do this)
-- Format output (applications do this)
-- Decide execution strategy (orchestrator modules do this)
-- Store configuration (libraries do this)
+# Same API, same behavior
+session = AmplifierSession(config=mount_plan)
+response = await session.execute("Hello!")
+```
 
-**Repository:** [microsoft/amplifier-core](https://github.com/microsoft/amplifier-core)
+The Python API is unchanged. The Rust implementation is transparent - you get better performance with the same interface.
 
-## Quick Start Options
+### Architecture
 
-### Option 1: Using amplifier-foundation (Recommended)
+```
+Rust Kernel (crates/amplifier-core/)
+  ├── Session lifecycle
+  ├── Coordinator
+  ├── Event system
+  ├── Hook registry
+  └── Cancellation tokens
+           ↓ PyO3 bridge
+Python Bindings (python/amplifier_core/)
+  ├── Pydantic models (unchanged)
+  ├── Module loader (Python)
+  └── Backward-compatible imports
+           ↓ Protocols
+Modules (Tool, Provider, Hook, etc.)
+  └── Implemented in Python (unchanged)
+```
 
-High-level API with bundle composition:
+**For developers**: 
+- Modules remain in Python (no change required)
+- Python bindings handle the bridge
+- Rust kernel provides the engine
+
+## Core Concepts
+
+### Session
+
+Execution context with mounted modules and conversation state. Lifecycle: `initialize()` → `execute()` → `cleanup()`.
+
+### Mount Plan
+
+Configuration dictionary specifying which modules to load and their configuration. Applications and bundles compile to mount plans.
+
+### Coordinator
+
+Infrastructure context providing:
+- `session_id` and `request_id`
+- Config access
+- Hook dispatch
+- Module registry
+
+Injected into all modules during initialization.
+
+### Module Types
+
+All modules use Python `Protocol` (structural typing, no inheritance required):
+
+| Module Type | Purpose | Key Methods |
+|-------------|---------|-------------|
+| **Provider** | LLM backends | `complete()`, `list_models()`, `get_info()` |
+| **Tool** | Agent capabilities | `execute()` |
+| **Orchestrator** | Execution loops | `execute()` |
+| **ContextManager** | Memory | `add_message()`, `get_messages()`, `compact()` |
+| **Hook** | Observability | `__call__(event, data)` |
+
+See [Module Development](../../developer/) for protocol details.
+
+## Design Philosophy
+
+### Mechanism, Not Policy
+
+The kernel provides **capabilities** without **decisions**:
+
+| Kernel Provides (Mechanism) | Modules Decide (Policy) |
+| --------------------------- | ----------------------- |
+| Module loading              | Which modules to load   |
+| Event emission              | What to log, where      |
+| Session lifecycle           | Orchestration strategy  |
+| Hook registration           | Security policies       |
+
+**Litmus test**: "Could two teams want different behavior?" → If yes, it's policy → Module, not kernel.
+
+### Ruthless Simplicity
+
+- **KISS taken seriously**: As simple as possible, but no simpler
+- **Minimize abstractions**: Every layer must justify existence
+- **Start minimal**: Grow as needed, avoid future-proofing
+- **Code you don't write has no bugs**
+
+### Small, Stable, Boring Kernel
+
+- **Changes rarely**: Maintains backward compatibility always
+- **Single maintainer scope**: Easy to reason about
+- **Favor deletion over accretion**: Keep kernel minimal
+- **Innovation at edges**: Modules compete, kernel stays stable
+
+### Modular Design (Bricks & Studs)
+
+Think LEGO blocks:
+
+- **Brick** = Self-contained module with clear responsibility
+- **Stud** = Interface/protocol where bricks connect
+- **Blueprint** = Specification (docs define target state)
+- **Builder** = AI generates code from spec
+
+**Prefer regeneration over editing**: Rebuild from spec, don't line-edit.
+
+### Event-First Observability
+
+- **If it's important → emit a canonical event**
+- **If it's not observable → it didn't happen**
+- **One JSONL stream = single source of truth**
+- **Hooks observe without blocking**
+
+## Getting Started
+
+### Building Applications
+
+Start with the [Application Developer Guide](../applications/):
+
+1. Learn how to initialize sessions
+2. Build mount plans from bundles
+3. Handle user interaction
+4. Format and display results
+
+Key example: [CLI Case Study](../applications/cli_case_study.md)
+
+### Using amplifier-foundation
+
+The foundation library provides bundle composition and utilities:
 
 ```python
 from amplifier_foundation import load_bundle
 
-# Load and compose bundles
+# Load bundles
 foundation = await load_bundle("git+https://github.com/microsoft/amplifier-foundation@main")
 provider = await load_bundle("./providers/anthropic.yaml")
+
+# Compose (later overrides earlier)
 composed = foundation.compose(provider)
 
-# Prepare and execute
+# Prepare: resolve modules, download if needed
 prepared = await composed.prepare()
+
+# Create session
 async with await prepared.create_session() as session:
     response = await session.execute("Hello!")
 ```
 
-See [amplifier-foundation Library](amplifier_foundation/) for detailed documentation.
+See [amplifier-foundation documentation](amplifier_foundation/) for complete API.
 
-### Option 2: Using amplifier-core directly
+### Contributing to amplifier-core
 
-Lower-level API with manual mount plans:
+**Prerequisites**:
+- Rust 1.70+ (for kernel development)
+- Python 3.10+
+- maturin (for building Python bindings)
 
-```python
-from amplifier_core import AmplifierSession
+**Development setup**:
 
-# Define a Mount Plan
-mount_plan = {
-    "session": {
-        "orchestrator": "loop-basic",
-        "context": "context-simple"
-    },
-    "providers": [
-        {
-            "module": "provider-anthropic",
-            "source": "git+https://github.com/microsoft/amplifier-module-provider-anthropic@main",
-            "config": {
-                "default_model": "claude-sonnet-4-5"
-            }
-        }
-    ],
-    "tools": [
-        {
-            "module": "tool-bash",
-            "source": "git+https://github.com/microsoft/amplifier-module-tool-bash@main"
-        }
-    ]
-}
+```bash
+# Install Rust
+curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
 
-# Create and use a session
-async with AmplifierSession(mount_plan) as session:
-    # Execute a prompt
-    response = await session.execute("What is 2 + 2?")
-    print(response)
+# Clone repo
+git clone https://github.com/microsoft/amplifier-core
+cd amplifier-core
+
+# Build and install in development mode
+pip install maturin
+maturin develop
+
+# Run tests
+cargo test           # Rust tests
+pytest              # Python tests
 ```
 
-That's it! The kernel handles:
-- Validating the mount plan
-- Loading the modules
-- Coordinating the execution
-- Emitting events
+See `docs/RUST_CORE_TESTING.md` in amplifier-core for detailed testing guide.
 
-## What's Next?
+## Repository Structure
 
-<div class="grid">
+### amplifier-core
 
-<div class="card">
-<h3><a href="../applications/">Building Applications</a></h3>
-<p>Learn how to build applications on amplifier-core. Session management, mount plans, and library integration.</p>
-</div>
-
-<div class="card">
-<h3><a href="../../architecture/overview/">Architecture Overview</a></h3>
-<p>Deep dive into the architecture, kernel philosophy, and design decisions.</p>
-</div>
-
-<div class="card">
-<h3><a href="using_libraries/">Using Libraries</a></h3>
-<p>How to integrate amplifier-foundation in your application.</p>
-</div>
-
-<div class="card">
-<h3><a href="contributing/">Contributing</a></h3>
-<p>Guidelines for contributing to amplifier-core, libraries, and the foundation.</p>
-</div>
-
-</div>
-
-## Philosophy & Principles
-
-When working with the foundation, keep these principles in mind:
-
-### 1. Mechanism, Not Policy
-
-The kernel provides capabilities, not decisions. If two teams could want different behavior, it's policy → belongs outside the kernel.
-
-**Example:**
-- ✅ Kernel: "Emit a `tool:pre` event before tool execution"
-- ❌ Kernel: "Log tool execution to stdout in JSON format"
-
-The first is mechanism (event emission). The second is policy (what to do with events).
-
-### 2. Backward Compatibility is Sacred
-
-Kernel interfaces must not break existing modules or applications. Evolution is additive only.
-
-### 3. Small and Stable
-
-The kernel is intentionally minimal (~2,600 lines). Changes are rare and boring. Innovation happens at the edges (modules), not in the kernel.
-
-### 4. Test in Isolation
-
-Mock the coordinator when testing. Modules and applications should be testable without running the full kernel.
-
-### 5. Libraries are for Applications
-
-Runtime modules never import libraries. Only applications use libraries. This keeps the module boundary clean.
-
-```python
-# ✅ In your application
-from amplifier_foundation import load_bundle, BundleRegistry
-
-# ❌ In a module (provider, tool, etc.)
-from amplifier_foundation import load_bundle  # Never do this!
+```
+amplifier-core/
+├── crates/amplifier-core/     # Rust kernel
+│   ├── src/
+│   │   ├── session.rs         # Session lifecycle
+│   │   ├── coordinator.rs     # Infrastructure context
+│   │   ├── hooks.rs           # Hook registry
+│   │   └── events.rs          # Event system
+│   └── Cargo.toml
+├── bindings/python/           # PyO3 bridge
+├── python/amplifier_core/     # Python API
+│   ├── interfaces.py          # Protocols
+│   ├── models.py              # Data models
+│   └── message_models.py      # Pydantic models
+└── docs/
+    ├── DESIGN_PHILOSOPHY.md   # Architecture principles
+    ├── contracts/             # Module contracts
+    └── RUST_CORE_TESTING.md   # Testing guide
 ```
 
-### 6. Ruthless Simplicity
+### amplifier-foundation
 
-As simple as possible, but no simpler. Minimize abstractions - every layer must justify its existence. Start minimal, grow as needed. Code you don't write has no bugs.
+```
+amplifier-foundation/
+├── amplifier_foundation/      # Library code
+│   ├── bundle.py              # Bundle composition
+│   ├── registry.py            # Bundle loading
+│   ├── validator.py           # Bundle validation
+│   ├── mentions/              # @mention resolution
+│   └── utils/                 # Utilities
+├── docs/
+│   ├── BUNDLE_GUIDE.md        # Bundle authoring
+│   ├── AGENT_AUTHORING.md     # Agent creation
+│   ├── CONCEPTS.md            # Mental model
+│   └── PATTERNS.md            # Common patterns
+├── agents/                    # Reference agents
+├── behaviors/                 # Reference behaviors
+├── providers/                 # Provider configs
+└── examples/                  # Working examples
+```
 
-### 7. Event-First Observability
+## Key Resources
 
-If it's important, emit a canonical event. If it's not observable, it didn't happen. One JSONL stream is the single source of truth. Hooks observe without blocking.
+### Documentation
 
-### 8. Text-First, Inspectable
+**Core (Kernel)**:
+- [DESIGN_PHILOSOPHY.md](https://github.com/microsoft/amplifier-core/blob/main/docs/DESIGN_PHILOSOPHY.md) - Architecture principles
+- [Module Contracts](../../developer/index.md) - Protocol specifications
+- [RUST_CORE_TESTING.md](https://github.com/microsoft/amplifier-core/blob/main/docs/RUST_CORE_TESTING.md) - Testing guide
 
-Human-readable, diffable, versionable representations. JSON schemas for validation. No hidden state, no magic globals. Explicit over implicit.
+**Foundation (Libraries)**:
+- [BUNDLE_GUIDE.md](amplifier_foundation/bundle_system.md) - Bundle authoring
+- [AGENT_AUTHORING.md](https://github.com/microsoft/amplifier-foundation/blob/main/docs/AGENT_AUTHORING.md) - Agent creation
+- [CONCEPTS.md](amplifier_foundation/concepts.md) - Mental model
+- [PATTERNS.md](https://github.com/microsoft/amplifier-foundation/blob/main/docs/PATTERNS.md) - Common patterns
 
-## Resources
+### Examples
 
-- **[Architecture Documentation](../../architecture/)** - Kernel philosophy, module system, events
-- **[Kernel Philosophy](../../architecture/kernel/)** - Deep dive into kernel design
-- **[Module Contracts](../modules/contracts/)** - Reference for module interfaces
-- **[Application Developer Guide](../applications/)** - Building applications on amplifier-core
-- **[Contributing Guide](../../community/contributing/)** - How to contribute
+**amplifier-core**: API examples in `examples/`
+**amplifier-foundation**: 20+ examples in `examples/` directory
+**amplifier-app-cli**: Complete application case study
 
-## Getting Help
+## Development Workflow
 
-- **GitHub Discussions:** [Amplifier Discussions](https://github.com/microsoft/amplifier/discussions)
-- **Issues:** [Report bugs or request features](https://github.com/microsoft/amplifier/issues)
-- **Architecture Questions:** Read the [Design Philosophy](https://github.com/microsoft/amplifier-core/blob/main/docs/DESIGN_PHILOSOPHY.md)
+### Typical Development Pattern
+
+1. **Understand the layers**: Know which layer your work belongs in
+2. **Follow the philosophy**: Mechanism vs policy, ruthless simplicity
+3. **Write specifications first**: Define contracts before implementation
+4. **Build modules, not kernel**: Most work happens in modules
+5. **Test thoroughly**: Unit tests, integration tests, manual verification
+6. **Maintain backward compatibility**: Especially in kernel
+
+### When to Modify the Kernel
+
+**Rarely.** The kernel should change infrequently. Only modify when:
+
+- ✅ Multiple modules need the same mechanism
+- ✅ Change benefits the entire ecosystem
+- ✅ Backward compatibility is maintained
+- ❌ NOT for policy decisions (which provider, how to format)
+- ❌ NOT for product features (bundle in modules)
+
+### Contributing Guidelines
+
+1. **Read DESIGN_PHILOSOPHY.md first**
+2. **Discuss major changes** before implementation
+3. **Maintain backward compatibility** in public APIs
+4. **Write tests** for all changes
+5. **Update documentation** alongside code
+
+## Next Steps
+
+- **Building an application?** → See [Application Developer Guide](../applications/)
+- **Working with bundles?** → See [Bundle System](amplifier_foundation/bundle_system.md)
+- **Creating modules?** → See [Module Developer Guide](../../developer/)
+- **Contributing to core?** → Read [DESIGN_PHILOSOPHY.md](https://github.com/microsoft/amplifier-core/blob/main/docs/DESIGN_PHILOSOPHY.md)
+
+## Community
+
+- **GitHub Issues**: Bug reports and feature requests
+- **Discussions**: Architecture questions and proposals
+- **Pull Requests**: Code contributions
+
+The foundation is built on principles of simplicity, stability, and modularity. When in doubt, ask: "Is this mechanism or policy?" and "Which layer does this belong in?"

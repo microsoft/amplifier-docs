@@ -80,7 +80,7 @@
           "repo": "amplifier-app-cli",
           "path": "amplifier_app_cli/main.py",
           "exists": true,
-          "hash": "25045f2f53262c07"
+          "hash": "f85376256aea0098"
         },
         {
           "repo": "amplifier-app-cli",
@@ -97,25 +97,25 @@
           "repo": "amplifier-foundation",
           "path": "agents/explorer.md",
           "exists": true,
-          "hash": "1abe058c5f1474d6"
+          "hash": "ac9fdb98d5a615ca"
         },
         {
           "repo": "amplifier-foundation",
           "path": "agents/foundation-expert.md",
           "exists": true,
-          "hash": "1694218a59956347"
+          "hash": "89b15cfb7095297d"
         },
         {
           "repo": "amplifier-foundation",
           "path": "agents/zen-architect.md",
           "exists": true,
-          "hash": "80ee4c1181675860"
+          "hash": "4304dfb03814bfda"
         },
         {
           "repo": "amplifier-app-cli",
           "path": "docs/AGENT_DELEGATION_IMPLEMENTATION.md",
           "exists": true,
-          "hash": "1c260e8c9d78126d"
+          "hash": "a14bb129bde300f4"
         }
       ]
     },
@@ -125,14 +125,14 @@
         {
           "repo": "amplifier-core",
           "path": "amplifier_core/session.py",
-          "exists": true,
-          "hash": "9e710f5777a37c47"
+          "exists": false,
+          "hash": null
         },
         {
           "repo": "amplifier-app-cli",
           "path": "amplifier_app_cli/session_spawner.py",
           "exists": true,
-          "hash": "2d9ca68d3677cb32"
+          "hash": "77b29a1581628696"
         }
       ]
     },
@@ -143,7 +143,7 @@
           "repo": "amplifier-core",
           "path": "README.md",
           "exists": true,
-          "hash": "78e3ab20b0604c49"
+          "hash": "748e242e28dc0ba4"
         },
         {
           "repo": "amplifier-core",
