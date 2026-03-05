@@ -75,7 +75,7 @@ Tools provide capabilities to agents.
 
 ### Tool Contract
 
-**Protocol definition**: `amplifier_core/interfaces.py` lines 129-152
+**Protocol definition**: `amplifier_core/interfaces.py` lines 121-146
 
 ```python
 from amplifier_core.interfaces import Tool
@@ -192,7 +192,7 @@ Providers integrate LLM APIs.
 
 ### Provider Contract
 
-**Protocol definition**: `amplifier_core/interfaces.py` lines 62-125
+**Protocol definition**: `amplifier_core/interfaces.py` lines 54-119
 
 **Detailed specification**: See [PROVIDER_SPECIFICATION.md](https://github.com/microsoft/amplifier-core/blob/main/docs/specs/PROVIDER_SPECIFICATION.md) for complete implementation guidance including:
 - Content block preservation requirements
@@ -238,6 +238,32 @@ class Provider(Protocol):
 - `ToolCall` - From `amplifier_core/message_models.py`
 
 **Reference implementation**: [amplifier-module-provider-anthropic](https://github.com/microsoft/amplifier-module-provider-anthropic)
+
+### ModelInfo Extensions
+
+The `list_models()` method returns `list[ModelInfo]`. Beyond the required fields (`id`, `display_name`, `context_window`, `max_output_tokens`), ModelInfo supports optional extension fields for model class routing and cost-aware selection:
+
+| Field | Type | Default | Description |
+|-------|------|---------|-------------|
+| `cost_per_input_token` | `float \| None` | `None` | Cost per input token in USD (e.g., `3e-6` for $3/MTok) |
+| `cost_per_output_token` | `float \| None` | `None` | Cost per output token in USD |
+| `metadata` | `dict[str, Any]` | `{}` | Extensible metadata bag for cost tier, model class, provider-specific tags |
+
+**Cost Fields**: Providers **SHOULD** populate `cost_per_input_token` and `cost_per_output_token` when pricing information is available. These enable cost-aware model selection and budget tracking.
+
+**Metadata: `cost_tier`**: Providers **SHOULD** set `metadata["cost_tier"]` to one of the well-known cost tier strings:
+
+| Tier | Description |
+|------|-------------|
+| `free` | No-cost models (local, free-tier) |
+| `low` | Budget-friendly models (e.g., Haiku-class) |
+| `medium` | Standard pricing (e.g., Sonnet-class) |
+| `high` | Premium pricing (e.g., Opus-class) |
+| `extreme` | Highest-cost models (e.g., deep research) |
+
+**Capabilities**: Providers **SHOULD** populate the `capabilities` list using well-known constants from `amplifier_core.capabilities`. See the [Capabilities Taxonomy](https://github.com/microsoft/amplifier-core/blob/main/docs/specs/PROVIDER_SPECIFICATION.md#capabilities-taxonomy) in the Provider Specification for the full list.
+
+**Backward Compatibility**: All extension fields are optional with sensible defaults. Existing providers that do not populate these fields continue to work unchanged — they simply won't participate in cost-aware or capability-based routing.
 
 ### Example Provider
 
@@ -300,7 +326,7 @@ Hooks intercept events for observability and modification.
 
 ### Hook Contract
 
-**Protocol definition**: `amplifier_core/interfaces.py` lines 206-220
+**Protocol definition**: `amplifier_core/interfaces.py` lines 205-220
 
 **Detailed API reference**: See [HOOKS_API.md](https://github.com/microsoft/amplifier-core/blob/main/docs/HOOKS_API.md) for complete documentation including:
 - HookResult actions and fields

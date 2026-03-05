@@ -499,333 +499,97 @@ Tracked state for each bundle:
 - `explicitly_requested` - True if user explicitly requested
 - `app_bundle` - True if registered as app bundle
 
-### Persistence
-
-Registry state persists to `~/.amplifier/registry.json`:
-
-```json
-{
-  "foundation": {
-    "uri": "git+https://github.com/microsoft/amplifier-foundation@main",
-    "name": "foundation",
-    "version": "1.0.0",
-    "loaded_at": "2024-01-15T10:30:00Z",
-    "local_path": "/home/user/.amplifier/cache/github.com/microsoft/amplifier-foundation/main",
-    "is_root": true
-  }
-}
-```
-
-## Update Checking
+### Update Tracking
 
 Check for bundle updates:
 
 ```python
-from amplifier_foundation import check_bundle_status, update_bundle
-
-# Check status
-status = await check_bundle_status(registry, "foundation")
-if status.update_available:
-    print(f"Update available: {status.current_version} -> {status.latest_version}")
+# Check if update available
+update_info = await registry.check_for_update("foundation")
+if update_info.has_update:
+    print(f"Update available: {update_info.current_version} → {update_info.latest_version}")
     
-    # Update
-    await update_bundle(registry, "foundation")
+# Update bundle
+await registry.update("foundation")
 ```
 
-### BundleStatus
-
-Update status information:
-
-- `name` - Bundle name
-- `current_version` - Installed version
-- `latest_version` - Available version
-- `update_available` - Boolean flag
-- `last_checked` - When last checked
-
-## Include Resolution
-
-The registry resolves `includes:` recursively:
-
-```yaml
-# my-bundle.md
-includes:
-  - bundle: foundation
-  - bundle: my-bundle:behaviors/my-capability
-```
-
-### Resolution Process
-
-1. Load each included bundle
-2. Compose in order (earlier to later)
-3. Track dependencies in registry
-4. Detect circular includes
-
-### Circular Include Detection
-
-The registry prevents circular includes:
-
-```yaml
-# bundle-a.md
-includes:
-  - bundle: bundle-b
-
-# bundle-b.md
-includes:
-  - bundle: bundle-a  # Error: circular include
-```
-
-## Module Activation
-
-`prepare()` activates modules for use:
-
-### Activation Process
-
-1. **Extract module specs** from mount plan
-2. **Download sources** (git URLs to cache)
-3. **Install dependencies** (via pip/uv)
-4. **Register entry points** (make importable)
-5. **Save install state** for fast subsequent startups
-
-### Module Paths
-
-Activated modules are tracked by the `BundleModuleResolver`:
+## Complete Example
 
 ```python
-prepared = await bundle.prepare()
-resolver = prepared.resolver  # BundleModuleResolver
+from amplifier_foundation import BundleRegistry, load_bundle
 
-# Resolver provides module paths for ModuleLoader
+# Create registry
+registry = BundleRegistry()
+
+# Register bundles
+registry.register({
+    "foundation": "git+https://github.com/microsoft/amplifier-foundation@main",
+    "custom-tools": "./bundles/custom-tools.md"
+})
+
+# Load and compose
+base = await registry.load("foundation")
+custom = await registry.load("custom-tools")
+composed = base.compose(custom)
+
+# Prepare for execution
+prepared = await composed.prepare()
+
+# Create session
+async with prepared.create_session() as session:
+    response = await session.execute("Hello, world!")
+    print(response)
 ```
-
-### Bundle Package Paths
-
-Bundles can include Python packages that need to be on `sys.path`:
-
-```python
-prepared = await bundle.prepare()
-package_paths = prepared.bundle_package_paths
-
-# These paths are registered as session capabilities
-# for inheritance by child sessions
-```
-
-## Agent Pre-activation
-
-`prepare()` pre-activates modules declared in agent configs:
-
-```python
-# Without pre-activation, spawned agent sessions would fail
-# when their orchestrator/provider/tool modules aren't found
-
-# prepare() activates:
-# - Agent's session orchestrator and context
-# - Agent's providers, tools, hooks
-```
-
-This ensures child sessions can find all needed modules via the inherited resolver.
-
-## Context File Loading
-
-Context files are loaded during preparation:
-
-### context.include (YAML)
-
-```yaml
-context:
-  include:
-    - my-bundle:context/instructions.md
-```
-
-Content is **accumulated** across composition and injected into system prompt with headers.
-
-### @mentions (Markdown)
-
-```markdown
-@my-bundle:context/file.md
-```
-
-Content is **prepended** as XML during instruction loading:
-
-```xml
-<context_file paths="@my-bundle:context/file.md → /abs/path">
-[file content]
-</context_file>
-
----
-
-[instruction with @mention still present as semantic reference]
-```
-
-## Load-on-Demand Pattern
-
-Use **soft references** (text without `@`) for content that's sometimes needed:
-
-```markdown
-**Documentation (load on demand):**
-- Schema: recipes:docs/RECIPE_SCHEMA.md
-- Examples: recipes:examples/code-review-recipe.yaml
-- Guide: foundation:docs/BUNDLE_GUIDE.md
-```
-
-The AI can load these via `read_file` when actually needed.
-
-### When to Use Each Pattern
-
-| Pattern | Syntax | Loads | Use When |
-|---------|--------|-------|----------|
-| **@mention** | `@bundle:path` | Immediately | Content is ALWAYS needed |
-| **Soft reference** | `bundle:path` (no @) | On-demand | Content is SOMETIMES needed |
-| **Agent delegation** | Delegate to expert agent | When spawned | Content belongs to a specialist |
 
 ## Best Practices
 
-### Use the Thin Bundle Pattern
+### Bundle Organization
 
-When including foundation, don't redeclare what it provides:
+```
+my-bundle/
+├── bundle.md              # Root bundle
+├── agents/
+│   ├── expert.md         # Agent definitions
+│   └── reviewer.md
+├── behaviors/
+│   ├── streaming.yaml    # Behavior configs
+│   └── debug-mode.yaml
+├── context/
+│   ├── guidelines.md     # Context files
+│   └── examples.md
+└── modules/
+    └── my-tool/          # Local modules
+```
 
+### Composition Patterns
+
+**Base + Override**:
+```python
+base = await registry.load("foundation")
+override = await load_bundle("./local-overrides.md")
+composed = base.compose(override)
+```
+
+**Multi-Layer**:
+```python
+result = base.compose(team).compose(project).compose(personal)
+```
+
+**Conditional Inclusion**:
 ```yaml
-# ✅ GOOD: Thin bundle
 includes:
   - bundle: foundation
-
-# Only declare what YOU add
-agents:
-  include:
-    - my-bundle:my-agent
+  - bundle: debug-tools    # Only in dev
 ```
 
-### Create Behaviors for Reusability
+### Namespace Management
 
-Package agents + context in `behaviors/` so others can include just your capability:
-
-```yaml
-# behaviors/my-capability.yaml
-bundle:
-  name: my-capability-behavior
-  
-agents:
-  include:
-    - my-bundle:my-agent
-    
-context:
-  include:
-    - my-bundle:context/instructions.md
-```
-
-### Consolidate Instructions
-
-Put instructions in `context/instructions.md`, not inline in bundle.md:
-
-```markdown
----
-bundle:
-  name: my-bundle
-includes:
-  - bundle: foundation
-  - bundle: my-bundle:behaviors/my-capability
----
-
-# My Bundle
-
-@my-bundle:context/instructions.md
-
----
-
-@foundation:context/shared/common-system-base.md
-```
-
-### Use Context Sink Agents
-
-For heavy documentation, create specialized agents that @mention the docs:
-
-```markdown
-# agents/my-expert.md - Context sink
----
-meta:
-  name: my-expert
-  description: "Expert with deep domain knowledge..."
----
-
-# My Expert
-
-@my-bundle:docs/COMPREHENSIVE_GUIDE.md
-@my-bundle:docs/API_REFERENCE.md
-```
-
-The root session stays light; heavy context loads only when the agent is spawned.
-
-## Common Anti-Patterns
-
-### ❌ Duplicating Foundation
-
-```yaml
-# DON'T DO THIS when you include foundation
-includes:
-  - bundle: foundation
-
-tools:
-  - module: tool-filesystem     # Foundation has this!
-    source: git+https://...
-```
-
-**Fix**: Remove duplicated declarations.
-
-### ❌ Using @ Prefix in YAML
-
-```yaml
-# DON'T DO THIS - @ prefix is for markdown only
-context:
-  include:
-    - "@my-bundle:context/instructions.md"   # ❌ @ doesn't belong here
-
-# DO THIS
-context:
-  include:
-    - my-bundle:context/instructions.md      # ✅ No @ in YAML
-```
-
-### ❌ Using Repository Name as Namespace
-
-```yaml
-# If loading: git+https://github.com/microsoft/amplifier-bundle-recipes@main
-# And bundle.name in that repo is: "recipes"
-
-# DON'T DO THIS
-agents:
-  include:
-    - amplifier-bundle-recipes:recipe-author   # ❌ Repo name
-
-# DO THIS
-agents:
-  include:
-    - recipes:recipe-author                    # ✅ bundle.name value
-```
-
-**Why**: The namespace is ALWAYS `bundle.name`, not the git URL or repository name.
-
-### ❌ Including Subdirectory in Paths
-
-```yaml
-# If loading: git+https://...@main#subdirectory=bundles/foo
-# And bundle.name is: "foo"
-
-# DON'T DO THIS
-context:
-  include:
-    - foo:bundles/foo/context/instructions.md   # ❌ Redundant path
-
-# DO THIS
-context:
-  include:
-    - foo:context/instructions.md               # ✅ Relative to bundle location
-```
-
-**Why**: When loaded via `#subdirectory=X`, the bundle root IS `X/`. Paths are relative to that root.
+- Use descriptive bundle names: `my-org-bundle` not `bundle`
+- Keep namespaces flat: Avoid deeply nested references
+- Document `@mentions`: Comment complex reference chains
 
 ## Related Documentation
 
-- **[Core Concepts](concepts.md)** - Mental model
-- **[Common Patterns](patterns.md)** - Usage examples
-- **[API Reference](api_reference.md)** - API overview
-- **[Bundle Guide](https://github.com/microsoft/amplifier-foundation/blob/main/docs/BUNDLE_GUIDE.md)** - Complete authoring guide
-- **[URI Formats](https://github.com/microsoft/amplifier-foundation/blob/main/docs/URI_FORMATS.md)** - Source URI reference
+- [Core Concepts](concepts.md) - Mental model and terminology
+- [Common Patterns](patterns.md) - Code examples and recipes
+- [API Reference](api_reference.md) - Complete API documentation

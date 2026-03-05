@@ -11,7 +11,21 @@ Providers integrate LLM backends into Amplifier.
 
 Providers translate between Amplifier's unified message format and vendor-specific LLM APIs.
 
+## Detailed Specification
+
+**See [PROVIDER_SPECIFICATION.md](https://github.com/microsoft/amplifier-core/blob/main/docs/specs/PROVIDER_SPECIFICATION.md)** for complete implementation guidance including:
+
+- Protocol summary and method signatures
+- Content block preservation requirements
+- Role conversion patterns
+- Auto-continuation handling
+- Debug levels and observability
+
+This contract document provides the quick-reference essentials. The specification contains the full details.
+
 ## Protocol
+
+**Source**: `amplifier_core/interfaces.py` lines 54-119
 
 ```python
 from typing import Protocol, runtime_checkable
@@ -22,11 +36,11 @@ from amplifier_core.message_models import ChatRequest, ChatResponse, ToolCall
 class Provider(Protocol):
     @property
     def name(self) -> str:
-        """Unique provider identifier."""
+        """Provider name."""
         ...
 
     def get_info(self) -> ProviderInfo:
-        """Return provider metadata."""
+        """Get provider metadata."""
         ...
 
     async def list_models(self) -> list[ModelInfo]:
@@ -38,35 +52,76 @@ class Provider(Protocol):
         request: ChatRequest,
         **kwargs
     ) -> ChatResponse:
-        """Complete a chat request."""
+        """Generate completion from ChatRequest."""
         ...
 
     def parse_tool_calls(
         self,
         response: ChatResponse
     ) -> list[ToolCall]:
-        """Extract tool calls from response."""
+        """Parse tool calls from response."""
         ...
 ```
+
+**Note**: `ToolCall` is from `amplifier_core.message_models` (see [REQUEST_ENVELOPE_V1](https://github.com/microsoft/amplifier-core/blob/main/docs/specs/PROVIDER_SPECIFICATION.md) for details)
+
+## ModelInfo Extensions (Model Class Routing)
+
+The `list_models()` method returns `list[ModelInfo]`. Beyond the required fields (`id`, `display_name`, `context_window`, `max_output_tokens`), ModelInfo supports optional extension fields for model class routing and cost-aware selection:
+
+| Field | Type | Default | Description |
+|-------|------|---------|-------------|
+| `cost_per_input_token` | `float \| None` | `None` | Cost per input token in USD (e.g., `3e-6` for $3/MTok) |
+| `cost_per_output_token` | `float \| None` | `None` | Cost per output token in USD |
+| `metadata` | `dict[str, Any]` | `{}` | Extensible metadata bag for cost tier, model class, provider-specific tags |
+
+### Cost Fields
+
+Providers **SHOULD** populate `cost_per_input_token` and `cost_per_output_token` when pricing information is available. These enable cost-aware model selection and budget tracking.
+
+### Metadata: `cost_tier`
+
+Providers **SHOULD** set `metadata["cost_tier"]` to one of the well-known cost tier strings:
+
+| Tier | Description |
+|------|-------------|
+| `free` | No-cost models (local, free-tier) |
+| `low` | Budget-friendly models (e.g., Haiku-class) |
+| `medium` | Standard pricing (e.g., Sonnet-class) |
+| `high` | Premium pricing (e.g., Opus-class) |
+| `extreme` | Highest-cost models (e.g., deep research) |
+
+### Capabilities
+
+Providers **SHOULD** populate the `capabilities` list using well-known constants from `amplifier_core.capabilities`. See the [Capabilities Taxonomy](https://github.com/microsoft/amplifier-core/blob/main/docs/specs/PROVIDER_SPECIFICATION.md#capabilities-taxonomy) in the Provider Specification for the full list.
+
+### Backward Compatibility
+
+All extension fields are optional with sensible defaults. Existing providers that do not populate these fields continue to work unchanged — they simply won't participate in cost-aware or capability-based routing.
 
 ## Mount Function
 
 ```python
-async def mount(coordinator, config=None):
-    config = config or {}
-    
-    # Check for required credentials
+async def mount(coordinator: ModuleCoordinator, config: dict) -> Provider | Callable | None:
+    """
+    Initialize and return provider instance.
+
+    Returns:
+        - Provider instance (registered automatically)
+        - Cleanup callable (for resource cleanup on unmount)
+        - None for graceful degradation (e.g., missing API key)
+    """
     api_key = config.get("api_key") or os.environ.get("MY_API_KEY")
     if not api_key:
-        # Graceful degradation - don't mount if not configured
+        logger.warning("No API key - provider not mounted")
         return None
-    
-    provider = MyProvider(config)
-    await coordinator.mount("providers", provider, name=provider.name)
-    
+
+    provider = MyProvider(api_key=api_key, config=config)
+    await coordinator.mount("providers", provider, name="my-provider")
+
     async def cleanup():
-        await provider.close()  # Close HTTP connections
-    
+        await provider.client.close()
+
     return cleanup
 ```
 
@@ -102,6 +157,20 @@ class ModelInfo:
 
 ## Configuration
 
+Providers receive configuration via Mount Plan:
+
+```yaml
+providers:
+  - module: my-provider
+    source: git+https://github.com/org/my-provider@main
+    config:
+      api_key: "${MY_API_KEY}"
+      default_model: model-v1
+      debug: true
+```
+
+See [MOUNT_PLAN_SPECIFICATION.md](https://github.com/microsoft/amplifier-core/blob/main/docs/specs/MOUNT_PLAN_SPECIFICATION.md) for full schema.
+
 Common configuration options:
 
 | Option | Type | Description |
@@ -125,6 +194,20 @@ Providers should emit these events:
 | `llm:response` | After API response | usage, duration |
 | `llm:request:debug` | Debug logging | Request summary |
 | `llm:response:debug` | Debug logging | Response summary |
+
+## Observability
+
+Register custom events via contribution channels:
+
+```python
+coordinator.register_contributor(
+    "observability.events",
+    "my-provider",
+    lambda: ["my-provider:rate_limit", "my-provider:retry"]
+)
+```
+
+See [CONTRIBUTION_CHANNELS.md](https://github.com/microsoft/amplifier-core/blob/main/docs/specs/CONTRIBUTION_CHANNELS.md) for the pattern.
 
 ## Example Implementation
 
@@ -272,11 +355,66 @@ async def complete(self, request, **kwargs) -> dict:
     raise Exception("Max retries exceeded")
 ```
 
+## Validation Checklist
+
+### Required
+
+- [ ] Implements all 5 Provider protocol methods
+- [ ] `mount()` function with entry point in pyproject.toml
+- [ ] Preserves all content block types (especially `signature` in ThinkingBlock)
+- [ ] Reports `Usage` (input/output/total tokens)
+- [ ] Returns `ChatResponse` from `complete()`
+
+### Recommended
+
+- [ ] Graceful degradation on missing config (return None from mount)
+- [ ] Validates tool call/result sequences
+- [ ] Supports debug configuration flags
+- [ ] Registers cleanup function for resource management
+- [ ] Registers observability events via contribution channels
+
+## Testing
+
+Use test utilities from `amplifier_core/testing.py`:
+
+```python
+from amplifier_core.testing import TestCoordinator, create_test_coordinator
+
+@pytest.mark.asyncio
+async def test_provider_mount():
+    coordinator = create_test_coordinator()
+    cleanup = await mount(coordinator, {"api_key": "test-key"})
+
+    assert "my-provider" in coordinator.get_mounted("providers")
+
+    if cleanup:
+        await cleanup()
+```
+
+## Quick Validation Command
+
+```bash
+# Structural validation
+amplifier module validate ./my-provider --type provider
+```
+
 ## Related Contracts
 
 - **[Orchestrator Contract](orchestrator.md)** - Orchestrators call providers
 - **[Context Contract](context.md)** - Context managers use provider info for budgets
 
+## Canonical Example
+
+**Reference implementation**: [amplifier-module-provider-anthropic](https://github.com/microsoft/amplifier-module-provider-anthropic)
+
+Study this module for:
+- Complete Provider protocol implementation
+- Content block handling patterns
+- Configuration and credential management
+- Debug logging integration
+
 ## Authoritative Reference
 
 **→ [Provider Contract](https://github.com/microsoft/amplifier-core/blob/main/docs/contracts/PROVIDER_CONTRACT.md)** - Complete specification
+
+**→ [PROVIDER_SPECIFICATION.md](https://github.com/microsoft/amplifier-core/blob/main/docs/specs/PROVIDER_SPECIFICATION.md)** - Detailed implementation guidance

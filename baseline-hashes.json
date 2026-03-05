@@ -124,9 +124,9 @@
       "sources": [
         {
           "repo": "amplifier-core",
-          "path": "amplifier_core/session.py",
-          "exists": false,
-          "hash": null
+          "path": "python/amplifier_core/session.py",
+          "exists": true,
+          "hash": "9e710f5777a37c47"
         },
         {
           "repo": "amplifier-app-cli",
@@ -212,7 +212,7 @@
           "repo": "amplifier-foundation",
           "path": "docs/CONCEPTS.md",
           "exists": true,
-          "hash": "a2c28773a50062ab"
+          "hash": "d40f28c686b74f0e"
         }
       ]
     },
@@ -229,13 +229,13 @@
           "repo": "amplifier-foundation",
           "path": "amplifier_foundation/bundle.py",
           "exists": true,
-          "hash": "d617736eb47244b2"
+          "hash": "b74c36da761eca9c"
         },
         {
           "repo": "amplifier-foundation",
           "path": "amplifier_foundation/registry.py",
           "exists": true,
-          "hash": "501c78ee4a1e7f70"
+          "hash": "907f232add3ed283"
         }
       ]
     },
@@ -310,13 +310,13 @@
           "repo": "amplifier-foundation",
           "path": "amplifier_foundation/bundle.py",
           "exists": true,
-          "hash": "d617736eb47244b2"
+          "hash": "b74c36da761eca9c"
         },
         {
           "repo": "amplifier-foundation",
           "path": "amplifier_foundation/registry.py",
           "exists": true,
-          "hash": "501c78ee4a1e7f70"
+          "hash": "907f232add3ed283"
         }
       ]
     },
@@ -474,7 +474,7 @@
           "repo": "amplifier-core",
           "path": "docs/contracts/README.md",
           "exists": true,
-          "hash": "e3719194c6408d79"
+          "hash": "cc3413843d01bb8a"
         },
         {
           "repo": "amplifier-core",
@@ -486,7 +486,7 @@
           "repo": "amplifier-core",
           "path": "docs/contracts/PROVIDER_CONTRACT.md",
           "exists": true,
-          "hash": "f165c47d92e29305"
+          "hash": "18298f59c21023e5"
         },
         {
           "repo": "amplifier-core",
@@ -514,13 +514,13 @@
           "repo": "amplifier-core",
           "path": "docs/contracts/PROVIDER_CONTRACT.md",
           "exists": true,
-          "hash": "f165c47d92e29305"
+          "hash": "18298f59c21023e5"
         },
         {
           "repo": "amplifier-core",
-          "path": "amplifier_core/interfaces.py",
+          "path": "python/amplifier_core/interfaces.py",
           "exists": true,
-          "hash": "b777f19669e2a60c"
+          "hash": "654cce5b1701754a"
         }
       ]
     },
