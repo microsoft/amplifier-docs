@@ -66,163 +66,285 @@ def create_architect_agent(provider: Bundle) -> Bundle:
         
         Focus on design, not implementation. Be thorough but concise."""
     ).compose(provider)
+
+
+def create_implementer_agent(provider: Bundle) -> Bundle:
+    """Writes code based on specifications"""
+    return Bundle(
+        name="implementer",
+        tools=[
+            {"module": "tool-filesystem", "source": "..."},
+            {"module": "tool-bash", "source": "..."}
+        ],
+        instruction="""You are a Software Implementation expert.
+        
+        Your role:
+        - Implement code based on specifications
+        - Write clean, tested, documented code
+        - Follow the architecture and contracts provided
+        - Run tests to verify correctness
+        
+        When given a specification:
+        1. Understand the requirements
+        2. Implement the code
+        3. Write tests
+        4. Verify it works
+        5. Document the implementation
+        
+        Focus on clean, working code that matches the spec exactly."""
+    ).compose(provider)
+
+
+def create_reviewer_agent(provider: Bundle) -> Bundle:
+    """Reviews code for quality, security, and best practices"""
+    return Bundle(
+        name="reviewer",
+        tools=[{"module": "tool-filesystem", "source": "..."}],
+        instruction="""You are a Code Review expert.
+        
+        Your role:
+        - Review code for correctness, security, and best practices
+        - Identify bugs, vulnerabilities, and improvement opportunities
+        - Provide actionable feedback
+        
+        When reviewing code:
+        1. Check correctness (does it match the spec?)
+        2. Check security (any vulnerabilities?)
+        3. Check quality (readable, maintainable?)
+        4. Check tests (adequate coverage?)
+        5. Provide specific, actionable feedback
+        
+        Be thorough but constructive. Focus on important issues."""
+    ).compose(provider)
 ```
 
-### Sequential Workflows
+### Sequential Workflow
 
-Agents work in sequence, each building on the previous agent's output:
+Agents execute in sequence, each building on the previous agent's output:
 
 ```python
 workflow = [
-    ("architect", "Design a rate limiting module...", architect),
-    ("implementer", "Implement the rate limiting module based on the architect's design...", implementer),
-    ("reviewer", "Review the rate limiter implementation...", reviewer),
+    (
+        "architect",
+        """Design a rate limiting module for API requests.
+        
+        Requirements:
+        - Support different rate limit strategies (token bucket, sliding window)
+        - Thread-safe for concurrent requests
+        - Configurable limits per endpoint
+        - Include usage tracking
+        
+        Provide:
+        1. Module structure
+        2. Class definitions and interfaces
+        3. Key algorithms
+        4. Example usage""",
+        architect,
+    ),
+    (
+        "implementer",
+        """Implement the rate limiting module based on the architect's design.
+        
+        Create:
+        1. rate_limiter.py with all classes
+        2. A simple test to verify it works
+        3. Brief usage example
+        
+        Keep it simple and focused.""",
+        implementer,
+    ),
+    (
+        "reviewer",
+        """Review the rate limiter implementation.
+        
+        Check:
+        1. Does it match the architecture?
+        2. Are there any bugs or edge cases?
+        3. Is it thread-safe?
+        4. Is the code readable and maintainable?
+        
+        Provide specific feedback for improvement.""",
+        reviewer,
+    ),
 ]
 
+# Execute workflow
 results = await system.execute_workflow(task, workflow)
 ```
 
-**How it works**:
-1. Architect analyzes and designs
-2. Implementer receives architect's design as context
-3. Reviewer receives both architect's design and implementer's code
-
 ### Context Passing
 
-Each agent sees the work of previous agents:
+Each agent receives:
+1. The original task description
+2. All previous agents' outputs
+3. Its specific instruction
 
 ```python
 def _format_context(self, context: dict[str, Any], previous_results: dict[str, str]) -> str:
     """Format context from previous agents for the current agent."""
     if not previous_results:
         return f"Task: {context['task']}"
-
+    
     sections = [f"Task: {context['task']}", "\nPrevious work:"]
     for agent_name, result in previous_results.items():
         sections.append(f"\n{agent_name.upper()} OUTPUT:")
         sections.append(result[:500] + "..." if len(result) > 500 else result)
-
+    
     return "\n".join(sections)
 ```
 
-## Complete Example Workflow
+## Real-World Use Cases
 
-### Task: Build a Rate Limiting Module
+### Software Development
 
-**Step 1: Architect Agent**
-
-```python
-architect = create_architect_agent(provider)
-
-# Instruction
-"""Design a rate limiting module for API requests.
-
-Requirements:
-- Support different rate limit strategies (token bucket, sliding window)
-- Thread-safe for concurrent requests
-- Configurable limits per endpoint
-- Include usage tracking
-
-Provide:
-1. Module structure
-2. Class definitions and interfaces
-3. Key algorithms
-4. Example usage"""
+```
+Architect → Implementer → Reviewer → Tester
 ```
 
-**Output**: Detailed architecture specification with class designs and interfaces.
+Each specialist focuses on their domain expertise.
 
-**Step 2: Implementer Agent**
+### Data Analysis
 
-```python
-implementer = create_implementer_agent(provider)
-
-# Instruction (receives architect's output as context)
-"""Implement the rate limiting module based on the architect's design.
-
-Create:
-1. rate_limiter.py with all classes
-2. A simple test to verify it works
-3. Brief usage example
-
-Keep it simple and focused."""
+```
+Collector → Analyzer → Visualizer
 ```
 
-**Output**: Working Python code with tests.
+Separation of concerns: gathering, processing, presentation.
 
-**Step 3: Reviewer Agent**
+### Content Creation
 
-```python
-reviewer = create_reviewer_agent(provider)
-
-# Instruction (receives both previous outputs as context)
-"""Review the rate limiter implementation.
-
-Check:
-1. Does it match the architecture?
-2. Are there any bugs or edge cases?
-3. Is it thread-safe?
-4. Is the code readable and maintainable?
-
-Provide specific feedback for improvement."""
+```
+Researcher → Writer → Editor
 ```
 
-**Output**: Code review with specific recommendations.
+Research facts, write content, polish for quality.
 
-## Multi-Agent System Class
+### Customer Support
+
+```
+Classifier → Resolver → Escalator
+```
+
+Route by type, attempt resolution, escalate if needed.
+
+## Architecture Patterns
+
+### The Orchestrator Pattern
+
+A coordinator manages multiple specialized agents:
 
 ```python
 class MultiAgentSystem:
     """Orchestrates multiple specialized agents to complete complex tasks."""
-
+    
     def __init__(self, foundation: Bundle, provider: Bundle):
         self.foundation = foundation
         self.provider = provider
-
-    async def execute_workflow(self, task: str, workflow: list[tuple[str, str, Bundle]]) -> dict[str, Any]:
+    
+    async def execute_workflow(
+        self, 
+        task: str, 
+        workflow: list[tuple[str, str, Bundle]]
+    ) -> dict[str, Any]:
         """Execute a multi-agent workflow.
-
+        
         Args:
             task: The overall task description
             workflow: List of (agent_name, instruction, agent_bundle) tuples
-
+        
         Returns:
             Dict with results from each agent
         """
         results = {}
         context = {"task": task}
-
+        
         for agent_name, instruction, agent_bundle in workflow:
             # Compose foundation + agent
             composed = self.foundation.compose(agent_bundle)
+            
+            # Prepare and execute
             prepared = await composed.prepare()
             session = await prepared.create_session()
-
+            
             # Add context from previous agents
             context_str = self._format_context(context, results)
             full_instruction = f"{context_str}\n\n{instruction}"
-
+            
             # Execute
             async with session:
                 response = await session.execute(full_instruction)
                 results[agent_name] = response
-
+        
         return results
 ```
 
-## Expected Output
+### Parallel Execution
+
+For independent tasks, execute agents in parallel:
+
+```python
+async def parallel_workflow():
+    """Execute multiple independent agents in parallel."""
+    
+    # Create tasks
+    tasks = [
+        analyze_code(code_agent),
+        check_security(security_agent),
+        verify_tests(test_agent),
+    ]
+    
+    # Run in parallel
+    results = await asyncio.gather(*tasks)
+    
+    return results
+```
+
+## Key Design Principles
+
+### 1. Single Responsibility
+
+Each agent should have ONE clear job:
+
+- ✅ **Good**: "Architect" designs, "Implementer" codes, "Reviewer" reviews
+- ❌ **Bad**: "Developer" does everything
+
+### 2. Clear Interfaces
+
+Define what each agent receives and produces:
+
+```python
+# Clear contract
+architect_output: Specification
+implementer_input: Specification
+implementer_output: Implementation
+reviewer_input: Implementation
+```
+
+### 3. Stateless Agents
+
+Agents should not maintain state between invocations:
+
+- All context passed explicitly
+- Results returned, not stored
+- Enables parallel execution
+
+### 4. Composable
+
+Agents should be reusable in different workflows:
+
+```python
+# Same agents, different workflows
+workflow_1 = [architect, implementer, reviewer]
+workflow_2 = [architect, implementer, tester, reviewer]
+workflow_3 = [researcher, implementer, documenter]
+```
+
+## Example Output
 
 ```
-🤝 Amplifier Multi-Agent Systems
 ============================================================
-
-KEY CONCEPT: Specialized Agents Working Together
-- Each agent has different expertise, tools, and instructions
-- Agents communicate through structured workflows
-- Complex tasks decomposed into agent responsibilities
-
-REAL-WORLD PATTERN:
-This is how you build sophisticated AI systems in production.
+WORKFLOW: Build a Feature (Design → Implement → Review)
+============================================================
 
 ============================================================
 🤖 Agent: ARCHITECT
@@ -232,7 +354,7 @@ Instruction: Design a rate limiting module for API requests...
 🔄 Executing...
 
 ✓ architect completed
-Response length: 1243 chars
+Response length: 1847 chars
 
 ============================================================
 🤖 Agent: IMPLEMENTER
@@ -242,7 +364,7 @@ Instruction: Implement the rate limiting module based on the architect's design.
 🔄 Executing...
 
 ✓ implementer completed
-Response length: 2156 chars
+Response length: 2341 chars
 
 ============================================================
 🤖 Agent: REVIEWER
@@ -252,167 +374,34 @@ Instruction: Review the rate limiter implementation...
 🔄 Executing...
 
 ✓ reviewer completed
-Response length: 987 chars
+Response length: 982 chars
 
 ============================================================
 WORKFLOW COMPLETE - SUMMARY
 ============================================================
 
 ARCHITECT:
-  Output: 1243 characters
-  Preview: # Rate Limiting Module Design
-
-## Module Structure
-
-The rate limiting module will consist of...
+  Output: 1847 characters
+  Preview: I'll design a rate limiting module that supports multiple strategies...
 
 IMPLEMENTER:
-  Output: 2156 characters
-  Preview: ```python
-# rate_limiter.py
-
-from abc import ABC, abstractmethod
-import threading...
+  Output: 2341 characters
+  Preview: I'll implement the rate limiting module based on the architecture...
 
 REVIEWER:
-  Output: 987 characters
-  Preview: ## Code Review: Rate Limiter Implementation
-
-### Overall Assessment
-The implementation successfully...
-
-============================================================
-📚 WHAT YOU LEARNED:
-============================================================
-1. Agent Specialization: Different agents for different expertise
-2. Workflow Orchestration: Sequential handoffs between agents
-3. Context Passing: Agents build on previous work
-4. Composition: Each agent is foundation + provider + tools + instruction
-
-✅ You now understand how to build multi-agent architectures!
-
-NEXT STEPS:
-- Define agents for your domain
-- Create workflows that match your business processes
-- Consider parallel execution for independent tasks
-```
-
-## Real-World Use Cases
-
-### Software Development Pipeline
-
-```python
-workflow = [
-    ("architect", "Design the system", architect_agent),
-    ("implementer", "Write the code", implementer_agent),
-    ("tester", "Create tests", tester_agent),
-    ("reviewer", "Review quality", reviewer_agent),
-]
-```
-
-### Data Analysis Pipeline
-
-```python
-workflow = [
-    ("collector", "Gather data sources", collector_agent),
-    ("analyzer", "Analyze the data", analyzer_agent),
-    ("visualizer", "Create visualizations", visualizer_agent),
-]
-```
-
-### Content Creation Pipeline
-
-```python
-workflow = [
-    ("researcher", "Research the topic", researcher_agent),
-    ("writer", "Write the article", writer_agent),
-    ("editor", "Edit and refine", editor_agent),
-]
-```
-
-### Customer Support Pipeline
-
-```python
-workflow = [
-    ("classifier", "Classify the issue", classifier_agent),
-    ("resolver", "Resolve the issue", resolver_agent),
-    ("escalator", "Escalate if needed", escalator_agent),
-]
-```
-
-## Key Takeaways
-
-**Specialization is Power**:
-- Each agent focuses on one expertise area
-- Clear responsibilities prevent confusion
-- Easier to test and improve individual agents
-
-**Context Builds Understanding**:
-- Later agents benefit from earlier agents' work
-- Full conversation history maintained
-- Allows for refinement and iteration
-
-**Composition Enables Flexibility**:
-- Each agent is just a bundle
-- Easy to swap agents in/out
-- Can use different models for different agents
-
-**Workflows Are Declarative**:
-- Define the sequence upfront
-- Clear handoffs between agents
-- Easy to understand and modify
-
-## Advanced Patterns
-
-### Parallel Execution
-
-For independent tasks, run agents in parallel:
-
-```python
-async def parallel_workflow():
-    """Run multiple agents concurrently."""
-    results = await asyncio.gather(
-        agent1_session.execute("Task 1"),
-        agent2_session.execute("Task 2"),
-        agent3_session.execute("Task 3"),
-    )
-    return results
-```
-
-### Conditional Workflows
-
-Route to different agents based on results:
-
-```python
-# Classifier determines which specialist to use
-classification = await classifier.execute("Classify this issue")
-
-if "bug" in classification.lower():
-    result = await bug_hunter.execute("Fix the bug")
-elif "feature" in classification.lower():
-    result = await feature_builder.execute("Build the feature")
-```
-
-### Iterative Refinement
-
-Loop until quality threshold met:
-
-```python
-while not meets_quality_standard(result):
-    feedback = await reviewer.execute(f"Review: {result}")
-    result = await implementer.execute(f"Improve based on: {feedback}")
+  Output: 982 characters
+  Preview: The implementation looks solid overall. Here's my detailed review...
 ```
 
 ## Next Steps
 
-**Explore more patterns**:
-- [Common Patterns](../patterns.md#agent-patterns) - Agent delegation patterns
-- [Bundle Guide](https://github.com/microsoft/amplifier-foundation/blob/main/docs/BUNDLE_GUIDE.md) - Creating agent bundles
+- **Custom Orchestration**: Build your own workflow patterns
+- **Error Handling**: Add retry logic and fallbacks
+- **Monitoring**: Track agent performance and costs
+- **Production Deployment**: Scale multi-agent systems
 
-**Learn about tools**:
-- [Tool modules](/modules/tools/) - Available tools for agents
-- [Custom Tools](/modules/tools/custom) - Build your own tools
+## Learn More
 
-**Understand composition**:
-- [Composition](../concepts.md#composition) - How bundles merge
-- [Mount Plans](../concepts.md#mount-plan) - Final configuration structure
+- [Bundle System Deep Dive](../bundle_system.md) - How composition works
+- [Common Patterns](../patterns.md) - Agent spawning patterns
+- [Application Guide](/developer_guides/applications/index.md) - Building production apps

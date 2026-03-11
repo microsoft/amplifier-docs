@@ -46,13 +46,13 @@
           "repo": "amplifier-module-provider-openai",
           "path": "README.md",
           "exists": true,
-          "hash": "bb6e08b84fa67b9b"
+          "hash": "719fd8b71cf69b67"
         },
         {
           "repo": "amplifier-module-provider-azure-openai",
           "path": "README.md",
           "exists": true,
-          "hash": "2c0daa41d6927cc7"
+          "hash": "99d6687f6630a47c"
         },
         {
           "repo": "amplifier-module-provider-ollama",
@@ -126,13 +126,13 @@
           "repo": "amplifier-core",
           "path": "python/amplifier_core/session.py",
           "exists": true,
-          "hash": "9e710f5777a37c47"
+          "hash": "de9852ae5c20d556"
         },
         {
           "repo": "amplifier-app-cli",
           "path": "amplifier_app_cli/session_spawner.py",
           "exists": true,
-          "hash": "77b29a1581628696"
+          "hash": "f0570d5f3a609026"
         }
       ]
     },
@@ -229,7 +229,7 @@
           "repo": "amplifier-foundation",
           "path": "amplifier_foundation/bundle.py",
           "exists": true,
-          "hash": "b74c36da761eca9c"
+          "hash": "dc6fed83c90fc4e8"
         },
         {
           "repo": "amplifier-foundation",
@@ -287,7 +287,7 @@
           "repo": "amplifier-foundation",
           "path": "docs/PATTERNS.md",
           "exists": true,
-          "hash": "79097e432d5a7fc5"
+          "hash": "bdf8e7001c0aa810"
         }
       ]
     },
@@ -310,7 +310,7 @@
           "repo": "amplifier-foundation",
           "path": "amplifier_foundation/bundle.py",
           "exists": true,
-          "hash": "b74c36da761eca9c"
+          "hash": "dc6fed83c90fc4e8"
         },
         {
           "repo": "amplifier-foundation",
@@ -373,7 +373,7 @@
           "repo": "amplifier-foundation",
           "path": "docs/PATTERNS.md",
           "exists": true,
-          "hash": "79097e432d5a7fc5"
+          "hash": "bdf8e7001c0aa810"
         }
       ]
     },
@@ -418,7 +418,7 @@
           "repo": "amplifier-foundation",
           "path": "docs/PATTERNS.md",
           "exists": true,
-          "hash": "79097e432d5a7fc5"
+          "hash": "bdf8e7001c0aa810"
         }
       ]
     },
@@ -427,9 +427,9 @@
       "sources": [
         {
           "repo": "amplifier-core",
-          "path": "amplifier_core/session.py",
+          "path": "python/amplifier_core/session.py",
           "exists": true,
-          "hash": "9e710f5777a37c47"
+          "hash": "de9852ae5c20d556"
         },
         {
           "repo": "amplifier-app-cli",
@@ -446,13 +446,13 @@
           "repo": "amplifier-app-cli",
           "path": "amplifier_app_cli/main.py",
           "exists": true,
-          "hash": "25045f2f53262c07"
+          "hash": "f85376256aea0098"
         },
         {
           "repo": "amplifier-app-cli",
           "path": "docs/AGENT_DELEGATION_IMPLEMENTATION.md",
           "exists": true,
-          "hash": "1c260e8c9d78126d"
+          "hash": "a14bb129bde300f4"
         }
       ]
     },
@@ -463,7 +463,7 @@
           "repo": "amplifier-core",
           "path": "docs/contracts/README.md",
           "exists": true,
-          "hash": "e3719194c6408d79"
+          "hash": "cc3413843d01bb8a"
         }
       ]
     },

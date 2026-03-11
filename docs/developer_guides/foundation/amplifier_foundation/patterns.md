@@ -157,7 +157,7 @@ providers:
   - module: provider-openai
     source: git+...
     config:
-      default_model: gpt-5.2
+      default_model: gpt-5.4
       priority: 2
 ```
 
@@ -272,7 +272,7 @@ result = await prepared.spawn(
     instruction="Quick analysis task",
     provider_preferences=[
         ProviderPreference(provider="anthropic", model="claude-haiku-*"),
-        ProviderPreference(provider="openai", model="gpt-4o-mini"),
+        ProviderPreference(provider="openai", model="gpt-5-mini"),
     ],
 )
 
@@ -282,30 +282,45 @@ result = await prepared.spawn(
 
 ### Controlling Agent Tool Inheritance
 
-By default, spawned agents inherit all tools from their parent. Configure tool inheritance using the bundle-level `spawn` section:
+By default, spawned agents inherit all tools from their parent. Configure tool inheritance in the task tool's config section:
 
 ```yaml
 # In your bundle.md
-spawn:
-  exclude_tools: [tool-task]  # Agents inherit all EXCEPT these
-  # OR
-  tools: [tool-a, tool-b]     # Agents get ONLY these tools
+tools:
+  - module: tool-task
+    source: git+https://github.com/microsoft/amplifier-module-tool-task@main
+    config:
+      exclude_tools: [tool-task]  # Agents inherit all EXCEPT these
+```
+
+Or specify an explicit allowlist:
+
+```yaml
+tools:
+  - module: tool-task
+    config:
+      inherit_tools: [tool-filesystem, tool-bash]  # Agents get ONLY these
 ```
 
 **Common pattern**: Prevent agents from delegating further:
 
 ```yaml
-# In bundle.md
+# Coordinator has task tool for orchestration
 tools:
   - module: tool-filesystem
   - module: tool-bash
   - module: tool-task
-
-spawn:
-  exclude_tools: [tool-task]  # Spawned agents can't delegate
+    config:
+      exclude_tools: [tool-task]  # Spawned agents can't delegate
 ```
 
 This ensures agents do the work themselves rather than trying to spawn sub-agents.
+
+**Design rationale**: Tool inheritance config belongs in tool-task's config section because:
+- The task tool is the module that consumes this config
+- Follows the pattern of all other tool configs
+- Without tool-task mounted, this config is meaningless
+- Standard module-config merge rules apply during bundle composition
 
 ### Agent Resolution Pattern
 
@@ -476,9 +491,8 @@ for prompt in prompts:
         response = await session.execute(prompt)
 ```
 
-## See Also
+## Next Steps
 
-- **[Core Concepts](concepts.md)** - Mental model
-- **[Bundle System Deep Dive](bundle_system.md)** - Loading, composition, validation
-- **[API Reference](api_reference.md)** - API overview
-- **[Application Integration Guide](https://github.com/microsoft/amplifier-foundation/blob/main/docs/APPLICATION_INTEGRATION_GUIDE.md)** - Application lifecycle patterns, the protocol boundary pattern, and production anti-patterns
+- [Bundle System Deep Dive](bundle_system.md) - Loading, composition, and validation details
+- [API Reference](api_reference.md) - Complete API documentation
+- [Examples](examples/) - Practical examples and tutorials

@@ -94,321 +94,151 @@ The project slug is derived from your working directory:
 /home/user/projects/my-app → -home-user-projects-my-app
 ```
 
-**Why slugs?** They create unique, filesystem-safe identifiers for each project directory.
-
-## Session Lifecycle
-
-### Session States
-
-Sessions progress through these states:
-
-- **Created** - New session initialized
-- **Running** - Actively executing prompts
-- **Completed** - Finished successfully
-- **Failed** - Encountered an error
-- **Cancelled** - User interrupted (Ctrl+C)
-
-### Session Metadata
-
-Each session stores:
-
-```json
-{
-  "session_id": "abc123",
-  "created": "2024-01-15T10:30:00Z",
-  "profile": "dev",
-  "bundle": "foundation",
-  "provider": "anthropic",
-  "model": "claude-opus-4",
-  "message_count": 5,
-  "last_prompt": "Add error handling"
-}
-```
-
-## Parent-Child Sessions
-
-When agents delegate to sub-agents, a **parent-child relationship** is created:
-
-```
-Parent Session (abc123)
-├── Child Session 1 (abc123-def456_zen-architect)
-│   └── Grandchild (abc123-def456-ghi789_bug-hunter)
-└── Child Session 2 (abc123-jkl012_modular-builder)
-```
-
-### Session ID Format
-
-Child sessions use a hierarchical format:
-
-```
-<parent-id>-<child-span>_<agent-name>
-```
-
-Example: `abc123-a1b2c3d4_zen-architect`
-
-- `abc123` - Parent session ID
-- `a1b2c3d4` - Child span ID (16 hex chars)
-- `zen-architect` - Agent name
-
-### Lineage Tracking
-
-The kernel tracks session lineage:
-
-- `session_id` - Current session's unique ID
-- `parent_id` - Parent session ID (None for root sessions)
-- `trace_id` - Root session ID (propagates through all children)
-
-**Events include lineage**: All events emitted by sessions include `session_id` and `parent_id` fields for tracing the full execution tree.
+Sessions are isolated per project, so you can work on multiple projects without confusion.
 
 ## Session Events
 
-The kernel emits lifecycle events:
+Sessions emit lifecycle events for observability:
 
-### Session Start/Resume
+| Event | When | Payload |
+|-------|------|---------|
+| `session:start` | New session begins | session_id, metadata |
+| `session:resume` | Session resumed | session_id, metadata |
+| `session:fork` | Child session created | parent, session_id, metadata |
+| `session:end` | Session completes | session_id, status |
 
-```python
-# New session
-SESSION_START = "session:start"
-SESSION_START_DEBUG = "session:start:debug"
-SESSION_START_RAW = "session:start:raw"
+**Status values**: `running`, `completed`, `failed`, `cancelled`
 
-# Resumed session
-SESSION_RESUME = "session:resume"
-SESSION_RESUME_DEBUG = "session:resume:debug"
-SESSION_RESUME_RAW = "session:resume:raw"
-```
+## Advanced Usage
 
-**Event data**:
-```python
-{
-    "session_id": "abc123",
-    "parent_id": None,  # or parent session ID
-    "mount_plan": {...}  # Debug/raw modes only
-}
-```
+### Custom Session Creation
 
-### Session Fork
-
-When a child session is created:
+For programmatic use:
 
 ```python
-SESSION_FORK = "session:fork"
-SESSION_FORK_DEBUG = "session:fork:debug"
-SESSION_FORK_RAW = "session:fork:raw"
+from amplifier_core import AmplifierSession
+
+session = AmplifierSession(
+    config={
+        "session": {
+            "orchestrator": {"module": "loop-streaming"},
+            "context": {"module": "context-simple"}
+        },
+        "providers": [...],
+        "tools": [...]
+    },
+    session_id="custom-id",  # Optional, generates UUID if not provided
+    parent_id=None,          # Optional, for child sessions
+    is_resumed=False         # Controls session:start vs session:resume event
+)
+
+await session.initialize()
+result = await session.execute("Your prompt here")
+await session.cleanup()
 ```
 
-**Event data**:
-```python
-{
-    "parent": "abc123",
-    "session_id": "abc123-def456_agent",
-    "mount_plan": {...}  # Debug/raw modes only
-}
-```
+### Multi-Turn Conversations
 
-### Session Cancellation
-
-When a session is cancelled (Ctrl+C):
-
-```python
-CANCEL_COMPLETED = "cancel:completed"
-```
-
-**Event data**:
-```python
-{
-    "was_immediate": False,  # Whether cancellation was immediate
-    "error": "..."  # Optional error message if exception occurred
-}
-```
-
-## Debug Mode
-
-Enable debug mode for detailed session inspection:
-
-```yaml
-# In mount plan
-session:
-  debug: true        # Enable debug events
-  raw_debug: true    # Include full mount plan in events
-```
-
-**Debug events** include:
-- Full mount plan configuration
-- Redacted secrets (API keys, tokens)
-- Session initialization details
-
-## Multi-Turn Sub-Session Resumption
-
-Sub-sessions support multi-turn conversations. When a sub-session completes, its state is automatically persisted, enabling resumption across multiple turns.
-
-### State Persistence
-
-The system automatically saves sub-session state:
-
-```python
-# Saved to ~/.amplifier/projects/{project}/sessions/{session-id}/
-{
-    "session_id": "parent-123-child-456_agent",
-    "parent_id": "parent-123",
-    "trace_id": "parent-123",  # Root session ID
-    "agent_name": "zen-architect",
-    "child_span": "child-456",
-    "created": "2024-01-15T10:30:00Z",
-    "config": {...},  # Full merged mount plan
-    "agent_overlay": {...},  # Original agent config
-    "turn_count": 1
-}
-```
-
-### Resuming Sub-Sessions
-
-Resume a previous sub-session by providing its `session_id`:
-
-```python
-# Via task tool
-result = await task_tool.execute({
-    "session_id": "parent-123-child-456_agent",  # From previous spawn
-    "instruction": "Add OAuth 2.0 support"
-})
-```
-
-**Resume process**:
-1. Load transcript and metadata from storage
-2. Recreate AmplifierSession with stored configuration
-3. Restore transcript to context
-4. Execute new instruction with full conversation history
-5. Save updated state
-
-### Multi-Turn Example
-
-```python
-# Turn 1: Initial delegation
-response1 = await task_tool.execute({
-    "agent": "zen-architect",
-    "instruction": "Design a caching system"
-})
-session_id = response1["session_id"]
-
-# Turn 2: Resume with refinement
-response2 = await task_tool.execute({
-    "session_id": session_id,
-    "instruction": "Add TTL support to the cache"
-})
-
-# Turn 3: Continue iteration
-response3 = await task_tool.execute({
-    "session_id": session_id,
-    "instruction": "Add eviction policies"
-})
-```
-
-## Session Configuration
-
-Sessions are configured via the **mount plan**:
-
-```yaml
-session:
-  orchestrator:
-    module: loop-streaming
-    config:
-      min_delay_between_calls_ms: 500  # Rate limiting
-  context:
-    module: context-simple
-    config:
-      max_tokens: 100000
-
-providers:
-  - module: provider-anthropic
-    config:
-      api_key: "${ANTHROPIC_API_KEY}"
-
-tools:
-  - module: tool-filesystem
-  - module: tool-bash
-
-hooks:
-  - module: hooks-logging
-```
-
-## Best Practices
-
-### Session Naming
-
-Use descriptive prompts so sessions are easy to identify:
+Sessions maintain context across turns automatically:
 
 ```bash
-# Good
-amplifier run "Add OAuth 2.0 authentication to user service"
+amplifier run "Explain this function"
+# Session abc123 created
 
-# Less helpful
-amplifier run "fix auth"
+amplifier run --resume abc123 "Now add error handling"
+# Continues previous conversation
+
+amplifier run --resume abc123 "Add tests for it"
+# Builds on entire conversation history
 ```
 
-### Session Cleanup
+### Session Configuration
 
-Sessions persist indefinitely. Clean up old sessions:
+Sessions require:
+- **Orchestrator**: Execution strategy (e.g., `loop-streaming`, `loop-basic`)
+- **Context Manager**: Conversation memory (e.g., `context-simple`)
+- **Providers**: At least one LLM provider
 
-```bash
-# Delete specific session
-amplifier session delete abc123
+Optional components:
+- **Tools**: Additional capabilities
+- **Hooks**: Lifecycle observers
 
-# Delete all sessions older than 30 days
-amplifier session cleanup --older-than 30d
+### Cleanup
+
+Sessions clean up automatically, but you can force cleanup:
+
+```python
+await session.cleanup()
 ```
 
-### Working Directory
-
-Sessions are scoped to the project directory. Change directories for different projects:
-
-```bash
-cd ~/projects/project-a
-amplifier run "task"  # Session saved to project-a/
-
-cd ~/projects/project-b
-amplifier run "task"  # Session saved to project-b/
-```
+This:
+- Emits `session:end` event
+- Runs registered cleanup functions
+- Releases resources
 
 ## Troubleshooting
 
 ### Session Not Found
 
-If a session can't be found:
-
 ```bash
-# Verify session exists
-amplifier session list
+amplifier session resume abc123
+# Error: Session 'abc123' not found
+```
 
-# Check project directory
-pwd  # Sessions are scoped to current directory
+**Solution**: List sessions to find the correct ID:
+```bash
+amplifier session list
 ```
 
 ### Corrupted Session
 
-If a session is corrupted:
+If a session won't resume:
+
+1. **Check events log**: `cat ~/.amplifier/projects/<slug>/sessions/<id>/events.jsonl`
+2. **Validate transcript**: Ensure `transcript.jsonl` is valid JSONL
+3. **Start fresh**: Create a new session if recovery fails
+
+### Missing Context
+
+If resumed session lacks context:
+
+- **Context compaction**: Long sessions may have truncated early messages
+- **Solution**: Reference specific files/code in your prompt
+
+### Performance Issues
+
+Large sessions (100+ turns) may slow down:
+
+- **Context manager overhead**: Processing entire history
+- **Solution**: Start a new session or use session compaction features
+
+## Best Practices
+
+### Session Naming
+
+While session IDs are auto-generated, you can track them by:
+- Using `--resume` with the last session ID
+- Creating project-specific workflows with consistent prompts
+
+### Session Hygiene
+
+- **One topic per session**: Start new sessions for unrelated tasks
+- **Regular cleanup**: Old sessions consume disk space
+- **Archive important sessions**: Copy session directories for future reference
+
+### Debugging Sessions
+
+Enable debug logging to see session lifecycle:
 
 ```bash
-# Delete corrupted session
-amplifier session delete abc123
-
-# Or use session-analyst agent to repair
-amplifier run --agent foundation:session-analyst "Repair session abc123"
+export AMPLIFIER_LOG_LEVEL=DEBUG
+amplifier run "Your prompt"
 ```
 
-### Resume Failed
+Check the `events.jsonl` file for complete event history.
 
-If resuming fails:
+## Next Steps
 
-```bash
-# Check session details
-amplifier session show abc123
-
-# Verify events.jsonl isn't too large
-ls -lh ~/.amplifier/projects/*/sessions/abc123/events.jsonl
-```
-
-## Related Documentation
-
-- [Profiles](profiles.md) - Configure different environments
-- [Bundles](bundles.md) - Pre-configured capability sets
-- [Agent Delegation](../developer_guides/applications/cli_case_study.md) - Sub-session spawning
+- [Provider Setup](../getting_started/providers.md) - Configure LLM providers
+- [Tools](../tools/index.md) - Add capabilities to your sessions
+- [Profiles](../profiles/index.md) - Create reusable session configurations
