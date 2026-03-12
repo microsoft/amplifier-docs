@@ -126,7 +126,7 @@
           "repo": "amplifier-core",
           "path": "python/amplifier_core/session.py",
           "exists": true,
-          "hash": "de9852ae5c20d556"
+          "hash": "4d2902034a64c5dd"
         },
         {
           "repo": "amplifier-app-cli",
@@ -429,7 +429,7 @@
           "repo": "amplifier-core",
           "path": "python/amplifier_core/session.py",
           "exists": true,
-          "hash": "de9852ae5c20d556"
+          "hash": "4d2902034a64c5dd"
         },
         {
           "repo": "amplifier-app-cli",
@@ -535,9 +535,9 @@
         },
         {
           "repo": "amplifier-core",
-          "path": "amplifier_core/interfaces.py",
+          "path": "python/amplifier_core/interfaces.py",
           "exists": true,
-          "hash": "b777f19669e2a60c"
+          "hash": "654cce5b1701754a"
         }
       ]
     },
@@ -552,9 +552,9 @@
         },
         {
           "repo": "amplifier-core",
-          "path": "amplifier_core/hooks.py",
+          "path": "python/amplifier_core/hooks.py",
           "exists": true,
-          "hash": "767d53c36ec54525"
+          "hash": "0e762ad3c65cf95f"
         }
       ]
     },
@@ -565,13 +565,13 @@
           "repo": "amplifier-core",
           "path": "docs/contracts/ORCHESTRATOR_CONTRACT.md",
           "exists": true,
-          "hash": "a41467f5484a93e9"
+          "hash": "0577ebb298dbbc18"
         },
         {
           "repo": "amplifier-core",
-          "path": "amplifier_core/interfaces.py",
+          "path": "python/amplifier_core/interfaces.py",
           "exists": true,
-          "hash": "b777f19669e2a60c"
+          "hash": "654cce5b1701754a"
         }
       ]
     },
@@ -586,9 +586,9 @@
         },
         {
           "repo": "amplifier-core",
-          "path": "amplifier_core/interfaces.py",
+          "path": "python/amplifier_core/interfaces.py",
           "exists": true,
-          "hash": "b777f19669e2a60c"
+          "hash": "654cce5b1701754a"
         }
       ]
     },
@@ -616,7 +616,7 @@
           "repo": "amplifier-core",
           "path": "README.md",
           "exists": true,
-          "hash": "78e3ab20b0604c49"
+          "hash": "748e242e28dc0ba4"
         }
       ]
     },
@@ -631,21 +631,21 @@
         },
         {
           "repo": "amplifier-core",
-          "path": "amplifier_core/__init__.py",
+          "path": "python/amplifier_core/__init__.py",
           "exists": true,
-          "hash": "d2c5c204517fd5f8"
+          "hash": "016efd28d33e5b49"
         },
         {
           "repo": "amplifier-core",
-          "path": "amplifier_core/session.py",
+          "path": "python/amplifier_core/session.py",
           "exists": true,
-          "hash": "9e710f5777a37c47"
+          "hash": "4d2902034a64c5dd"
         },
         {
           "repo": "amplifier-core",
-          "path": "amplifier_core/coordinator.py",
+          "path": "python/amplifier_core/coordinator.py",
           "exists": true,
-          "hash": "ddead941b88aace6"
+          "hash": "d288f5e2f7dd4aa5"
         }
       ]
     },
@@ -656,13 +656,13 @@
           "repo": "amplifier-core",
           "path": "docs/contracts/README.md",
           "exists": true,
-          "hash": "e3719194c6408d79"
+          "hash": "cc3413843d01bb8a"
         },
         {
           "repo": "amplifier-core",
-          "path": "amplifier_core/loader.py",
+          "path": "python/amplifier_core/loader.py",
           "exists": true,
-          "hash": "9f88cfdc971c5f52"
+          "hash": "48344bd47bb4e392"
         }
       ]
     },

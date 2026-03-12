@@ -26,7 +26,7 @@ An **application** in the Amplifier ecosystem is any program that uses amplifier
 ## Architecture: How Applications Work
 
 ```
-┌─────────────────────────────────────────────────────┐
+┌─────────────────────────────────────────────────────────┐
 │  Your Application                                   │
 │                                                     │
 │  ┌─────────────┐  ┌──────────────┐  ┌───────────┐ │
@@ -34,357 +34,312 @@ An **application** in the Amplifier ecosystem is any program that uses amplifier
 │  │  (CLI/Web)  │  │  Resolution  │  │  Formatter│ │
 │  └──────┬──────┘  └──────┬───────┘  └─────┬─────┘ │
 │         │                │                │       │
-│         └────────────────┴────────────────┘       │
+│         └────────────────┼────────────────┘       │
 │                          │                        │
-│                  ┌───────▼────────┐               │
-│                  │ amplifier-     │               │
-│                  │ foundation     │               │
-│                  │ (Bundle        │               │
-│                  │  composition)  │               │
-│                  └───────┬────────┘               │
-│                          │                        │
-│                  ┌───────▼────────┐               │
-│                  │ amplifier-core │               │
-│                  │ (Session,      │               │
-│                  │  Coordinator,  │               │
-│                  │  Module loader)│               │
-│                  └───────┬────────┘               │
-│                          │                        │
-│         ┌────────────────┼────────────────┐       │
-│         │                │                │       │
-│    ┌────▼─────┐  ┌──────▼──────┐  ┌─────▼────┐  │
-│    │ Provider │  │   Tools     │  │  Hooks   │  │
-│    │ Modules  │  │   Modules   │  │  Modules │  │
-│    └──────────┘  └─────────────┘  └──────────┘  │
-└─────────────────────────────────────────────────────┘
+│                          ▼                        │
+│               ┌─────────────────────┐             │
+│               │  AmplifierSession   │             │
+│               │  (amplifier-core)   │             │
+│               └──────────┬──────────┘             │
+└──────────────────────────┼──────────────────────────┘
+                           │
+                           ▼
+        ┌────────────────────────────────┐
+        │  Modules (Providers, Tools,    │
+        │  Orchestrators, Contexts...)   │
+        └────────────────────────────────┘
 ```
 
-**Your job as an application developer:**
+**Key points**:
+- Application layer is policy (what to load, how to display)
+- Kernel layer is mechanism (session management, module loading)
+- Modules are swappable implementations (compete at edges)
 
-1. **UI Layer** - Capture user input and display results
-2. **Configuration** - Use amplifier-foundation to load and compose bundles
-3. **Session Management** - Create and manage amplifier-core sessions
-4. **Display** - Format and present AI responses to users
+## Building an Application
 
-## The Application Pattern
+### 1. Create Mount Plan
 
-### 1. Load and Compose Bundles
-
-Use amplifier-foundation to manage configuration:
+Define which modules to load:
 
 ```python
-from amplifier_foundation import load_bundle
+from amplifier_core import AmplifierSession
 
-# Load base bundle
-foundation = await load_bundle("git+https://github.com/microsoft/amplifier-foundation-bundle@main")
-
-# Load provider
-provider = await load_bundle("./providers/anthropic-sonnet.yaml")
-
-# Compose
-bundle = foundation.compose(provider)
-
-# Get mount plan for amplifier-core
-mount_plan = bundle.to_mount_plan()
+config = {
+    "session": {
+        "orchestrator": "loop-basic",
+        "context": "context-simple"
+    },
+    "providers": [
+        {"module": "provider-anthropic"}
+    ],
+    "tools": [
+        {"module": "tool-filesystem"},
+        {"module": "tool-bash"}
+    ]
+}
 ```
 
 ### 2. Create Session
 
-Use the mount plan to create an amplifier-core session:
+Initialize with configuration:
 
 ```python
-from amplifier_core import AmplifierSession
-
-# Create session
 session = AmplifierSession(
-    config=mount_plan,
-    session_id=session_id,  # Optional: for resuming
-    parent_id=parent_id,    # Optional: for child sessions
-    approval_system=approval_system,  # Optional: app-layer approval
-    display_system=display_system,    # Optional: app-layer display
-    is_resumed=is_resumed   # Whether resuming existing session
+    config=config,
+    session_id=None,           # Auto-generated if None
+    parent_id=None,            # None for top-level, UUID for child
+    approval_system=None,      # App-layer approval policy
+    display_system=None,       # App-layer display policy
+    is_resumed=False           # True if resuming existing session
 )
+```
 
-# Initialize (loads and mounts modules)
+**Session Parameters**:
+- `config`: Required mount plan (orchestrator and context must be specified)
+- `session_id`: Optional explicit ID (generates UUID if None)
+- `parent_id`: Optional parent session ID for child sessions (forking)
+- `approval_system`: Optional approval policy (app-layer UX)
+- `display_system`: Optional display policy (app-layer UX)
+- `is_resumed`: Whether session is resumed (controls event emission)
+
+### 3. Initialize and Execute
+
+Run the session:
+
+```python
+# With context manager (recommended)
+async with AmplifierSession(config) as session:
+    response = await session.execute("List files in current directory")
+    print(response)
+
+# Or manually
+session = AmplifierSession(config)
 await session.initialize()
+response = await session.execute(prompt)
+await session.cleanup()
 ```
 
-### 3. Execute Prompts
+## Session Lifecycle
+
+Sessions have distinct states tracked in `SessionStatus`:
+
+| State | Description |
+|-------|-------------|
+| `created` | Session initialized but not yet executed |
+| `running` | Currently executing a prompt |
+| `completed` | Execution finished successfully |
+| `failed` | Execution encountered an error |
+| `cancelled` | User cancelled execution |
+
+The kernel emits lifecycle events:
+- `session:start` - New session begins
+- `session:resume` - Session resumed
+- `session:fork` - Child session created
+- `session:end` - Session cleanup
+
+## Configuration Resolution
+
+Applications resolve configuration from multiple sources:
+
+1. **User settings** (~/.amplifier/settings.yaml)
+2. **Profile configuration** (profiles define module sets)
+3. **Bundle configuration** (bundles are shareable configs)
+4. **Command-line overrides** (--provider, --model flags)
+
+Example from amplifier-app-cli:
 
 ```python
-# Single execution
-response = await session.execute("Your prompt here")
+# Load user settings
+settings = load_settings()
 
-# Interactive loop
-async with session:
-    while True:
-        prompt = get_user_input()
-        if not prompt:
-            break
-        response = await session.execute(prompt)
-        display_response(response)
+# Resolve profile
+profile = settings.get_profile(profile_name)
+
+# Merge with bundle config
+config = merge_configs(profile, bundle_config)
+
+# Apply CLI overrides
+if provider_override:
+    config["providers"] = [{"module": provider_override}]
 ```
 
-### 4. Session Lifecycle
+## Child Sessions (Forking)
+
+Applications can spawn child sessions for agent delegation:
 
 ```python
-# Context manager handles cleanup
-async with session:
-    # Session is initialized and ready
-    response = await session.execute(prompt)
-    # Session cleanup happens automatically
+# Create child session with parent linkage
+child_session = AmplifierSession(
+    config=child_config,
+    session_id="generated-child-id",
+    parent_id=parent_session.session_id,  # Links to parent
+    approval_system=parent_session.coordinator.approval_system,
+    display_system=parent_session.coordinator.display_system
+)
+```
 
-# Or manual cleanup
+**Key features**:
+- `parent_id` establishes parent-child relationship
+- Kernel emits `session:fork` event with lineage
+- Child sessions inherit UX systems (approval, display)
+- Enables hierarchical agent delegation patterns
+
+**W3C Trace Context pattern**:
+- Root session ID becomes the `trace_id`
+- All child sessions inherit the same `trace_id`
+- Enables distributed tracing across agent hierarchies
+
+## Approval System Integration
+
+Applications provide approval policies:
+
+```python
+from amplifier_core.interfaces import ApprovalProvider, ApprovalRequest, ApprovalResponse
+
+class MyApprovalSystem(ApprovalProvider):
+    async def request_approval(self, request: ApprovalRequest) -> ApprovalResponse:
+        # Show approval dialog to user
+        approved = show_dialog(request.action, request.risk_level)
+        return ApprovalResponse(approved=approved)
+
+# Inject into session
+session = AmplifierSession(
+    config=config,
+    approval_system=MyApprovalSystem()
+)
+```
+
+The kernel provides the mechanism (ApprovalProvider protocol), applications provide the policy (how to show dialogs, cache decisions).
+
+## Display System Integration
+
+Applications control output formatting:
+
+```python
+class MyDisplaySystem:
+    def show_status(self, message: str):
+        """Show status message to user."""
+        print(f"[STATUS] {message}")
+    
+    def show_result(self, result: str):
+        """Show final result to user."""
+        print(f"\n{result}\n")
+
+# Inject into session
+session = AmplifierSession(
+    config=config,
+    display_system=MyDisplaySystem()
+)
+```
+
+## Event Handling
+
+Applications can hook into lifecycle events:
+
+```python
+from amplifier_core.hooks import HookResult
+
+async def my_event_handler(event: str, data: dict) -> HookResult:
+    if event == "tool:pre":
+        print(f"About to execute tool: {data['tool_name']}")
+    return HookResult(action="continue")
+
+# Register during module mounting
+coordinator.hooks.register("tool:pre", my_event_handler)
+```
+
+## Best Practices
+
+### Configuration Management
+
+- **Validate early**: Check required fields before session creation
+- **Provide defaults**: Sensible defaults for optional fields
+- **Layer configs**: User settings → profile → bundle → CLI overrides
+- **Document options**: Clear documentation for all config options
+
+### Error Handling
+
+```python
 try:
-    await session.initialize()
-    response = await session.execute(prompt)
-finally:
-    await session.cleanup()
-```
-
-## Key Application Responsibilities
-
-### Configuration Resolution
-
-**Your app decides:**
-- Which bundles to load (foundation, provider, tools)
-- How to compose them (order, overrides)
-- Where config files are stored
-- How users select profiles/providers
-
-**Example: Profile-based config**
-
-```python
-async def load_profile(profile_name: str) -> Bundle:
-    """Load user's profile bundle."""
-    profile_path = Path(f"~/.myapp/profiles/{profile_name}.md").expanduser()
-    return await load_bundle(str(profile_path))
-
-# User selects profile
-profile = await load_profile("development")
-composed = foundation.compose(profile)
+    async with AmplifierSession(config) as session:
+        response = await session.execute(prompt)
+except ValueError as e:
+    # Config validation error
+    print(f"Configuration error: {e}")
+except RuntimeError as e:
+    # Module mounting error
+    print(f"Module error: {e}")
+except Exception as e:
+    # Execution error
+    print(f"Execution error: {e}")
 ```
 
 ### Session Management
 
-**Your app manages:**
-- Creating new sessions
-- Resuming previous sessions
-- Session storage location
-- Session metadata (working directory, project context)
+- **Use context managers**: Ensures cleanup happens
+- **Track session IDs**: Enable session resumption
+- **Handle cancellation**: Graceful Ctrl+C handling
+- **Clean up resources**: Always call session.cleanup()
 
-**Example: Session directory structure**
+### Module Loading
 
 ```python
-def get_session_dir(session_id: str) -> Path:
-    """Get session storage directory."""
-    project_slug = get_project_slug(os.getcwd())
-    return Path(f"~/.myapp/projects/{project_slug}/sessions/{session_id}").expanduser()
+from amplifier_core.loader import ModuleLoader
 
-# Create or resume
-if resume_id:
-    session_dir = get_session_dir(resume_id)
-    # Load metadata, pass to AmplifierSession
-else:
-    session_id = str(uuid.uuid4())
-    session_dir = get_session_dir(session_id)
-    session_dir.mkdir(parents=True, exist_ok=True)
+# Create loader with coordinator for resolver injection
+loader = ModuleLoader(coordinator=session.coordinator)
+
+# Load modules from mount plan
+for provider_config in config["providers"]:
+    mount_fn = await loader.load(
+        module_id=provider_config["module"],
+        config=provider_config.get("config"),
+        coordinator=session.coordinator
+    )
+    await loader.initialize(mount_fn, session.coordinator)
 ```
 
-### Display and Formatting
+## The Rust Kernel
 
-**Your app controls:**
-- How responses are formatted
-- Streaming vs. batch display
-- Error presentation
-- Progress indicators
+amplifier-core is implemented in Rust with Python bindings via PyO3:
 
-**Example: Display system**
+- **Same API**: Python code requires zero changes
+- **Same imports**: `from amplifier_core import AmplifierSession`
+- **Backward compatible**: Existing applications work without modification
 
-```python
-class MyDisplaySystem:
-    """Custom display for my app."""
-    
-    async def show_response(self, response: str):
-        """Display AI response."""
-        # Format with your app's style
-        formatted = format_markdown(response)
-        print(formatted)
-    
-    async def show_error(self, error: Exception):
-        """Display error."""
-        print(f"Error: {error}", file=sys.stderr)
-    
-    async def show_progress(self, message: str):
-        """Show progress indicator."""
-        print(f"⏳ {message}")
-```
+The Rust kernel provides:
+- Type-safe session management
+- Fast event dispatch
+- Efficient hook processing
+- Cancellation primitives
 
-### Module Resolution
-
-**Your app provides:**
-- Module source resolver (maps module IDs to sources)
-- Cache location for downloaded modules
-- Update policy (when to check for updates)
-
-**Example: Module source resolver**
+## Example: Minimal Application
 
 ```python
-from amplifier_foundation import SimpleSourceResolver
-
-# Configure module sources
-resolver = SimpleSourceResolver(
-    cache_dir=Path("~/.myapp/modules").expanduser(),
-    sources={
-        "tool-filesystem": "git+https://github.com/microsoft/amplifier-module-tool-filesystem@main",
-        "tool-bash": "git+https://github.com/microsoft/amplifier-module-tool-bash@main",
-        # ... more modules
-    }
-)
-
-# Mount resolver before session initialization
-await session.coordinator.mount("source-resolver", resolver)
-```
-
-## Integration Points
-
-### 1. Bundle System (amplifier-foundation)
-
-**What it provides:**
-- Bundle loading and composition
-- Module configuration merging
-- @mention resolution
-- Source resolution
-
-**How you use it:**
-```python
-from amplifier_foundation import load_bundle, BundleRegistry
-
-registry = BundleRegistry()
-bundle = await registry.load("foundation")
-mount_plan = bundle.to_mount_plan()
-```
-
-### 2. Session System (amplifier-core)
-
-**What it provides:**
-- Module lifecycle management
-- Orchestrator and context managers
-- Event system and hooks
-- Provider abstraction
-
-**How you use it:**
-```python
+import asyncio
 from amplifier_core import AmplifierSession
 
-session = AmplifierSession(config=mount_plan)
-await session.initialize()
-response = await session.execute(prompt)
+async def main():
+    config = {
+        "session": {
+            "orchestrator": "loop-basic",
+            "context": "context-simple"
+        },
+        "providers": [{"module": "provider-anthropic"}],
+        "tools": [{"module": "tool-filesystem"}]
+    }
+    
+    async with AmplifierSession(config) as session:
+        response = await session.execute("List files in current directory")
+        print(response)
+
+if __name__ == "__main__":
+    asyncio.run(main())
 ```
 
-### 3. Your App Layer
+## See Also
 
-**What you provide:**
-- User interface (CLI, web, API)
-- Configuration policy (where configs live, defaults)
-- Session storage (where sessions persist)
-- Display formatting (how to present results)
-
-## Real-World Example: CLI Application
-
-See [CLI Case Study](cli_case_study.md) for a detailed walkthrough of how amplifier-app-cli is built.
-
-**Key takeaways:**
-
-- **Thin application layer** - Let foundation and core do the heavy lifting
-- **Clear separation** - UI, config, session, display are distinct concerns
-- **Composition over configuration** - Build bundles, don't write config files
-- **Protocol boundary** - Your app speaks mount plans to core
-
-## Common Patterns
-
-### Pattern: Profile Management
-
-```python
-class ProfileManager:
-    """Manage user profiles."""
-    
-    def __init__(self, profiles_dir: Path):
-        self.profiles_dir = profiles_dir
-    
-    async def list_profiles(self) -> list[str]:
-        """List available profiles."""
-        return [p.stem for p in self.profiles_dir.glob("*.md")]
-    
-    async def load_profile(self, name: str) -> Bundle:
-        """Load profile bundle."""
-        path = self.profiles_dir / f"{name}.md"
-        return await load_bundle(str(path))
-    
-    async def save_profile(self, name: str, bundle: Bundle):
-        """Save profile bundle."""
-        path = self.profiles_dir / f"{name}.md"
-        # Serialize and save bundle
-```
-
-### Pattern: Session Resumption
-
-```python
-async def create_or_resume_session(
-    mount_plan: dict,
-    session_id: str | None = None
-) -> AmplifierSession:
-    """Create new session or resume existing."""
-    
-    if session_id:
-        # Load session metadata
-        metadata = load_session_metadata(session_id)
-        
-        # Create session with resume flag
-        session = AmplifierSession(
-            config=mount_plan,
-            session_id=session_id,
-            is_resumed=True
-        )
-    else:
-        # Create new session
-        session = AmplifierSession(
-            config=mount_plan,
-            session_id=str(uuid.uuid4())
-        )
-    
-    await session.initialize()
-    return session
-```
-
-### Pattern: Event Handling
-
-```python
-class MyEventHandler:
-    """Handle session events."""
-    
-    async def on_tool_call(self, event: dict):
-        """Called when tool is executed."""
-        tool_name = event.get("tool_name")
-        print(f"🔧 Using tool: {tool_name}")
-    
-    async def on_error(self, event: dict):
-        """Called on error."""
-        error = event.get("error")
-        print(f"❌ Error: {error}")
-
-# Register handler as hook module
-await session.coordinator.mount("hooks", handler, name="my-event-handler")
-```
-
-## Next Steps
-
-- **[CLI Case Study](cli_case_study.md)** - Deep dive into amplifier-app-cli
-- **[Bundle System](../foundation/amplifier_foundation/bundle_system.md)** - Understanding bundles
-- **[Module Contracts](/developer/index.md)** - Building custom modules
-
-## Resources
-
-- **amplifier-core** - Session and module system
-- **amplifier-foundation** - Bundle composition layer
-- **amplifier-app-cli** - Reference implementation
+- [Session Lifecycle](../../user_guide/sessions.md) - Session management guide
+- [Module Contracts](../contracts/index.md) - Module interfaces
+- [Mount Plan Specification](../specs/mount-plan.md) - Configuration format
+- [Hooks API](../hooks-api.md) - Event system reference

@@ -62,224 +62,270 @@ session = AmplifierSession(config)  # Validates required fields
 await session.initialize()  # Discovers and loads all modules
 
 # Modules mount via coordinator
-await coordinator.mount("providers", provider, name="anthropic")
-await coordinator.hooks.emit("session:start", data)
+await coordinator.mount("tools", tool_instance, name="my-tool")
+
+# Session executes
+response = await session.execute(prompt)
 ```
+
+The kernel is implemented in **Rust** with Python bindings via PyO3:
+- Same API for Python consumers
+- Type-safe session management
+- Fast event dispatch
+- Efficient hook processing
 
 ### Layer 3: Modules
 
 Modules implement specific functionality:
 
-- **Providers**: LLM API integrations (Anthropic, OpenAI, Azure, Ollama)
-- **Tools**: Agent capabilities (filesystem, bash, web, search)
-- **Orchestrators**: Execution strategies (basic, streaming, events)
-- **Contexts**: ContextManager implementations for memory management (simple, persistent)
-- **Hooks**: Observability and control (logging, approval, redaction, streaming)
-- **Agents**: Configuration overlays for specialized sub-sessions
+| Module Type | Examples | Mount Point |
+|-------------|----------|-------------|
+| **Providers** | Anthropic, OpenAI, Azure | `providers` |
+| **Tools** | Filesystem, Bash, Web | `tools` |
+| **Orchestrators** | Basic loop, Streaming | `orchestrator` |
+| **Contexts** | Simple, Persistent | `context` |
+| **Hooks** | Logging, Approval | (registered) |
 
 ```python
-# Module implements contract
-class AnthropicProvider:
-    async def complete(self, request: ChatRequest) -> ChatResponse:
-        # Provider-specific implementation
-        ...
+# Modules discovered via entry points
+[project.entry-points."amplifier.modules"]
+tool-filesystem = "amplifier_module_tool_filesystem:mount"
+
+# Module implements protocol
+class MyTool:
+    @property
+    def name(self) -> str: return "my_tool"
+    
+    @property
+    def description(self) -> str: return "Does X"
+    
+    async def execute(self, input: dict) -> ToolResult: ...
 ```
 
-## Component Relationships
-
-```
-┌─────────────────────────────────────────────────────────────────┐
-│                        Application                               │
-│  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐             │
-│  │   Bundles   │  │   Config    │  │  Collections│             │
-│  └──────┬──────┘  └──────┬──────┘  └──────┬──────┘             │
-│         │                │                │                      │
-│         └────────────────┼────────────────┘                      │
-│                          │                                       │
-│                          ▼                                       │
-│                   ┌─────────────┐                                │
-│                   │ Mount Plan  │                                │
-│                   └──────┬──────┘                                │
-└──────────────────────────┼──────────────────────────────────────┘
-                           │
-                           ▼
-┌──────────────────────────┼──────────────────────────────────────┐
-│                        Kernel                                    │
-│                   ┌─────────────┐                                │
-│                   │   Session   │                                │
-│                   └──────┬──────┘                                │
-│                          │                                       │
-│                          ▼                                       │
-│                   ┌─────────────┐                                │
-│                   │ Coordinator │                                │
-│                   └──────┬──────┘                                │
-│         ┌────────────────┼────────────────┐                      │
-│         ▼                ▼                ▼                      │
-│  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐             │
-│  │   Loader    │  │    Hooks    │  │   Events    │             │
-│  └─────────────┘  └─────────────┘  └─────────────┘             │
-└──────────────────────────┼──────────────────────────────────────┘
-                           │
-                           ▼
-┌──────────────────────────┼──────────────────────────────────────┐
-│                       Modules                                    │
-│  ┌───────────┐ ┌───────────┐ ┌───────────┐ ┌───────────┐       │
-│  │ Providers │ │   Tools   │ │Orchestrator│ │  Context  │       │
-│  └───────────┘ └───────────┘ └───────────┘ └───────────┘       │
-│                                                                  │
-│  ┌───────────────────────────────────────────────────────┐      │
-│  │                        Hooks                           │      │
-│  │  ┌─────────┐ ┌─────────┐ ┌─────────┐ ┌─────────┐     │      │
-│  │  │ Logging │ │ Approval│ │Redaction│ │Streaming│     │      │
-│  │  └─────────┘ └─────────┘ └─────────┘ └─────────┘     │      │
-│  └───────────────────────────────────────────────────────┘      │
-└─────────────────────────────────────────────────────────────────┘
-```
-
-## Session Execution Flow
+## Data Flow
 
 ```
 User Prompt
-     │
-     ▼
-┌─────────────────────────────────────────────────────────────────┐
-│ 1. Session receives prompt                                       │
-│    emit("prompt:submit", {prompt})                              │
-└──────┬──────────────────────────────────────────────────────────┘
-       │
-       ▼
-┌─────────────────────────────────────────────────────────────────┐
-│ 2. Orchestrator takes control                                    │
-│    orchestrator.execute(prompt, context, providers, tools)      │
-└──────┬──────────────────────────────────────────────────────────┘
-       │
-       ▼
-┌─────────────────────────────────────────────────────────────────┐
-│ 3. Add prompt to context                                         │
-│    context.add_message({role: "user", content: prompt})         │
-└──────┬──────────────────────────────────────────────────────────┘
-       │
-       ▼
-┌─────────────────────────────────────────────────────────────────┐
-│ 4. Call provider                                                 │
-│    emit("provider:request", {...})                              │
-│    response = provider.complete(messages)                        │
-│    emit("provider:response", {...})                             │
-└──────┬──────────────────────────────────────────────────────────┘
-       │
-       ▼
-┌─────────────────────────────────────────────────────────────────┐
-│ 5. Process tool calls (if any)                                   │
-│    for tool_call in response.tool_calls:                        │
-│        emit("tool:pre", {...})                                  │
-│        result = tool.execute(input)                             │
-│        emit("tool:post", {...})                                 │
-│        context.add_message({role: "tool", ...})                 │
-│    → Loop back to step 4 if more tool calls                     │
-└──────┬──────────────────────────────────────────────────────────┘
-       │
-       ▼
-┌─────────────────────────────────────────────────────────────────┐
-│ 6. Return final response                                         │
-│    emit("orchestrator:complete", {...})                         │
-│    emit("prompt:complete", {...})                               │
-│    return response.text                                          │
-└─────────────────────────────────────────────────────────────────┘
+    ↓
+Application Layer
+    ↓ (mount plan)
+Kernel (AmplifierSession)
+    ↓ (load modules)
+Coordinator
+    ↓ (orchestrator.execute())
+Orchestrator Module
+    ↓ (context.get_messages())
+Context Manager
+    ↓ (provider.complete())
+Provider Module
+    ↓ (tool.execute())
+Tool Modules
+    ↓ (hooks.emit())
+Hook Modules
+    ↓
+Final Response
 ```
 
-## Core Concepts
+## Event Flow
 
-| Concept | Description |
-|---------|-------------|
-| **Kernel** | Ultra-thin core providing mechanisms only (~2,600 lines) |
-| **Module** | Swappable component implementing a contract (Protocol) |
-| **Mount Plan** | Configuration specifying which modules to load |
-| **Event** | Observable occurrence in the system |
-| **Hook** | Module that observes/controls events |
-| **Session** | Single conversation lifecycle |
-| **Coordinator** | Infrastructure context for modules |
-| **Context Manager** | Memory management with compaction |
-| **Agent** | Configuration overlay for specialized sub-sessions |
+The kernel emits lifecycle events through the hook system:
 
-## Key Design Decisions
+```
+session:start → execution:start → provider:request → provider:response
+    ↓
+tool:pre → tool:post (repeat for each tool)
+    ↓
+execution:end → orchestrator:complete → session:end
+```
 
-### Why a Tiny Kernel?
+**Hook modules observe events**:
+- Log to files (hooks-logging)
+- Request approval (hooks-approval)
+- Redact secrets (hooks-redaction)
+- Custom observability (your hooks)
 
-1. **Stability**: Fewer changes = fewer breaking changes
-2. **Auditability**: Can be reviewed in an afternoon
-3. **Maintainability**: Single-throat-to-choke ownership
-4. **Flexibility**: All innovation happens at edges
+## Module Contracts
 
-### Why Module Contracts?
+Modules communicate via stable protocols:
 
-1. **Independence**: Modules develop independently
-2. **Swappability**: Replace any module without touching others
-3. **Testing**: Mock modules for isolated testing
-4. **Competition**: Multiple implementations can compete
+```python
+# Provider Protocol
+class Provider(Protocol):
+    @property
+    def name(self) -> str: ...
+    def get_info(self) -> ProviderInfo: ...
+    async def list_models(self) -> list[ModelInfo]: ...
+    async def complete(self, request: ChatRequest) -> ChatResponse: ...
+    def parse_tool_calls(self, response: ChatResponse) -> list[ToolCall]: ...
 
-### Why Events?
+# Tool Protocol
+class Tool(Protocol):
+    @property
+    def name(self) -> str: ...
+    @property
+    def description(self) -> str: ...
+    async def execute(self, input: dict[str, Any]) -> ToolResult: ...
 
-1. **Observability**: Everything important is observable
-2. **Decoupling**: Emitters don't know about observers
-3. **Debugging**: Complete audit trail
-4. **Extensions**: Add behavior via hooks, not code changes
+# Orchestrator Protocol
+class Orchestrator(Protocol):
+    async def execute(
+        self, prompt: str, context: ContextManager,
+        providers: dict[str, Provider], tools: dict[str, Tool],
+        hooks: HookRegistry
+    ) -> str: ...
 
-### Why Directness Over Abstraction?
+# ContextManager Protocol
+class ContextManager(Protocol):
+    async def add_message(self, message: dict[str, Any]) -> None: ...
+    async def get_messages_for_request(
+        self, token_budget: int | None = None,
+        provider: Any | None = None
+    ) -> list[dict[str, Any]]: ...
+    async def get_messages(self) -> list[dict[str, Any]]: ...
+    async def set_messages(self, messages: list[dict[str, Any]]) -> None: ...
+    async def clear(self) -> None: ...
 
-1. **Simplicity**: Fewer layers to understand
-2. **Maintenance**: Clear code paths
-3. **Debugging**: Easy to trace execution
-4. **Performance**: No unnecessary indirection
+# HookHandler Protocol
+class HookHandler(Protocol):
+    async def __call__(self, event: str, data: dict[str, Any]) -> HookResult: ...
+```
 
-### Decision Framework
+Protocols use structural subtyping (duck typing) - no inheritance required.
 
-When faced with implementation decisions, apply these questions:
+## Configuration Flow
 
-1. **Necessity**: "Do we actually need this right now?"
-2. **Simplicity**: "What's the simplest way to solve this?"
-3. **Directness**: "Can we solve this more directly?"
-4. **Value**: "Does the complexity add proportional value?"
-5. **Maintenance**: "How easy will this be to understand later?"
+```
+User Settings (~/.amplifier/settings.yaml)
+    ↓ (profile selection)
+Profile Config
+    ↓ (bundle loading)
+Bundle Config
+    ↓ (CLI overrides)
+Mount Plan
+    ↓ (validation)
+AmplifierSession(config)
+    ↓ (module loading)
+Running Session
+```
 
-## Libraries
+## The Rust Kernel
 
-Supporting libraries provide higher-level functionality:
+amplifier-core is implemented in Rust with Python bindings:
 
-| Library | Purpose |
-|---------|---------|
-| `amplifier-foundation` | Bundle loading, composition, configuration, module resolution, and session management |
+```
+┌─────────────────────────────────────────────────┐
+│  RUST KERNEL (crates/amplifier-core/)           │
+│  * Session lifecycle   * Event system           │
+│  * Coordinator         * Hook registry          │
+│  * Type-safe contracts * Cancellation tokens    │
+└────────────────────┬────────────────────────────┘
+                     │ PyO3 bridge
+                     ▼
+┌─────────────────────────────────────────────────┐
+│  PYTHON BINDINGS (python/amplifier_core/)       │
+│  * Same public API    * Pydantic models         │
+│  * Module loader      * Backward-compatible     │
+└────────────────────┬────────────────────────────┘
+                     │ protocols
+                     ▼
+┌─────────────────────────────────────────────────┐
+│  MODULES (Python, WASM, gRPC)                   │
+│  * Providers, Tools, Orchestrators, Contexts... │
+└─────────────────────────────────────────────────┘
+```
 
-These libraries are **not part of the kernel**—they're application-layer concerns.
+**Key features**:
+- Zero changes for Python consumers
+- Type-safe core with Protocol-based modules
+- Fast event dispatch
+- Efficient hook processing
+- Cancellation primitives
 
-## For Different Audiences
+## Design Principles
 
-Now that you understand the architecture, here's where to go based on what you want to do:
+### Mechanism vs Policy
 
-### I Want to Use Amplifier
-→ Start with [Getting Started](../getting_started/)  
-→ Read [CLI User Guide](../user_guide/) for the amplifier-app-cli application
+The kernel provides **mechanisms** (capabilities), modules provide **policies** (decisions):
 
-### I Want to Extend Amplifier with Modules
-→ Read this Architecture section to understand the system  
-→ Follow [Module Developer Guide](../developer/) for creating custom providers, tools, hooks
+| Mechanism (Kernel) | Policy (Modules) |
+|-------------------|------------------|
+| Load modules | Which modules to load |
+| Emit events | What to log, where |
+| Manage sessions | Orchestration strategy |
+| Register hooks | Security policies |
 
-### I Want to Build Applications on Amplifier
-→ Read this Architecture section to understand the foundation  
-→ Follow [Application Developer Guide](../developer_guides/applications/) for building apps on amplifier-core  
-→ Study [Foundation Guide](../developer_guides/foundation/) for using the core and libraries
+### Stable Contracts
 
-### I Want to Contribute to Amplifier Core
-→ Read this Architecture section + [Kernel Philosophy](kernel.md)  
-→ Follow [Foundation Developer Guide](../developer_guides/foundation/) for working with the kernel and libraries  
-→ See [Contributing](../community/contributing.md) for contribution guidelines
+- **Backward compatible**: Old modules work with new kernel
+- **Protocol-based**: Duck typing, no inheritance
+- **Additive evolution**: Add features, don't break existing
+- **Documented**: Clear expectations and examples
 
-## Next Steps
+### Event-First Observability
 
-- [Kernel Philosophy](kernel.md) - Deep dive into kernel design
-- [Module System](modules.md) - How modules work
-- [Mount Plans](mount_plans.md) - Configuration contract
-- [Event System](events.md) - Observability
+- If it's important → emit a canonical event
+- If it's not observable → it didn't happen
+- One JSONL stream = single source of truth
+- Hooks observe without blocking
 
-## References
+## Session Lifecycle
 
-- **→ [Design Philosophy](https://github.com/microsoft/amplifier-core/blob/main/docs/DESIGN_PHILOSOPHY.md)** - Kernel design principles and Linux kernel inspiration
+```python
+# Create session
+session = AmplifierSession(
+    config=config,
+    session_id=None,           # Auto-generated
+    parent_id=None,            # None for top-level
+    approval_system=None,      # App-layer policy
+    display_system=None,       # App-layer policy
+    is_resumed=False           # Controls event emission
+)
+
+# Initialize (load modules)
+await session.initialize()
+
+# Execute prompt
+response = await session.execute(prompt)
+
+# Cleanup
+await session.cleanup()
+```
+
+**Session states**:
+- `created` - Initialized but not yet executed
+- `running` - Currently executing
+- `completed` - Finished successfully
+- `failed` - Encountered error
+- `cancelled` - User cancelled
+
+**Lifecycle events**:
+- `session:start` - New session begins
+- `session:resume` - Session resumed
+- `session:fork` - Child session created
+- `session:end` - Session cleanup
+
+## Child Sessions (Forking)
+
+Sessions can spawn child sessions for agent delegation:
+
+```python
+child_session = AmplifierSession(
+    config=child_config,
+    session_id="child-id",
+    parent_id=parent_session.session_id,  # Links to parent
+    approval_system=parent_approval,
+    display_system=parent_display
+)
+```
+
+**W3C Trace Context pattern**:
+- Root session ID becomes the `trace_id`
+- All children inherit the same `trace_id`
+- Enables distributed tracing across agent hierarchies
+
+## See Also
+
+- [Kernel Philosophy](kernel.md) - Design principles
+- [Module System](modules.md) - Module loading and coordination
+- [Module Contracts](../developer/contracts/index.md) - Protocol specifications
+- [Design Philosophy](https://github.com/microsoft/amplifier-core/blob/main/docs/DESIGN_PHILOSOPHY.md) - Complete philosophy

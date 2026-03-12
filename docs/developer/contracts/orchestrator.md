@@ -79,247 +79,247 @@ Orchestrators **MUST** emit these events:
 | `prompt:submit` | Received prompt | prompt |
 | `provider:request` | Before LLM call | messages, model |
 | `provider:stream` | During streaming (optional) | chunk |
-| `provider:response` | After LLM response | response, usage |
-| `tool:pre` | Before tool execution | tool_name, input |
-| `tool:post` | After tool execution | tool_name, result |
-| `prompt:complete` | Final response | response |
-| `orchestrator:complete` | Loop finished | orchestrator, turn_count, status |
+| `provider:response` | After LLM call | response, usage |
+| `tool:pre` | Before tool execution | tool_name, tool_input |
+| `tool:post` | After successful tool execution | tool_name, tool_result |
+| `tool:error` | Tool execution failed | tool_name, error |
+| `orchestrator:complete` | Execution finished | orchestrator, turn_count, status |
 
-The `orchestrator:complete` event is **required** and must include:
-- `orchestrator`: Name of the orchestrator module
-- `turn_count`: Number of LLM turns executed
-- `status`: "success", "incomplete", or "error"
+### Required: orchestrator:complete Event
 
-## Configuration
-
-Common configuration options:
-
-| Option | Type | Description |
-|--------|------|-------------|
-| `max_iterations` | int | Maximum loop iterations |
-| `parallel_tools` | bool | Execute tools in parallel |
-| `streaming` | bool | Enable streaming output |
-| `debug` | bool | Enable debug logging |
-
-## Example Implementation
+**All orchestrators MUST emit `orchestrator:complete`** at the end of their `execute()` method:
 
 ```python
-from amplifier_core.models import HookResult
-
-class BasicOrchestrator:
-    def __init__(self, config):
-        self.max_iterations = config.get("max_iterations", 10)
-        self.parallel_tools = config.get("parallel_tools", False)
-
-    async def execute(self, prompt, context, providers, tools, hooks):
-        # Emit prompt received
-        await hooks.emit("prompt:submit", {"prompt": prompt})
-        
-        # Add user message
-        await context.add_message({"role": "user", "content": prompt})
-        
-        # Get first provider
-        provider = list(providers.values())[0]
-        iteration = 0
-
-        for iteration in range(self.max_iterations):
-            # Get messages with dynamic token budget from provider
-            messages = await context.get_messages_for_request(provider=provider)
-
-            # Emit request event
-            await hooks.emit("provider:request", {
-                "messages": messages,
-                "iteration": iteration
-            })
-
-            # Call provider
-            response = await provider.complete({"messages": messages})
-
-            # Emit response event
-            await hooks.emit("provider:response", {
-                "response": response,
-                "usage": response.get("usage", {})
-            })
-
-            # Add response to context
-            await context.add_message({
-                "role": "assistant",
-                "content": response["content"]
-            })
-
-            # Parse tool calls
-            tool_calls = provider.parse_tool_calls(response)
-
-            if not tool_calls:
-                # No tools - complete successfully
-                final_text = self._extract_text(response)
-                
-                await hooks.emit("prompt:complete", {"response": final_text})
-                await hooks.emit("orchestrator:complete", {
-                    "orchestrator": "basic",
-                    "turn_count": iteration + 1,
-                    "status": "success"
-                })
-                
-                return final_text
-
-            # Execute tools
-            for call in tool_calls:
-                tool = tools.get(call["name"])
-                if tool:
-                    # Emit pre-execution
-                    await hooks.emit("tool:pre", {
-                        "tool_name": call["name"],
-                        "input": call["input"]
-                    })
-
-                    # Execute tool
-                    result = await tool.execute(call["input"])
-
-                    # Emit post-execution
-                    await hooks.emit("tool:post", {
-                        "tool_name": call["name"],
-                        "result": result
-                    })
-
-                    # Add result to context
-                    await context.add_message({
-                        "role": "tool",
-                        "tool_call_id": call["id"],
-                        "content": result.get_serialized_output()
-                    })
-
-        # Max iterations reached
-        await hooks.emit("orchestrator:complete", {
-            "orchestrator": "basic",
-            "turn_count": iteration + 1,
-            "status": "incomplete"
-        })
-        
-        return "Max iterations reached"
-
-    def _extract_text(self, response):
-        for block in response.get("content", []):
-            if block.get("type") == "text":
-                return block.get("text", "")
-        return ""
+await hooks.emit("orchestrator:complete", {
+    "orchestrator": "my-orchestrator",  # Your orchestrator name
+    "turn_count": iteration_count,       # Number of LLM turns
+    "status": "success"                  # "success", "incomplete", or "cancelled"
+})
 ```
 
-## Streaming Orchestrator
+### Required: execution:start and execution:end Events
 
-Streaming output is handled via hooks, not callbacks:
-
-```python
-class StreamingOrchestrator:
-    def __init__(self, config):
-        self.max_iterations = config.get("max_iterations", 10)
-
-    async def execute(self, prompt, context, providers, tools, hooks):
-        await hooks.emit("prompt:submit", {"prompt": prompt})
-        await context.add_message({"role": "user", "content": prompt})
-        
-        provider = list(providers.values())[0]
-        iteration = 0
-
-        for iteration in range(self.max_iterations):
-            messages = await context.get_messages_for_request(provider=provider)
-
-            await hooks.emit("provider:request", {"messages": messages})
-
-            # Use streaming completion
-            full_response = None
-            async for chunk in provider.stream_complete({"messages": messages}):
-                # Emit streaming event - hooks handle display
-                await hooks.emit("provider:stream", {"chunk": chunk})
-                full_response = chunk  # Last chunk has full response
-
-            await hooks.emit("provider:response", {"response": full_response})
-
-            await context.add_message({
-                "role": "assistant",
-                "content": full_response["content"]
-            })
-
-            tool_calls = provider.parse_tool_calls(full_response)
-            if not tool_calls:
-                final = self._extract_text(full_response)
-                await hooks.emit("prompt:complete", {"response": final})
-                await hooks.emit("orchestrator:complete", {
-                    "orchestrator": "streaming",
-                    "turn_count": iteration + 1,
-                    "status": "success"
-                })
-                return final
-
-            # Execute tools...
-            for call in tool_calls:
-                tool = tools.get(call["name"])
-                if tool:
-                    await hooks.emit("tool:pre", {"tool_name": call["name"], "input": call["input"]})
-                    result = await tool.execute(call["input"])
-                    await hooks.emit("tool:post", {"tool_name": call["name"], "result": result})
-                    await context.add_message({
-                        "role": "tool",
-                        "tool_call_id": call["id"],
-                        "content": result.get_serialized_output()
-                    })
-
-        await hooks.emit("orchestrator:complete", {
-            "orchestrator": "streaming",
-            "turn_count": iteration + 1,
-            "status": "incomplete"
-        })
-        return "Max iterations reached"
-
-    def _extract_text(self, response):
-        for block in response.get("content", []):
-            if block.get("type") == "text":
-                return block.get("text", "")
-        return ""
-```
-
-## Graceful Degradation
-
-Orchestrators should handle errors gracefully:
+**All orchestrators MUST emit `execution:start` and `execution:end`** to mark execution boundaries:
 
 ```python
-async def execute(self, prompt, context, providers, tools, hooks):
+async def execute(self, prompt, context, providers, tools, hooks, coordinator=None):
+    # REQUIRED: Emit at the very start of execute()
+    await hooks.emit("execution:start", {"prompt": prompt})
+
     try:
-        # Normal execution...
-        return await self._execute_loop(prompt, context, providers, tools, hooks)
-    except Exception as e:
-        # Emit error event
-        await hooks.emit("orchestrator:complete", {
-            "orchestrator": "basic",
-            "turn_count": 0,
-            "status": "error",
-            "error": str(e)
+        # ... agent loop logic ...
+
+        # REQUIRED: Emit on successful completion
+        await hooks.emit("execution:end", {
+            "response": final_response,
+            "status": "completed"
+        })
+        return final_response
+
+    except CancelledError:
+        # REQUIRED: Emit on cancellation
+        await hooks.emit("execution:end", {
+            "response": "",
+            "status": "cancelled"
+        })
+        raise
+
+    except Exception:
+        # REQUIRED: Emit on error
+        await hooks.emit("execution:end", {
+            "response": "",
+            "status": "error"
         })
         raise
 ```
 
-## Validation
+## Hook Processing
 
-Orchestrators should validate inputs:
+Handle HookResult actions:
 
 ```python
-async def execute(self, prompt, context, providers, tools, hooks):
-    if not providers:
-        raise ValueError("At least one provider required")
-    
-    if not prompt or not prompt.strip():
-        raise ValueError("Prompt cannot be empty")
-    
-    # Continue with execution...
+# Before tool execution
+pre_result = await hooks.emit("tool:pre", data)
+
+if pre_result.action == "deny":
+    # Don't execute tool
+    return ToolResult(is_error=True, output=pre_result.reason)
+
+if pre_result.action == "modify":
+    # Use modified data
+    data = pre_result.data
+
+if pre_result.action == "inject_context":
+    # Add feedback to context
+    await context.add_message({
+        "role": pre_result.context_injection_role,
+        "content": pre_result.context_injection
+    })
+
+if pre_result.action == "ask_user":
+    # Request approval (requires approval provider)
+    approved = await request_approval(pre_result)
+    if not approved:
+        return ToolResult(is_error=True, output="User denied")
 ```
 
-## Related Contracts
+## Context Management
 
-- **[Context Contract](context.md)** - Orchestrators manage context
-- **[Provider Contract](provider.md)** - Orchestrators call providers
-- **[Tool Contract](tool.md)** - Orchestrators execute tools
-- **[Hook Contract](hook.md)** - Orchestrators emit events
+Manage conversation state:
 
-## Authoritative Reference
+```python
+# Add user message
+await context.add_message({"role": "user", "content": prompt})
 
-**→ [Orchestrator Contract](https://github.com/microsoft/amplifier-core/blob/main/docs/contracts/ORCHESTRATOR_CONTRACT.md)** - Complete specification
+# Add assistant response
+await context.add_message({"role": "assistant", "content": response.content})
+
+# Add tool result
+await context.add_message({
+    "role": "tool",
+    "tool_call_id": tool_call.id,
+    "content": result.output
+})
+
+# Get messages for LLM request (context handles compaction internally)
+messages = await context.get_messages_for_request()
+```
+
+## Provider Selection
+
+Handle multiple providers:
+
+```python
+# Get default or configured provider
+provider_name = config.get("default_provider", list(providers.keys())[0])
+provider = providers[provider_name]
+
+# Or allow per-request provider selection
+provider_name = request_options.get("provider", default_provider_name)
+```
+
+## Configuration
+
+Orchestrators receive configuration via Mount Plan:
+
+```yaml
+session:
+  orchestrator: my-orchestrator
+  context: context-simple
+
+# Orchestrator-specific config can be passed via providers/tools config
+```
+
+See [MOUNT_PLAN_SPECIFICATION.md](../specs/MOUNT_PLAN_SPECIFICATION.md) for full schema.
+
+## Observability
+
+Orchestrators **MUST** register the custom events they emit via the `observability.events` contribution channel:
+
+```python
+coordinator.register_contributor(
+    "observability.events",
+    "my-orchestrator",
+    lambda: [
+        "my-orchestrator:loop_started",
+        "my-orchestrator:loop_iteration",
+        "my-orchestrator:loop_completed"
+    ]
+)
+```
+
+> **Note**: The standard `execution:start`, `execution:end`, and `orchestrator:complete` events are registered by the kernel and do not need to be re-registered.
+
+See [CONTRIBUTION_CHANNELS.md](../specs/CONTRIBUTION_CHANNELS.md) for the pattern.
+
+## Canonical Example
+
+**Reference implementation**: [amplifier-module-loop-basic](https://github.com/microsoft/amplifier-module-loop-basic)
+
+Study this module for:
+- Complete execute() implementation
+- Event emission patterns
+- Hook result handling
+- Context management
+
+Additional examples:
+- [amplifier-module-loop-streaming](https://github.com/microsoft/amplifier-module-loop-streaming) - Real-time streaming
+- [amplifier-module-loop-events](https://github.com/microsoft/amplifier-module-loop-events) - Event-driven patterns
+
+## Validation Checklist
+
+### Required
+
+- [ ] Implements `execute(prompt, context, providers, tools, hooks, coordinator=None) -> str`
+- [ ] `mount()` function with entry point in pyproject.toml
+- [ ] **Emits `execution:start` with `{prompt}` at the very beginning of `execute()`**
+- [ ] **Emits `execution:end` with `{response, status}` on ALL exit paths (success, error, cancellation)**
+- [ ] Emits standard events (provider:request/response, tool:pre/post)
+- [ ] **Emits `orchestrator:complete` at the end of execute()**
+- [ ] Handles HookResult actions appropriately
+- [ ] Manages context (add messages, check compaction)
+- [ ] Registers custom observability events via `coordinator.register_contributor("observability.events", ...)`
+
+### Recommended
+
+- [ ] Supports multiple providers
+- [ ] Implements max iterations limit (prevent infinite loops)
+- [ ] Handles provider errors gracefully
+- [ ] Supports streaming via async generators
+
+## Testing
+
+Use test utilities from `amplifier_core/testing.py`:
+
+```python
+from amplifier_core.testing import (
+    MockCoordinator,
+    MockTool,
+    MockContextManager,
+    ScriptedOrchestrator,
+    EventRecorder
+)
+
+@pytest.mark.asyncio
+async def test_orchestrator_basic():
+    orchestrator = MyOrchestrator(config={})
+    context = MockContextManager()
+    providers = {"test": MockProvider()}
+    tools = {"test_tool": MockTool()}
+    hooks = HookRegistry()
+
+    result = await orchestrator.execute(
+        prompt="Test prompt",
+        context=context,
+        providers=providers,
+        tools=tools,
+        hooks=hooks
+    )
+
+    assert isinstance(result, str)
+    assert len(context.messages) > 0
+```
+
+### ScriptedOrchestrator for Testing
+
+```python
+from amplifier_core.testing import ScriptedOrchestrator
+
+# For testing components that use orchestrators
+orchestrator = ScriptedOrchestrator(responses=["Response 1", "Response 2"])
+
+result = await orchestrator.execute(...)
+assert result == "Response 1"
+```
+
+## Quick Validation Command
+
+```bash
+# Structural validation
+amplifier module validate ./my-orchestrator --type orchestrator
+```
+
+## See Also
+
+- [README.md](index.md) - All contracts
+- [CONTEXT_CONTRACT.md](CONTEXT_CONTRACT.md) - Memory management

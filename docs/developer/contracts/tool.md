@@ -78,229 +78,143 @@ Tools declare their parameters using JSON Schema:
 input_schema = {
     "type": "object",
     "properties": {
-        "path": {
+        "file_path": {
             "type": "string",
-            "description": "File path to read"
+            "description": "Path to the file"
         },
-        "encoding": {
+        "content": {
             "type": "string",
-            "description": "File encoding",
-            "default": "utf-8"
+            "description": "Content to write"
         }
     },
-    "required": ["path"]
+    "required": ["file_path", "content"]
 }
 ```
 
-## Events
+## Configuration
 
-Tools are wrapped with events by the orchestrator:
+Tools receive configuration via Mount Plan:
 
-| Event | When | Data |
-|-------|------|------|
-| `tool:pre` | Before execution | tool_name, input |
-| `tool:post` | After execution | tool_name, result |
-| `tool:error` | On failure | tool_name, error |
+```yaml
+tools:
+  - module: my-tool
+    config:
+      max_retries: 3
+      timeout: 30
+```
 
-### Debug Events
-
-For detailed logging:
-
-| Event | When | Data |
-|-------|------|------|
-| `tool:pre:debug` | Debug logging | Full input details |
-| `tool:post:debug` | Debug logging | Full result details |
-
-## Example Implementations
-
-### Read File Tool
+Access config in mount function:
 
 ```python
-from pathlib import Path
+async def mount(coordinator, config=None):
+    config = config or {}
+    max_retries = config.get("max_retries", 3)
+    tool = MyTool(max_retries=max_retries)
+    await coordinator.mount("tools", tool, name=tool.name)
+```
+
+## Error Handling
+
+Tools should return errors rather than raise exceptions:
+
+```python
+async def execute(self, input: dict[str, Any]) -> ToolResult:
+    try:
+        result = await self._do_work(input)
+        return ToolResult(success=True, output=result)
+    except FileNotFoundError as e:
+        return ToolResult(
+            success=False,
+            error={"type": "not_found", "message": str(e)}
+        )
+    except Exception as e:
+        return ToolResult(
+            success=False,
+            error={"type": "unknown", "message": str(e)}
+        )
+```
+
+## Example: Complete Tool
+
+```python
+from amplifier_core.interfaces import Tool
 from amplifier_core.models import ToolResult
 
 class ReadFileTool:
-    name = "read_file"
-    description = "Read the contents of a file"
+    """Read file contents."""
+    
     input_schema = {
         "type": "object",
         "properties": {
-            "path": {"type": "string", "description": "File path"},
-            "encoding": {"type": "string", "default": "utf-8"}
+            "file_path": {
+                "type": "string",
+                "description": "Path to file to read"
+            }
         },
-        "required": ["path"]
+        "required": ["file_path"]
     }
-
-    def __init__(self, config):
-        self.allowed_paths = config.get("allowed_paths", [])
-        self.max_size = config.get("max_size", 1048576)  # 1MB default
-
+    
+    @property
+    def name(self) -> str:
+        return "read_file"
+    
+    @property
+    def description(self) -> str:
+        return "Read the contents of a file"
+    
     async def execute(self, input: dict) -> ToolResult:
-        path = input.get("path")
-        encoding = input.get("encoding", "utf-8")
-
-        # Validate path
-        if not self._is_allowed(path):
+        file_path = input.get("file_path")
+        if not file_path:
             return ToolResult(
                 success=False,
-                error={"message": "Path not allowed", "type": "PermissionError"}
+                error={"message": "file_path is required"}
             )
-
+        
         try:
-            file_path = Path(path)
-            
-            # Check file size
-            if file_path.stat().st_size > self.max_size:
-                return ToolResult(
-                    success=False,
-                    error={"message": f"File exceeds max size ({self.max_size} bytes)", "type": "FileTooLarge"}
-                )
-            
-            content = file_path.read_text(encoding=encoding)
-            return ToolResult(
-                success=True,
-                output=content,
-                metadata={"path": str(path), "size": len(content)}
-            )
+            with open(file_path, 'r') as f:
+                content = f.read()
+            return ToolResult(success=True, output=content)
         except FileNotFoundError:
             return ToolResult(
                 success=False,
-                error={"message": f"File not found: {path}", "type": "FileNotFoundError"}
+                error={"message": f"File not found: {file_path}"}
             )
         except Exception as e:
             return ToolResult(
                 success=False,
-                error={"message": str(e), "type": type(e).__name__}
+                error={"message": str(e)}
             )
 
-    def _is_allowed(self, path: str) -> bool:
-        if not self.allowed_paths:
-            return True  # No restrictions
-        path = Path(path).resolve()
-        return any(
-            path.is_relative_to(Path(allowed).resolve())
-            for allowed in self.allowed_paths
-        )
+# Entry point
+async def mount(coordinator, config=None):
+    tool = ReadFileTool()
+    await coordinator.mount("tools", tool, name=tool.name)
+    return None  # No cleanup needed
 ```
 
-### Bash Tool
+## Testing
 
 ```python
-import asyncio
-from amplifier_core.models import ToolResult
+import pytest
+from amplifier_core.testing import MockCoordinator
 
-class BashTool:
-    name = "bash"
-    description = "Execute shell commands"
-    input_schema = {
-        "type": "object",
-        "properties": {
-            "command": {"type": "string", "description": "Command to execute"},
-            "timeout": {"type": "integer", "default": 30}
-        },
-        "required": ["command"]
-    }
-
-    def __init__(self, config):
-        self.default_timeout = config.get("timeout", 30)
-        self.blocked_commands = config.get("blocked_commands", ["rm -rf /"])
-
-    async def execute(self, input: dict) -> ToolResult:
-        command = input.get("command", "")
-        timeout = input.get("timeout", self.default_timeout)
-
-        # Safety check
-        for blocked in self.blocked_commands:
-            if blocked in command:
-                return ToolResult(
-                    success=False,
-                    error={"message": f"Blocked command pattern: {blocked}", "type": "SecurityError"}
-                )
-
-        try:
-            process = await asyncio.create_subprocess_shell(
-                command,
-                stdout=asyncio.subprocess.PIPE,
-                stderr=asyncio.subprocess.PIPE
-            )
-            
-            stdout, stderr = await asyncio.wait_for(
-                process.communicate(),
-                timeout=timeout
-            )
-
-            output = stdout.decode() if stdout else ""
-            error_output = stderr.decode() if stderr else ""
-
-            if process.returncode != 0:
-                return ToolResult(
-                    success=False,
-                    output=output,
-                    error={"message": error_output, "type": "CommandFailed", "exit_code": process.returncode}
-                )
-
-            return ToolResult(
-                success=True,
-                output=output + (f"\nstderr: {error_output}" if error_output else ""),
-                metadata={"exit_code": process.returncode}
-            )
-
-        except asyncio.TimeoutError:
-            return ToolResult(
-                success=False,
-                error={"message": f"Command timed out after {timeout}s", "type": "TimeoutError"}
-            )
-        except Exception as e:
-            return ToolResult(
-                success=False,
-                error={"message": str(e), "type": type(e).__name__}
-            )
-```
-
-## Graceful Degradation
-
-Tools should handle errors gracefully and return structured errors:
-
-```python
-async def execute(self, input: dict) -> ToolResult:
-    try:
-        # Normal execution
-        result = await self._do_work(input)
-        return ToolResult(success=True, output=result)
-    except PermissionError as e:
-        return ToolResult(
-            success=False,
-            error={"message": str(e), "type": "PermissionError"}
-        )
-    except Exception as e:
-        # Catch-all for unexpected errors
-        return ToolResult(
-            success=False,
-            error={"message": f"Unexpected error: {e}", "type": type(e).__name__}
-        )
-```
-
-## Token-Aware Output
-
-Tools should be mindful of output size to avoid consuming excessive context:
-
-```python
-async def execute(self, input: dict) -> ToolResult:
-    content = await self._fetch_content(input)
+@pytest.mark.asyncio
+async def test_read_file_tool():
+    tool = ReadFileTool()
     
-    # Truncate if too large
-    max_output = 50000  # ~12.5k tokens
-    if len(content) > max_output:
-        content = content[:max_output] + f"\n\n[Truncated: {len(content) - max_output} chars remaining]"
+    # Test successful read
+    result = await tool.execute({"file_path": "test.txt"})
+    assert result.success
+    assert result.output is not None
     
-    return ToolResult(success=True, output=content)
+    # Test file not found
+    result = await tool.execute({"file_path": "nonexistent.txt"})
+    assert not result.success
+    assert result.error is not None
 ```
 
-## Related Contracts
+## See Also
 
-- **[Orchestrator Contract](orchestrator.md)** - Orchestrators execute tools
-- **[Hook Contract](hook.md)** - Hooks can observe/block tool execution
-
-## Authoritative Reference
-
-**→ [Tool Contract](https://github.com/microsoft/amplifier-core/blob/main/docs/contracts/TOOL_CONTRACT.md)** - Complete specification
+- [Hook Contract](hook.md) - Tool execution hooks
+- [Orchestrator Contract](orchestrator.md) - Tool invocation
+- [Module Contracts](index.md) - All contracts

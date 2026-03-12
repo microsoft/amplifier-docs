@@ -160,20 +160,7 @@ hooks:
       log_level: "info"
 ```
 
-## Debug Events
-
-Hooks can emit debug events for observability:
-
-```python
-async def my_handler(event: str, data: dict) -> HookResult:
-    # Emit debug event (useful for development/troubleshooting)
-    await data.get("hooks").emit("my-hook:debug", {
-        "event": event,
-        "timestamp": time.time(),
-        "details": "Processing..."
-    })
-    return HookResult(action="continue")
-```
+See [MOUNT_PLAN_SPECIFICATION.md](../specs/MOUNT_PLAN_SPECIFICATION.md) for full schema.
 
 ## Observability
 
@@ -187,127 +174,21 @@ coordinator.register_contributor(
 )
 ```
 
-## Example: Validation Hook
+See [CONTRIBUTION_CHANNELS.md](../specs/CONTRIBUTION_CHANNELS.md) for the pattern.
 
-```python
-from amplifier_core.models import HookResult
+## Canonical Example
 
-async def mount(coordinator, config=None):
-    config = config or {}
-    blocked_paths = config.get("blocked_paths", ["/etc", "/root"])
+**Reference implementation**: [amplifier-module-hooks-logging](https://github.com/microsoft/amplifier-module-hooks-logging)
 
-    async def validate_file_access(event: str, data: dict) -> HookResult:
-        tool_name = data.get("tool_name", "")
-        tool_input = data.get("tool_input", {})
+Study this module for:
+- Hook registration patterns
+- Event handling
+- Configuration integration
+- Observability contribution
 
-        # Check file operations
-        if tool_name in ["read_file", "write_file", "edit_file"]:
-            file_path = tool_input.get("file_path", "")
-            for blocked in blocked_paths:
-                if file_path.startswith(blocked):
-                    return HookResult(
-                        action="deny",
-                        reason=f"Access to {blocked} is not allowed"
-                    )
-
-        return HookResult(action="continue")
-
-    # Register for tool:pre events
-    coordinator.hooks.register("tool:pre", validate_file_access, priority=5)
-
-    return None
-```
-
-## Example: Approval Hook
-
-```python
-async def mount(coordinator, config=None):
-    config = config or {}
-    approval_patterns = config.get("require_approval", ["*.py", "*.js"])
-
-    async def request_approval(event: str, data: dict) -> HookResult:
-        tool_name = data.get("tool_name", "")
-        tool_input = data.get("tool_input", {})
-
-        if tool_name == "write_file":
-            file_path = tool_input.get("file_path", "")
-            for pattern in approval_patterns:
-                if fnmatch.fnmatch(file_path, pattern):
-                    return HookResult(
-                        action="ask_user",
-                        approval_prompt=f"Allow writing to {file_path}?",
-                        approval_default="deny"
-                    )
-
-        return HookResult(action="continue")
-
-    coordinator.hooks.register("tool:pre", request_approval, priority=10)
-    return None
-```
-
-## Graceful Degradation
-
-Hooks should handle errors gracefully without crashing the kernel:
-
-```python
-async def safe_handler(event: str, data: dict) -> HookResult:
-    try:
-        # Your hook logic
-        result = await process_event(event, data)
-        return result
-    except Exception as e:
-        # Log error but don't crash
-        logger.error(f"Hook error: {e}")
-        # Continue execution - don't block on hook failures
-        return HookResult(action="continue")
-```
-
-## Testing
-
-Use test utilities from `amplifier_core/testing.py`:
-
-```python
-from amplifier_core.testing import TestCoordinator, EventRecorder
-from amplifier_core.models import HookResult
-
-@pytest.mark.asyncio
-async def test_hook_handler():
-    # Test handler directly
-    result = await my_validation_hook("tool:pre", {
-        "tool_name": "write_file",
-        "tool_input": {"file_path": "/etc/passwd"}
-    })
-
-    assert result.action == "deny"
-    assert "denied" in result.reason.lower()
-
-@pytest.mark.asyncio
-async def test_hook_registration():
-    coordinator = TestCoordinator()
-    cleanup = await mount(coordinator, {})
-
-    # Verify handlers registered
-    assert len(coordinator.hooks.handlers["tool:pre"]) > 0
-
-    if cleanup:
-        cleanup()
-```
-
-### EventRecorder for Testing
-
-```python
-from amplifier_core.testing import EventRecorder
-
-recorder = EventRecorder()
-
-# Use in tests
-await recorder.record("tool:pre", {"tool_name": "write_file"})
-
-# Assert
-events = recorder.get_events()
-assert len(events) == 1
-assert events[0][0] == "tool:pre"
-```
+Additional examples:
+- [amplifier-module-hooks-approval](https://github.com/microsoft/amplifier-module-hooks-approval) - Approval gates
+- [amplifier-module-hooks-redaction](https://github.com/microsoft/amplifier-module-hooks-redaction) - Security redaction
 
 ## Validation Checklist
 
@@ -326,26 +207,60 @@ assert events[0][0] == "tool:pre"
 - [ ] Support configuration for enabled events
 - [ ] Register custom events via contribution channels
 
+## Testing
+
+Use test utilities from `amplifier_core/testing.py`:
+
+```python
+from amplifier_core.testing import MockCoordinator, EventRecorder
+from amplifier_core.models import HookResult
+
+@pytest.mark.asyncio
+async def test_hook_handler():
+    # Test handler directly
+    result = await my_validation_hook("tool:pre", {
+        "tool_name": "Write",
+        "tool_input": {"file_path": "/etc/passwd"}
+    })
+
+    assert result.action == "deny"
+    assert "denied" in result.reason.lower()
+
+@pytest.mark.asyncio
+async def test_hook_registration():
+    coordinator = MockCoordinator()
+    cleanup = await mount(coordinator, {})
+
+    # Verify handlers registered
+    # ... test event emission
+
+    cleanup()
+```
+
+### EventRecorder for Testing
+
+```python
+from amplifier_core.testing import EventRecorder
+
+recorder = EventRecorder()
+
+# Use in tests
+await recorder.record("tool:pre", {"tool_name": "Write"})
+
+# Assert
+events = recorder.get_events()
+assert len(events) == 1
+assert events[0][0] == "tool:pre"  # events are (event_name, data) tuples
+```
+
 ## Quick Validation Command
 
 ```bash
+# Structural validation
 amplifier module validate ./my-hook --type hook
 ```
 
-## Canonical Examples
+## See Also
 
-Study these reference implementations:
-
-- **[amplifier-module-hooks-logging](https://github.com/microsoft/amplifier-module-hooks-logging)** - Logging and observability
-- **[amplifier-module-hooks-approval](https://github.com/microsoft/amplifier-module-hooks-approval)** - Approval gates
-- **[amplifier-module-hooks-redaction](https://github.com/microsoft/amplifier-module-hooks-redaction)** - Security redaction
-
-## Related Contracts
-
-- **[HOOKS_API.md](https://github.com/microsoft/amplifier-core/blob/main/docs/HOOKS_API.md)** - Detailed API documentation
-- **[Orchestrator Contract](orchestrator.md)** - Orchestrators emit events
-- **[Tool Contract](tool.md)** - Tools trigger tool:* events
-
-## References
-
-- **→ [HOOK_CONTRACT.md](https://github.com/microsoft/amplifier-core/blob/main/docs/contracts/HOOK_CONTRACT.md)** - Authoritative contract specification
+- [HOOKS_API.md](../HOOKS_API.md) - Complete hook system reference
+- [README.md](index.md) - All contracts
