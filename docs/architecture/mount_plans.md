@@ -81,238 +81,195 @@ Mount Plans are the **only way** applications communicate configuration to the k
             "module": "provider-anthropic",
             "source": "git+https://github.com/microsoft/amplifier-module-provider-anthropic@main",
             "config": {
-                "default_model": "claude-sonnet-4-5",
-                "max_tokens": 4096
-            }
-        },
-        {
-            "module": "provider-openai",
-            "source": "git+https://github.com/microsoft/amplifier-module-provider-openai@main",
-            "config": {
-                "default_model": "gpt-4o",
-                "max_tokens": 4096
+                "model": "claude-sonnet-4-5",
+                "api_key": "${ANTHROPIC_API_KEY}"
             }
         }
     ],
     "tools": [
         {
             "module": "tool-filesystem",
-            "source": "git+https://github.com/microsoft/amplifier-module-tool-filesystem@main",
             "config": {
-                "allowed_paths": ["/home/user/projects"]
+                "allowed_paths": ["."],
+                "require_approval": False
             }
         },
-        {
-            "module": "tool-bash",
-            "source": "git+https://github.com/microsoft/amplifier-module-tool-bash@main",
-            "config": {
-                "timeout": 30
-            }
-        }
+        {"module": "tool-bash"},
+        {"module": "tool-web"}
     ],
     "hooks": [
         {
             "module": "hooks-logging",
-            "source": "git+https://github.com/microsoft/amplifier-module-hooks-logging@main",
             "config": {
-                "level": "info"
-            }
-        },
-        {
-            "module": "hooks-approval",
-            "source": "git+https://github.com/microsoft/amplifier-module-hooks-approval@main"
-        }
-    ],
-    "agents": {
-        "explorer": {
-            "description": "Codebase exploration agent",
-            "tools": ["tool-filesystem", "tool-search"],
-            "system": {
-                "instruction": "You are a codebase exploration specialist..."
+                "output_dir": ".amplifier/logs"
             }
         }
-    }
+    ]
 }
 ```
 
 ## Session Configuration
 
-### Required Fields
+The `session` section controls orchestrator, context, and injection limits:
 
-| Field | Type | Description |
-|-------|------|-------------|
-| `orchestrator` | string | Module ID for orchestrator |
-| `context` | string | Module ID for context manager |
+```python
+"session": {
+    "orchestrator": "loop-streaming",
+    "context": "context-persistent",
+    "injection_budget_per_turn": 10000,  # Max tokens hooks can inject per turn (None for unlimited)
+    "injection_size_limit": 10240        # Max bytes per hook injection (None for unlimited)
+}
+```
 
-### Optional Fields
+### Injection Limits
 
-| Field | Type | Default | Description |
-|-------|------|---------|-------------|
-| `injection_budget_per_turn` | int | 10,000 | Token limit for hook injections per turn |
-| `injection_size_limit` | int | 10,240 | Byte limit per injection |
+Injection limits control hook context injection:
+
+- `injection_budget_per_turn`: Maximum total tokens hooks can inject in a single turn
+- `injection_size_limit`: Maximum bytes per individual injection
+
+Default values provide safety while allowing meaningful feedback. Set to `None` for unlimited (use with caution).
+
+## Module Sources
+
+All module references support an optional `source` field:
+
+```python
+{
+    "module": "tool-custom",
+    "source": "git+https://github.com/org/tool-custom@main"
+}
+```
+
+**Source URI formats:**
+- Git: `git+https://github.com/org/repo@ref`
+- File: `file:///absolute/path` or `./relative/path`
+- Package: `package-name` (or omit source to use installed package)
 
 ## Module Configuration
 
-Each module entry supports:
-
-| Field | Required | Description |
-|-------|----------|-------------|
-| `module` | Yes | Module ID (entry point name) |
-| `source` | No* | Where to load module from |
-| `config` | No | Module-specific configuration |
-
-*Source is required if module isn't installed as a package.
-
-### Source Formats
-
-```yaml
-# Git repository
-source: git+https://github.com/microsoft/amplifier-module-provider-anthropic@main
-
-# Git with specific tag
-source: git+https://github.com/org/module@v1.0.0
-
-# Local path
-source: file:///home/user/modules/my-module
-
-# Subdirectory in monorepo
-source: git+https://github.com/org/monorepo@main#subdirectory=modules/my-module
-```
-
-## Agent Configuration
-
-Agents are **configuration overlays** for sub-session delegation:
+Each module can have an optional `config` dictionary:
 
 ```python
-"agents": {
-    "agent-name": {
-        # Description shown in agent list
-        "description": "What this agent does",
+{
+    "module": "tool-filesystem",
+    "config": {
+        "allowed_paths": ["/app/data"],
+        "require_approval": True
+    }
+}
+```
 
-        # Override session settings
-        "session": {
-            "orchestrator": "loop-basic"
-        },
+### Environment Variables
 
-        # Override/limit providers
-        "providers": [
-            {"module": "provider-anthropic", "config": {...}}
-        ],
+Config values can reference environment variables using `${VAR_NAME}` syntax:
 
-        # Override/limit tools
-        "tools": ["tool-filesystem"],
+```python
+{
+    "module": "provider-anthropic",
+    "config": {
+        "api_key": "${ANTHROPIC_API_KEY}",
+        "model": "claude-sonnet-4-5"
+    }
+}
+```
 
-        # Override/add hooks
-        "hooks": [...],
+### Context Config
 
-        # System instruction
-        "system": {
-            "instruction": "You are a specialist in..."
+The context manager gets its config from a top-level `context.config` key:
+
+```python
+{
+    "context": {
+        "config": {
+            "max_tokens": 200000,
+            "compact_threshold": 0.92,
+            "auto_compact": True
         }
     }
 }
 ```
 
-Agents are **not** loaded at session start. They're used when the task tool spawns a sub-session.
+## Agents Section
 
-## Model Support
-
-Mount Plans can specify various models across providers:
-
-### Anthropic Models
-- `claude-sonnet-4-5` - Latest Claude Sonnet
-- `claude-haiku-20250110` - Fast, efficient model
-
-### OpenAI Models
-- `gpt-4o` - Latest GPT model
-- `gpt-4o` - Multimodal model
-
-### Azure OpenAI
-- Deployment names configured in Azure portal
-
-### Ollama (Local)
-- Any model available via `ollama list`
-
-## Vision Support
-
-For models with vision capabilities, images can be included in messages:
+The `agents` section defines configuration overlays for spawning child sessions:
 
 ```python
 {
-    "role": "user",
-    "content": [
-        {"type": "text", "text": "What's in this image?"},
-        {"type": "image", "source": {"type": "base64", "data": "...", "media_type": "image/png"}}
-    ]
-}
-```
-
-## Context Window Management
-
-Mount Plans work with context managers to handle token limits:
-
-```python
-"context": {
-    "config": {
-        "max_tokens": 100000,           # Base limit
-        "compaction_strategy": "truncate"
+    "agents": {
+        "bug-hunter": {
+            "description": "Specialized agent for debugging",
+            "session": {
+                "orchestrator": "loop-basic"
+            },
+            "tools": [
+                {"module": "tool-grep"},
+                {"module": "tool-lsp"}
+            ],
+            "system": {
+                "instruction": "You are a debugging specialist..."
+            }
+        }
     }
 }
 ```
 
-Context managers dynamically adjust based on provider info:
-- Query `provider.get_info().defaults.context_window`
-- Calculate: `context_window - max_output_tokens - safety_margin`
+**Important**: The `agents` section has different semantics from other sections:
+- Other sections (`providers`, `tools`, `hooks`): Lists of modules to load NOW
+- `agents` section: Dict of configuration overlays for future use by app layer
 
-## Mount Plan Creation
-
-### From Bundles (Typical)
-
-```python
-from amplifier_foundation import load_bundle
-
-bundle = await load_bundle("./bundle.md")
-mount_plan = bundle.to_mount_plan()
-```
-
-### Programmatic
-
-```python
-mount_plan = {
-    "session": {
-        "orchestrator": "loop-basic",
-        "context": "context-simple"
-    },
-    "providers": [
-        {"module": "provider-anthropic"}
-    ]
-}
-```
+Agent configurations are partial mount plans that get merged with a parent session's config when creating a child session.
 
 ## Validation
 
-The kernel validates Mount Plans before loading:
+Use `MountPlanValidator` to validate structure before loading:
 
 ```python
-# Required fields
-assert "session" in mount_plan
-assert "orchestrator" in mount_plan["session"]
-assert "context" in mount_plan["session"]
+from amplifier_core.validation import MountPlanValidator
 
-# Module references exist
-for provider in mount_plan.get("providers", []):
-    assert "module" in provider
+validator = MountPlanValidator()
+result = validator.validate(mount_plan)
+
+if not result.passed:
+    print(result.format_errors())
+    sys.exit(1)
 ```
 
-Invalid Mount Plans raise `ValidationError` with details.
+`MountPlanValidator` checks:
+- Root structure is a dict with required `session` section
+- Session section has required `orchestrator` and `context` fields
+- Module specs have required `module` field
+- Config and source fields are correct types when present
 
-## Best Practices
+## Creating Sessions
 
-1. **Always specify source**: Don't rely on packages being installed
-2. **Use git tags for production**: Pin to specific versions
-3. **Minimal configuration**: Only override defaults when needed
-4. **Test Mount Plans**: Validate before deploying
+```python
+from amplifier_core import AmplifierSession
 
-## References
+# Create session with mount plan
+session = AmplifierSession(mount_plan)
 
-- **→ [Mount Plan Specification](https://github.com/microsoft/amplifier-core/blob/main/docs/specs/MOUNT_PLAN_SPECIFICATION.md)** - Complete specification
+# Initialize and execute
+await session.initialize()
+response = await session.execute("Hello, world!")
+await session.cleanup()
+
+# Or use context manager
+async with AmplifierSession(mount_plan) as session:
+    response = await session.execute("Hello, world!")
+```
+
+## Philosophy
+
+The Mount Plan embodies the kernel philosophy:
+
+- **Mechanism, not policy**: Says _what_ to load, not _why_
+- **Policy at edges**: All decisions about _which_ modules live in the app layer
+- **Stable contract**: Schema is the stable boundary between app and kernel
+- **Text-first**: Simple dictionaries, easily serializable and inspectable
+- **Deterministic**: Same mount plan always produces same configuration
+
+## Related Documentation
+
+- **[Module Contracts](../developer/contracts/index.md)** - Interface definitions
+- **[MOUNT_PLAN_SPECIFICATION.md](https://github.com/microsoft/amplifier-core/blob/main/docs/specs/MOUNT_PLAN_SPECIFICATION.md)** - Complete specification

@@ -54,137 +54,154 @@ Amplifier uses an event-driven architecture for observability. The kernel emits 
 | `provider:error` | LLM call failed | error, model |
 | `provider:retry` | Retry attempt initiated | attempt, delay, retry_after |
 | `provider:throttle` | Pre-emptive throttling | dimension, remaining, limit, delay |
-| `provider:tool_sequence_repaired` | Tool sequence auto-repaired | repair_count, repairs |
-| `llm:request` | LLM request (alias) | messages, model |
-| `llm:request:debug` | LLM request (debug level) | full request with truncated values |
-| `llm:request:raw` | LLM request (raw data) | complete untruncated request params |
-| `llm:response` | LLM response (alias) | response, usage |
-| `llm:response:debug` | LLM response (debug level) | full response with truncated values |
-| `llm:response:raw` | LLM response (raw data) | complete untruncated response |
+| `provider:tool_sequence_repaired` | Tool sequence auto-repaired | original_calls, repaired_calls |
+| `provider:resolve` | Provider resolved for request | provider_id, model |
+
+### LLM Events
+
+| Event | When | Data |
+|-------|------|------|
+| `llm:request` | Raw LLM request | messages, model, parameters |
+| `llm:response` | Raw LLM response | response, usage |
 
 ### Content Block Events
 
 | Event | When | Data |
 |-------|------|------|
-| `content_block:start` | Content block streaming started | block_index, block_type |
-| `content_block:delta` | Content block chunk received | block_index, delta |
-| `content_block:end` | Content block streaming complete | block_index, block |
-| `thinking:delta` | Thinking content chunk | delta |
-| `thinking:final` | Thinking content complete | thinking_block |
+| `content_block:start` | Content block started | block_type, index |
+| `content_block:delta` | Content block delta | block_type, index, delta |
+| `content_block:end` | Content block completed | block_type, index, content |
 
-### Tool Events
+### Thinking Events
 
 | Event | When | Data |
 |-------|------|------|
-| `tool:pre` | Before tool execution | tool_name, input |
-| `tool:post` | After tool execution | tool_name, result |
+| `thinking:delta` | Thinking content delta | delta |
+| `thinking:final` | Thinking content finalized | thinking |
+
+### Tool Invocations
+
+| Event | When | Data |
+|-------|------|------|
+| `tool:pre` | Before tool execution | tool_name, arguments |
+| `tool:post` | After tool execution | tool_name, result, duration |
 | `tool:error` | Tool execution failed | tool_name, error |
 
-### Context Events
+### Context Management
 
 | Event | When | Data |
 |-------|------|------|
-| `context:pre_compact` | Before compaction | message_count, tokens |
-| `context:post_compact` | After compaction | message_count, tokens |
-| `context:compaction` | Compaction occurred | removed_count, strategy |
-| `context:include` | Context injected | source, content |
+| `context:pre_compact` | Before context compaction | current_size, threshold |
+| `context:post_compact` | After context compaction | old_size, new_size, method |
+| `context:compaction` | Context compaction occurred | details |
+| `context:include` | Context file included | file_path, size |
 
-### Orchestrator Events
-
-| Event | When | Data |
-|-------|------|------|
-| `orchestrator:complete` | Orchestrator execution complete | session_id |
-| `execution:start` | Orchestrator execution begins | session_id |
-| `execution:end` | Orchestrator execution completes | session_id, duration |
-
-### User Notification Events
+### Orchestrator Lifecycle
 
 | Event | When | Data |
 |-------|------|------|
-| `user:notification` | User notification triggered | message, type |
+| `orchestrator:complete` | Orchestrator finished | status, turn_count, metadata |
+| `execution:start` | Execution started | prompt |
+| `execution:end` | Execution ended | response, duration |
 
-### Artifact Events
-
-| Event | When | Data |
-|-------|------|------|
-| `artifact:write` | Artifact written | path, type |
-| `artifact:read` | Artifact read | path, type |
-
-### Approval Events
+### User Notifications
 
 | Event | When | Data |
 |-------|------|------|
-| `approval:required` | Approval requested | operation, prompt |
-| `approval:granted` | User approved | operation |
-| `approval:denied` | User denied | operation, reason |
-| `policy:violation` | Policy violation detected | policy, violation |
+| `user:notification` | User notification sent | level, message, source |
 
-### Cancellation Events
+### Artifacts
 
 | Event | When | Data |
 |-------|------|------|
-| `cancel:requested` | Cancellation initiated | mode (graceful/immediate) |
-| `cancel:completed` | Cancellation finalized | session_id |
+| `artifact:write` | Artifact written | artifact_id, path, size |
+| `artifact:read` | Artifact read | artifact_id, path |
 
-## Hook Integration
+### Policy / Approvals
 
-Hooks subscribe to events and respond:
+| Event | When | Data |
+|-------|------|------|
+| `policy:violation` | Policy violation detected | policy, details |
+| `approval:required` | Approval required | operation, reason |
+| `approval:granted` | Approval granted | operation, approver |
+| `approval:denied` | Approval denied | operation, reason |
+
+### Cancellation Lifecycle
+
+| Event | When | Data |
+|-------|------|------|
+| `cancel:requested` | Cancellation requested | immediate |
+| `cancel:completed` | Cancellation completed | was_immediate, error |
+
+## Event Access
+
+All event constants are exported from `amplifier_core.events`:
 
 ```python
-async def on_tool_execution(event_name: str, data: dict):
-    if event_name == "tool:pre":
-        print(f"Starting: {data['tool_name']}")
-
-# Register hook
-coordinator.hooks.register("tool:pre", on_tool_execution)
-```
-
-**Priority**: Higher priority hooks run first (default: 100)
-
-**Blocking vs Non-Blocking**: Hooks are non-blocking by default but can modify event data.
-
-## Event Data
-
-Each event includes:
-
-- **Common fields**: `timestamp`, `session_id`
-- **Event-specific fields**: Varies by event type
-
-Example `tool:post` data:
-
-```python
-{
-    "tool_name": "read_file",
-    "input": {"file_path": "README.md"},
-    "output": "...",
-    "duration_ms": 42,
-    "timestamp": "2025-01-15T10:30:00Z",
-    "session_id": "abc-123"
-}
+from amplifier_core.events import (
+    SESSION_START,
+    SESSION_END,
+    TOOL_PRE,
+    TOOL_POST,
+    # ... all other events
+)
 ```
 
 ## Contribution Channels
 
-Contribution channels provide pull-based aggregation for module capabilities and metadata. See the [Contribution Channels specification](https://github.com/microsoft/amplifier-core/blob/main/docs/specs/CONTRIBUTION_CHANNELS.md) for details.
+The kernel uses contribution channels for pull-based aggregation across modules. This allows modules to declare capabilities that consumers aggregate on demand.
 
-**Common channels**:
+### Example: Module Observability
 
-- `observability.events` - Modules declare lifecycle events
-- `capabilities.catalog` - Aggregate callable capabilities
-- `session.metadata` - Runtime metadata snapshots
-
-**Usage**:
+Modules can declare which events they emit:
 
 ```python
-# Module registration
 coordinator.register_contributor(
     "observability.events",
-    "tool-filesystem",
-    lambda: ["filesystem:read", "filesystem:write"]
+    "module-hooks-streaming-ui",
+    lambda: [
+        "streaming-ui:content-block-start",
+        "streaming-ui:content-block-end",
+    ],
 )
-
-# Consumer collection
-events = await coordinator.collect_contributions("observability.events")
 ```
 
-See [CONTRIBUTION_CHANNELS.md](https://github.com/microsoft/amplifier-core/blob/main/docs/specs/CONTRIBUTION_CHANNELS.md) for the complete specification.
+Consumers collect contributions dynamically:
+
+```python
+discovered = await coordinator.collect_contributions("observability.events")
+for contribution in discovered:
+    for event_name in contribution or []:
+        register_handler(event_name)
+```
+
+### Channel Naming
+
+Use `{domain}.{purpose}` for shared channels:
+- `observability.events` — modules declare lifecycle events
+- `capabilities.catalog` — aggregate callable capabilities
+- `session.metadata` — runtime metadata snapshots
+
+## Hook Integration
+
+Hooks observe events via the hook registry:
+
+```python
+async def my_handler(event: str, data: dict) -> HookResult:
+    # Observe or react to event
+    return HookResult(action="continue")
+
+coordinator.hooks.register("tool:pre", my_handler)
+```
+
+Hooks can:
+- **Observe**: Log or track events
+- **Modify**: Change event data
+- **Deny**: Block operations
+- **Inject context**: Add content to agent's conversation
+- **Request approval**: Ask user for permission
+
+## Related Documentation
+
+- **[Hook Contract](../developer/contracts/hook.md)** - Hook interface specification
+- **[CONTRIBUTION_CHANNELS.md](https://github.com/microsoft/amplifier-core/blob/main/docs/specs/CONTRIBUTION_CHANNELS.md)** - Contribution channel specification

@@ -116,7 +116,7 @@ class ModuleInfo(BaseModel):
     id: str                          # Module identifier
     name: str                        # Module display name
     version: str                     # Module version
-    type: str                        # Module type (provider, tool, hook, etc.)
+    type: str                        # Module type (orchestrator, provider, tool, context, hook, resolver)
     mount_point: str                 # Where module should be mounted
     description: str                 # Module description
     config_schema: dict | None = None # JSON schema for module configuration
@@ -147,6 +147,7 @@ class HookResult(BaseModel):
     suppress_output: bool = False             # Hide hook's output from user
     user_message: str | None = None           # Message to display to user
     user_message_level: str = "info"          # Severity: info, warning, error
+    user_message_source: str | None = None    # Source name for display (e.g., "python-check")
 ```
 
 See [Hooks API](hooks.md) for detailed HookResult documentation.
@@ -174,4 +175,158 @@ class SessionStatus(BaseModel):
 
     # Cost tracking
     estimated_cost: float | None = None
+
+    # Last activity
+    last_activity: datetime | None = None
+    last_error: dict[str, Any] | None = None
 ```
+
+## REQUEST_ENVELOPE_V1 Models
+
+Complete Pydantic models implementing the REQUEST_ENVELOPE_V1 specification. These provide type-safe message handling across all providers.
+
+**Source**: [amplifier_core/message_models.py](https://github.com/microsoft/amplifier-core/blob/main/amplifier_core/message_models.py)
+
+### Content Blocks
+
+**TextBlock** — Regular text content:
+```python
+class TextBlock(BaseModel):
+    type: Literal["text"] = "text"
+    text: str
+    visibility: Literal["internal", "developer", "user"] | None = None
+```
+
+**ThinkingBlock** — Anthropic extended thinking (must preserve signature):
+```python
+class ThinkingBlock(BaseModel):
+    type: Literal["thinking"] = "thinking"
+    thinking: str
+    signature: str | None = None
+    visibility: Literal["internal", "developer", "user"] | None = None
+    content: list[Any] | None = None  # OpenAI reasoning state
+```
+
+**RedactedThinkingBlock** — Anthropic redacted thinking:
+```python
+class RedactedThinkingBlock(BaseModel):
+    type: Literal["redacted_thinking"] = "redacted_thinking"
+    data: str
+    visibility: Literal["internal", "developer", "user"] | None = None
+```
+
+**ToolCallBlock** — Tool call request from model:
+```python
+class ToolCallBlock(BaseModel):
+    type: Literal["tool_call"] = "tool_call"
+    id: str
+    name: str
+    input: dict[str, Any]
+    visibility: Literal["internal", "developer", "user"] | None = None
+```
+
+**ToolResultBlock** — Tool execution result:
+```python
+class ToolResultBlock(BaseModel):
+    type: Literal["tool_result"] = "tool_result"
+    tool_call_id: str
+    output: Any
+    visibility: Literal["internal", "developer", "user"] | None = None
+```
+
+**ImageBlock** — Image content:
+```python
+class ImageBlock(BaseModel):
+    type: Literal["image"] = "image"
+    source: dict[str, Any]
+    visibility: Literal["internal", "developer", "user"] | None = None
+```
+
+**ReasoningBlock** — OpenAI o-series reasoning content:
+```python
+class ReasoningBlock(BaseModel):
+    type: Literal["reasoning"] = "reasoning"
+    content: list[Any]
+    summary: list[Any]
+    visibility: Literal["internal", "developer", "user"] | None = None
+```
+
+### Message
+
+Single message in conversation history:
+
+```python
+class Message(BaseModel):
+    role: Literal["system", "developer", "user", "assistant", "function", "tool"]
+    content: Union[str, list[ContentBlockUnion]]
+    name: str | None = None
+    tool_call_id: str | None = None
+    metadata: dict[str, Any] | None = None  # Provider-specific state
+```
+
+### ToolSpec
+
+Tool/function specification with JSON Schema parameters:
+
+```python
+class ToolSpec(BaseModel):
+    name: str
+    parameters: dict[str, Any]
+    description: str | None = None
+```
+
+### ChatRequest
+
+Complete chat request to provider (unified request format):
+
+```python
+class ChatRequest(BaseModel):
+    messages: list[Message]
+    tools: list[ToolSpec] | None = None
+    response_format: ResponseFormat | None = None
+    temperature: float | None = None
+    top_p: float | None = None
+    max_output_tokens: int | None = None
+    conversation_id: str | None = None
+    stream: bool | None = False
+    metadata: dict[str, Any] | None = None
+    model: str | None = None           # Per-request model override
+    tool_choice: str | dict[str, Any] | None = None
+    stop: list[str] | None = None
+    reasoning_effort: str | None = None
+    timeout: float | None = None       # Per-request timeout
+```
+
+### ChatResponse
+
+Response from provider (unified response format):
+
+```python
+class ChatResponse(BaseModel):
+    content: list[ContentBlockUnion]
+    tool_calls: list[ToolCall] | None = None
+    usage: Usage | None = None
+    degradation: Degradation | None = None
+    finish_reason: str | None = None
+    metadata: dict[str, Any] | None = None
+```
+
+### Usage
+
+Token usage information:
+
+```python
+class Usage(BaseModel):
+    input_tokens: int
+    output_tokens: int
+    total_tokens: int
+    reasoning_tokens: int | None = None
+    cache_read_tokens: int | None = None
+    cache_write_tokens: int | None = None
+```
+
+## Related Documentation
+
+- **[Session API](session.md)** - AmplifierSession class
+- **[Coordinator API](coordinator.md)** - ModuleCoordinator class
+- **[Hooks API](hooks.md)** - HookRegistry and HookResult details

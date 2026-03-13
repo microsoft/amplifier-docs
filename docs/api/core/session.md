@@ -27,11 +27,14 @@ AmplifierSession(
     session_id: str | None = None,             # Optional session ID (auto-generated if not provided)
     parent_id: str | None = None,              # Parent session ID for child sessions
     approval_system: ApprovalSystem | None = None,  # Optional approval system
-    display_system: DisplaySystem | None = None     # Optional display system
+    display_system: DisplaySystem | None = None,    # Optional display system
+    is_resumed: bool = False                   # Whether resuming existing session (controls event type)
 )
 ```
 
 When `parent_id` is set, the session is a child session. The kernel emits a `session:fork` event during initialization and includes `parent_id` in all events for lineage tracking.
+
+The `is_resumed` parameter controls whether the session emits `session:start` (new session) or `session:resume` (resumed session) events.
 
 ### Methods
 

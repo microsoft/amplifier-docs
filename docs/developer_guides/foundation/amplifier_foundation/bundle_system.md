@@ -70,388 +70,442 @@ tools:
 
 # Control what tools spawned agents inherit
 spawn:
-  exclude_tools:
-    - tool-task                     # Don't pass to child sessions
+  exclude_tools: [tool-task]        # Agents inherit all EXCEPT these
+  # OR use explicit list:
+  # tools: [tool-a, tool-b]         # Agents get ONLY these tools
+
+agents:
+  include:
+    - my-bundle:agent-name          # Reference agents in this bundle
+
+# Only declare hooks NOT inherited from includes
+hooks:
+  - module: hooks-custom
+    source: git+https://github.com/...
 ---
 
-# System Instruction
+# System Instructions
 
-This is the markdown body that becomes the system instruction.
+Your markdown instructions here. This becomes the system prompt.
 
-## Sections
-
-You can use markdown formatting, headers, lists, etc.
+Reference documentation with @mentions:
+@my-bundle:docs/GUIDE.md
 ```
 
-### Root Bundles vs Nested Bundles
+## Composition with includes:
 
-Bundles are classified structurally:
+Bundles can inherit from other bundles:
 
-- **Root bundle**: At `/bundle.md` or `/bundle.yaml` at the root of a repo/directory. Establishes the namespace via `bundle.name`. Tracked with `is_root=True`.
+```yaml
+includes:
+  - bundle: foundation                    # Well-known bundle name
+  - bundle: git+https://github.com/...    # Git URL
+  - bundle: ./bundles/variant.yaml        # Local file
+  - bundle: my-bundle:behaviors/foo       # Behavior within same bundle
+```
 
-- **Nested bundle**: Loaded via `#subdirectory=` URIs or `@namespace:path` references. Shares namespace with root bundle. Resolves paths relative to its own location. Tracked with `is_root=False`.
+**Merge rules**:
+- Later bundles override earlier ones
+- `session`: deep-merged (nested dicts merged recursively, later wins for scalars)
+- `spawn`: deep-merged (later overrides earlier)
+- `providers`, `tools`, `hooks`: merged by module ID (configs for same module are deep-merged)
+- `agents`: merged by agent name (later wins)
+- `context`: accumulates with namespace prefix (each bundle contributes without collision)
+- Markdown instructions: replace entirely (later wins)
 
-**Key insight**: The namespace comes from `bundle.name`, not the repo URL or directory name.
+## Bundle Preparation
 
-### Registry and Caching
+The `prepare()` method activates all modules for execution:
 
-The `BundleRegistry` manages bundle discovery, loading, and caching:
+```python
+bundle = await load_bundle("git+https://github.com/org/my-bundle@main")
+prepared = await bundle.prepare(
+    install_deps=True,
+    source_resolver=None,
+    progress_callback=None
+)
+
+# Use the prepared bundle
+async with prepared.create_session() as session:
+    response = await session.execute("Hello!")
+```
+
+### Parameters
+
+- `install_deps` (bool): Whether to install Python dependencies for modules (default: True)
+- `source_resolver` (callable): Optional callback for app-layer source override policy
+- `progress_callback` (callable): Optional callback for progress reporting
+
+### What prepare() does
+
+1. Installs bundle packages (if bundle has pyproject.toml)
+2. Installs packages from all included bundles
+3. Activates all modules (downloads and makes them importable)
+4. Pre-activates agent-specific modules for child sessions
+5. Creates a module resolver for the session
+6. Saves install state for fast subsequent startups
+
+### PreparedBundle
+
+Returns a `PreparedBundle` with:
+- `mount_plan`: Configuration dict for AmplifierSession
+- `resolver`: Module resolver for finding module paths
+- `bundle`: The original Bundle object
+- `bundle_package_paths`: Paths to bundle src/ directories
+
+## Session Creation
+
+The `PreparedBundle.create_session()` method creates a fully initialized session:
+
+```python
+session = await prepared.create_session(
+    session_id=None,           # Optional: for resuming
+    parent_id=None,            # Optional: parent session ID
+    approval_system=None,      # Optional: approval system
+    display_system=None,       # Optional: display system
+    session_cwd=None,          # Optional: working directory
+    is_resumed=False           # Whether resuming existing session
+)
+```
+
+### Session Working Directory
+
+The `session_cwd` parameter controls where local @-mentions resolve:
+- If provided: Local @-mentions like `@AGENTS.md` resolve relative to `session_cwd`
+- If omitted: Falls back to `bundle.base_path`
+
+Apps should pass their project/workspace directory to ensure @-mentions resolve correctly.
+
+### Dynamic System Prompts
+
+Sessions support dynamic system prompt reloading:
+- @mentioned files are re-read on every LLM call
+- Changes to AGENTS.md or bundle instructions take effect immediately
+- No session restart needed for context updates
+
+## Spawning Sub-Sessions
+
+The `PreparedBundle.spawn()` method creates child sessions:
+
+```python
+result = await prepared.spawn(
+    child_bundle,
+    "Task instruction",
+    compose=True,              # Compose child with parent bundle
+    parent_session=session,    # Parent for lineage tracking
+    orchestrator_config=None,  # Override orchestrator settings
+    parent_messages=None,      # Inject parent conversation
+    provider_preferences=None, # Ordered provider/model fallback
+    self_delegation_depth=0    # Depth limiting counter
+)
+```
+
+### Parameters
+
+- `child_bundle` (Bundle): Pre-resolved bundle to spawn
+- `instruction` (str): Task instruction for the sub-session
+- `compose` (bool): Whether to compose child with parent (default: True)
+- `parent_session`: Parent session for UX inheritance
+- `orchestrator_config` (dict): Override orchestrator settings
+- `parent_messages` (list): Messages to inject into child context
+- `provider_preferences` (list[ProviderPreference]): Ordered provider/model fallback chain
+- `self_delegation_depth` (int): Current delegation depth for limiting
+
+### Provider Preferences
+
+Provider preferences enable fallback chains with glob pattern support:
+
+```python
+from amplifier_foundation import ProviderPreference
+
+result = await prepared.spawn(
+    child_bundle,
+    "Analyze this code",
+    provider_preferences=[
+        ProviderPreference(provider="anthropic", model="claude-haiku-*"),
+        ProviderPreference(provider="openai", model="gpt-5-mini"),
+    ]
+)
+```
+
+The system tries each preference in order until finding an available provider.
+
+### Result Structure
+
+Returns a dict with:
+- `output` (str): Response from the sub-session
+- `session_id` (str): Sub-session ID (for resuming)
+- `status` (str): Completion status (from orchestrator:complete event)
+- `turn_count` (int): Number of turns taken
+- `metadata` (dict): Additional metadata from orchestrator
+
+## Bundle Registry
+
+The `BundleRegistry` manages bundle loading, caching, and updates:
 
 ```python
 from amplifier_foundation import BundleRegistry
 
-registry = BundleRegistry()
+registry = BundleRegistry(
+    home=None,                  # Base directory (default: ~/.amplifier)
+    strict=False,               # Raise on include failures vs warn
+    include_source_resolver=None  # Custom include resolution
+)
 
 # Register bundles
 registry.register({
-    "foundation": "git+https://github.com/microsoft/amplifier-foundation@main"
+    "foundation": "git+https://github.com/microsoft/amplifier-foundation@main",
+    "my-bundle": "./local/bundle.md"
 })
 
-# Load by name
+# Load a bundle
 bundle = await registry.load("foundation")
-
-# Load by URI (auto-registers if auto_register=True)
-bundle = await registry.load("git+https://github.com/org/bundle@main")
 
 # Load all registered bundles
 bundles = await registry.load()  # Returns dict[str, Bundle]
 ```
 
-**Caching**: The registry caches loaded bundles in `~/.amplifier/cache/` to avoid re-downloading. Cached bundles are reused across sessions.
+### Registry State
 
-**Deduplication**: If the same bundle is requested multiple times (diamond dependencies), the registry returns the same instance.
-
-## Bundle Composition
-
-Bundles compose via the `compose()` method or `includes:` declarations:
+The registry tracks loaded bundles with `BundleState`:
 
 ```python
-# Programmatic composition
-base = Bundle(name="base", tools=[...])
-overlay = Bundle(name="overlay", providers=[...])
-composed = base.compose(overlay)
+state = registry.get_state("foundation")
 
-# Declarative composition via includes
----
-bundle:
-  name: my-bundle
+# BundleState fields:
+# - uri: Original source URI
+# - name: Bundle name
+# - version: Bundle version
+# - loaded_at: Last load timestamp
+# - checked_at: Last update check timestamp
+# - local_path: Cached local path
+# - is_root: True for root bundles, False for nested
+# - root_name: For nested bundles, the root bundle name
+# - explicitly_requested: True if user explicitly loaded
+# - includes: List of bundles this bundle includes
+# - included_by: List of bundles that include this bundle
+```
+
+### Include Source Resolution
+
+Custom include resolution enables app-layer policies:
+
+```python
+def resolve_includes(source: str) -> str | None:
+    # Override specific includes
+    if source == "private:internal":
+        return "git+https://github.com/myorg/internal@main"
+    return None  # Use default resolution
+
+registry = BundleRegistry(include_source_resolver=resolve_includes)
+```
+
+### Update Checking
+
+Check for bundle updates:
+
+```python
+# Check single bundle
+update_info = await registry.check_update("foundation")
+if update_info:
+    print(f"Update available: {update_info.current_version} -> {update_info.available_version}")
+
+# Check all bundles
+updates = await registry.check_update()  # Returns list[UpdateInfo]
+```
+
+### Persistence
+
+Registry state is automatically persisted to `home/registry.json`:
+
+```python
+# Save current state
+registry.save()
+
+# State is automatically loaded on init from disk
+```
+
+## Validation
+
+Validate bundle structure before loading:
+
+```python
+from amplifier_foundation import validate_bundle_or_raise
+
+# Raises BundleValidationError if invalid
+validate_bundle_or_raise(bundle)
+
+# Or get validation result
+from amplifier_foundation import validate_bundle
+
+result = validate_bundle(bundle)
+if not result.is_valid:
+    for error in result.errors:
+        print(f"Error: {error}")
+```
+
+## Module Resolution
+
+Modules are resolved through multiple mechanisms:
+
+1. **Python entry points**: `amplifier.modules` group in pyproject.toml
+2. **Source URIs**: Git URLs, file paths, or package names
+3. **Module resolver**: BundleModuleResolver for activated modules
+
+### Lazy Activation
+
+The `BundleModuleResolver` supports lazy activation:
+
+```python
+# Modules not in initial activation set can be activated on-demand
+# This is used for agent-specific modules
+path = await resolver.async_resolve(
+    module_id="tool-custom",
+    source_hint="git+https://github.com/org/tool-custom@main"
+)
+```
+
+## Best Practices
+
+### Use Thin Bundles
+
+When including foundation, don't redeclare what it provides:
+
+```yaml
+# ✓ GOOD: Thin bundle
 includes:
   - bundle: foundation
   - bundle: my-bundle:behaviors/my-capability
----
-```
 
-### Composition Rules
-
-For each section during composition:
-
-- **session/spawn**: Deep merge (nested dicts merged, later wins for scalars)
-- **providers/tools/hooks**: Merge by module ID (later config overrides earlier)
-- **agents**: Later overrides earlier (by agent name)
-- **context**: Accumulates with namespace prefix (each bundle contributes)
-- **instruction**: Later replaces earlier
-
-### The Thin Bundle Pattern (Recommended)
-
-Most bundles should be **thin** - inheriting from foundation and adding only their unique capabilities:
-
-```yaml
----
-bundle:
-  name: my-capability
-  version: 1.0.0
-  description: Adds X capability
-
+# ✗ BAD: Fat bundle duplicating foundation
 includes:
-  - bundle: git+https://github.com/microsoft/amplifier-foundation@main
-  - bundle: my-capability:behaviors/my-capability    # Behavior pattern
----
-
-# My Capability
-
-@my-capability:context/instructions.md
-
----
-
-@foundation:context/shared/common-system-base.md
+  - bundle: foundation
+session:              # Foundation already defines this!
+  orchestrator: ...
+tools:                # Foundation already has these!
+  - module: tool-bash
 ```
 
-**Why thin bundles?**
-- No duplication of foundation's tools, session config, hooks
-- Automatic foundation updates
-- Cleaner separation of concerns
-- Easier maintenance
+### Consolidate Instructions
 
-### The Behavior Pattern
-
-A **behavior** is a reusable capability add-on that bundles agents + context (and optionally tools/hooks). Behaviors live in `behaviors/` and can be included by any bundle.
+Put instructions in `context/instructions.md`, not inline in bundle.md:
 
 ```yaml
 # behaviors/my-capability.yaml
-bundle:
-  name: my-capability-behavior
-  version: 1.0.0
-  description: Adds X capability with agents and context
-
-# Optional: Add tools specific to this capability
-tools:
-  - module: tool-my-capability
-    source: git+https://github.com/org/bundle@main#subdirectory=modules/tool-my-capability
-
-# Declare agents this behavior provides
-agents:
-  include:
-    - my-capability:agent-one
-    - my-capability:agent-two
-
-# Declare context files this behavior includes
 context:
   include:
     - my-capability:context/instructions.md
 ```
 
-**Using behaviors:**
+### Use Behaviors for Reusability
+
+Package agents + context in `behaviors/` so others can include just your capability:
 
 ```yaml
-includes:
-  - bundle: foundation
-  - bundle: my-capability:behaviors/my-capability   # From same bundle
-  - bundle: git+https://github.com/org/bundle@main#subdirectory=behaviors/foo.yaml  # External
-```
-
-### Agent Definition Patterns
-
-Both patterns are fully supported:
-
-#### Pattern 1: Include (Recommended)
-
-```yaml
-agents:
-  include:
-    - my-bundle:my-agent      # Loads agents/my-agent.md
-```
-
-**Use when**: Agent is self-contained with its own instructions in a separate `.md` file.
-
-#### Pattern 2: Inline (Valid for tool-scoped agents)
-
-```yaml
-agents:
-  my-agent:
-    description: "Agent with bundle-specific tool access"
-    instructions: my-bundle:agents/my-agent.md
-    tools:
-      - module: tool-special    # This agent gets specific tools
-        source: ./modules/tool-special
-```
-
-**Use when**: Agent needs bundle-specific tool configurations that differ from the parent bundle.
-
-## Bundle Validation
-
-Bundles are validated during loading:
-
-```python
-from amplifier_foundation import validate_bundle, validate_bundle_or_raise
-
-# Validate and get result
-result = validate_bundle(bundle)
-if not result.is_valid:
-    for error in result.errors:
-        print(f"Error: {error}")
-
-# Validate and raise on error
-validate_bundle_or_raise(bundle)  # Raises BundleValidationError if invalid
-```
-
-**Validation checks:**
-- Required fields: `bundle.name`, `session.orchestrator`, `session.context` (if session present)
-- Module lists: `providers`, `tools`, `hooks` must be lists of dicts with `module` key
-- Tool inheritance: `spawn.exclude_tools` and `spawn.inherit_tools` are mutually exclusive
-
-## Bundle Preparation
-
-The `prepare()` method activates all modules, making them importable:
-
-```python
-bundle = await load_bundle("git+https://github.com/org/my-bundle@main")
-
-# Prepare bundle (downloads and installs modules)
-prepared = await bundle.prepare(install_deps=True)
-
-# Create session from prepared bundle
-async with prepared.create_session() as session:
-    response = await session.execute("Hello!")
-
-# Or manually:
-from amplifier_core import AmplifierSession
-
-session = AmplifierSession(config=prepared.mount_plan)
-await session.coordinator.mount("module-source-resolver", prepared.resolver)
-await session.initialize()
-```
-
-**What prepare() does:**
-
-1. **Install bundle packages**: If the bundle has a `pyproject.toml`, installs it as a Python package
-2. **Install included bundle packages**: Installs packages from all bundles in `source_base_paths`
-3. **Activate modules**: Downloads and installs all modules (orchestrator, context, providers, tools, hooks)
-4. **Create resolver**: Returns a `BundleModuleResolver` for AmplifierSession to use
-
-**Source resolver callback:**
-
-```python
-def resolve_with_overrides(module_id: str, source: str) -> str:
-    # App-layer policy: override module sources from settings
-    return overrides.get(module_id) or source
-
-prepared = await bundle.prepare(source_resolver=resolve_with_overrides)
-```
-
-**Progress callback:**
-
-```python
-def on_progress(action: str, detail: str):
-    print(f"{action}: {detail}")
-
-prepared = await bundle.prepare(progress_callback=on_progress)
-```
-
-## Context and Agent Resolution
-
-Bundles track paths for context files and agents:
-
-```python
-# Resolve context file
-path = bundle.resolve_context_path("my-bundle:context/instructions.md")
-
-# Resolve agent file
-path = bundle.resolve_agent_path("my-bundle:my-agent")
-# Looks in: source_base_paths["my-bundle"]/agents/my-agent.md
-
-# Resolve pending context (after composition)
-bundle.resolve_pending_context()
-
-# Load agent metadata (after composition)
-bundle.load_agent_metadata()
-```
-
-**Pending context**: Context references with namespace prefixes (e.g., `foundation:context/file.md`) are stored as pending during parsing. After composition, `resolve_pending_context()` resolves them using `source_base_paths`.
-
-**Agent metadata**: `load_agent_metadata()` loads descriptions and other metadata from agent `.md` files. Call after composition when `source_base_paths` is fully populated.
-
-## Mount Plan Generation
-
-Convert a bundle to a mount plan for `AmplifierSession`:
-
-```python
-mount_plan = bundle.to_mount_plan()
-
-# Mount plan structure:
-{
-    "session": {"orchestrator": {...}, "context": {...}},
-    "providers": [{...}],
-    "tools": [{...}],
-    "hooks": [{...}],
-    "agents": {...},
-    "spawn": {...}
-}
-
-# Use with AmplifierSession
-session = AmplifierSession(config=mount_plan)
-```
-
-## Directory Conventions
-
-Bundle repos follow conventions for maximum reusability:
-
-| Directory | Purpose |
-|-----------|---------|
-| `/bundle.md` | Root bundle - repo's primary entry point, establishes namespace |
-| `/bundles/*.yaml` | Standalone bundles - pre-composed, ready-to-use variants |
-| `/behaviors/*.yaml` | Behavior bundles - reusable capabilities to compose onto other bundles |
-| `/providers/*.yaml` | Provider bundles - provider configurations |
-| `/agents/*.md` | Agent files - specialized agent definitions |
-| `/context/*.md` | Context files - shared instructions, knowledge |
-| `/modules/` | Local modules - tool implementations specific to this bundle |
-
-**Recommended pattern:**
-
-1. Put your main value in `/behaviors/` (what others compose onto their bundles)
-2. Root bundle includes its own behavior (DRY pattern)
-3. `/bundles/` offers pre-composed variants (convenience for users)
-
-## Structural vs Conventional Classification
-
-Bundles have two independent classification systems:
-
-| Bundle | Structural | Conventional |
-|--------|------------|--------------|
-| `/bundle.md` | Root (`is_root=True`) | Root bundle |
-| `/bundles/with-anthropic.yaml` | Nested (`is_root=False`) | Standalone bundle |
-| `/behaviors/my-capability.yaml` | Nested (`is_root=False`) | Behavior bundle |
-| `/providers/anthropic-opus.yaml` | Nested (`is_root=False`) | Provider bundle |
-
-**Structural**: How the bundle is loaded and tracked by the registry
-**Conventional**: What role it plays in your bundle architecture
-
-## Common Anti-Patterns
-
-### ❌ Duplicating Foundation
-
-```yaml
-# DON'T DO THIS when you include foundation
-includes:
-  - bundle: foundation
+# behaviors/my-capability.yaml
+bundle:
+  name: my-capability-behavior
 
 tools:
-  - module: tool-filesystem     # Foundation has this!
-    source: git+https://...
+  - module: tool-my-capability
+    source: ./modules/tool-my-capability
 
-session:
-  orchestrator:                 # Foundation has this!
-    module: loop-streaming
-```
-
-**Fix**: Remove duplicated declarations. Foundation provides them.
-
-### ❌ Using @ Prefix in YAML
-
-```yaml
-# DON'T DO THIS - @ prefix is for markdown only
-context:
-  include:
-    - "@my-bundle:context/instructions.md"   # ❌ @ doesn't belong here
-
-# DO THIS - bare namespace:path in YAML
-context:
-  include:
-    - my-bundle:context/instructions.md      # ✅ No @ in YAML
-```
-
-**Why it's wrong**: The `@` prefix is markdown syntax for eager file loading. YAML sections use bare `namespace:path` references. Using `@` in YAML causes **silent failure**.
-
-### ❌ Using Repository Name as Namespace
-
-```yaml
-# If loading: git+https://github.com/microsoft/amplifier-bundle-recipes@main
-# And bundle.name in that repo is: "recipes"
-
-# DON'T DO THIS
 agents:
   include:
-    - amplifier-bundle-recipes:recipe-author   # ❌ Repo name
+    - my-capability:agent-one
 
-# DO THIS
-agents:
+context:
   include:
-    - recipes:recipe-author                    # ✅ bundle.name value
+    - my-capability:context/instructions.md
 ```
 
-**Why it's wrong**: The namespace is ALWAYS `bundle.name` from the YAML frontmatter, regardless of the git URL or repository name.
+### No @ Prefix in YAML
 
-## Next Steps
+The `@` prefix is markdown syntax only. In YAML sections, use bare `namespace:path`:
 
-- [Common Patterns](patterns.md) - Practical patterns for using Amplifier Foundation
-- [API Reference](api_reference.md) - Complete API documentation
-- [Bundle Guide](https://github.com/microsoft/amplifier-foundation/blob/main/docs/BUNDLE_GUIDE.md) - Comprehensive guide to creating bundles
+```yaml
+# ✓ GOOD
+context:
+  include:
+    - my-bundle:context/instructions.md
+
+# ✗ BAD
+context:
+  include:
+    - "@my-bundle:context/instructions.md"  # @ doesn't belong in YAML
+```
+
+### Use bundle.name as Namespace
+
+The namespace is always `bundle.name`, not the repository name:
+
+```yaml
+# If bundle.name is "recipes"
+agents:
+  include:
+    - recipes:recipe-author  # ✓ Use bundle.name
+    - amplifier-bundle-recipes:recipe-author  # ✗ Don't use repo name
+```
+
+## Advanced Patterns
+
+### Context Deduplication
+
+The system uses SHA-256 content deduplication to avoid loading the same file multiple times:
+
+```python
+# If multiple @mentions reference the same file content,
+# it's loaded once and reused
+deduplicator = ContentDeduplicator()
+```
+
+### Mention Resolution
+
+@mentions are resolved using the `MentionResolver`:
+
+```python
+from amplifier_foundation import BaseMentionResolver
+
+resolver = BaseMentionResolver(
+    bundles={"foundation": foundation_bundle},
+    base_path=Path("/project")
+)
+
+results = await load_mentions("See @foundation:docs/GUIDE.md", resolver)
+```
+
+### Load-on-Demand (Soft References)
+
+Reference files without `@` to defer loading:
+
+```markdown
+**Documentation (load on demand):**
+- Schema: recipes:docs/RECIPE_SCHEMA.md
+- Guide: foundation:docs/BUNDLE_GUIDE.md
+```
+
+The AI can load these on-demand via `read_file` when actually needed.
+
+## Troubleshooting
+
+### Module not found
+
+- Verify `source:` path is correct relative to bundle location
+- Check module has `pyproject.toml` with entry point
+- Ensure `mount()` function exists in module
+
+### Agent not loading
+
+- Verify `meta:` frontmatter exists with `name` and `description`
+- Check agent file is in `agents/` directory
+- Verify `agents: include:` uses correct namespace prefix
+
+### @mentions not resolving
+
+- Verify file exists at the referenced path
+- Check namespace matches bundle name
+- Ensure path is relative to bundle root
+
+### Circular dependencies
+
+The registry detects and skips circular includes automatically. Check logs for warnings about circular dependencies.

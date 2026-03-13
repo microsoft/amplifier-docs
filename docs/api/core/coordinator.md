@@ -16,6 +16,7 @@ The coordinator is created by `AmplifierSession` and provides infrastructure con
 - Mount points for module attachment
 - Infrastructure context (session ID, parent ID, config)
 - Capability registry for inter-module communication
+- Contribution channels for pull-based aggregation
 - Event system with hook registry
 
 ### Properties
@@ -87,6 +88,26 @@ Get a registered capability.
 list_agents = coordinator.get_capability("agents.list")
 ```
 
+#### `register_contributor(channel, name, callback)`
+
+Register a contributor for a contribution channel.
+
+```python
+coordinator.register_contributor(
+    "observability.events",
+    "tool-filesystem",
+    lambda: ["filesystem:read", "filesystem:write"]
+)
+```
+
+#### `collect_contributions(channel) -> list[Any]`
+
+Collect contributions from all registered contributors for a channel.
+
+```python
+events = await coordinator.collect_contributions("observability.events")
+```
+
 ### Emitting Events
 
 Events are emitted via the hook registry:
@@ -102,17 +123,17 @@ Modules are loaded via the mount plan during session initialization:
 ```python
 # Mount plan specifies modules to load
 config = {
-    "session": {"orchestrator": "loop-basic", "context": "context-simple"},
-    "providers": [{"module": "provider-anthropic", ...}],
-    "tools": [{"module": "tool-bash", ...}],
-    ...
+    "session": {
+        "orchestrator": "loop-basic",
+        "context": "context-simple"
+    },
+    "providers": [{"module": "provider-anthropic"}],
+    "tools": [{"module": "tool-bash"}]
 }
 
-# Coordinator loads modules during session.initialize()
+# Session initialization loads and mounts all modules
 async with AmplifierSession(config=config) as session:
-    # session.coordinator has all modules loaded
-    providers = session.coordinator.get("providers")  # dict[str, Provider]
-    tools = session.coordinator.get("tools")          # dict[str, Tool]
+    # All modules are now mounted and accessible via coordinator
+    orchestrator = session.coordinator.get("orchestrator")
+    tools = session.coordinator.get("tools")
 ```
-
-For implementation details, see the [source](https://github.com/microsoft/amplifier-core/blob/main/amplifier_core/coordinator.py).

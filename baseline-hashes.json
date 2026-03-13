@@ -235,7 +235,7 @@
           "repo": "amplifier-foundation",
           "path": "amplifier_foundation/registry.py",
           "exists": true,
-          "hash": "907f232add3ed283"
+          "hash": "8ef4d68cc1561a01"
         }
       ]
     },
@@ -677,7 +677,7 @@
         },
         {
           "repo": "amplifier-core",
-          "path": "amplifier_core/models.py",
+          "path": "python/amplifier_core/models.py",
           "exists": true,
           "hash": "55168832a62ecc9a"
         }
@@ -694,9 +694,9 @@
         },
         {
           "repo": "amplifier-core",
-          "path": "amplifier_core/events.py",
+          "path": "python/amplifier_core/events.py",
           "exists": true,
-          "hash": "5334e3fbe9fbfb3e"
+          "hash": "e8380f9596cf685e"
         }
       ]
     },
@@ -720,9 +720,9 @@
       "sources": [
         {
           "repo": "amplifier-core",
-          "path": "amplifier_core/session.py",
+          "path": "python/amplifier_core/session.py",
           "exists": true,
-          "hash": "9e710f5777a37c47"
+          "hash": "4d2902034a64c5dd"
         }
       ]
     },
@@ -731,9 +731,9 @@
       "sources": [
         {
           "repo": "amplifier-core",
-          "path": "amplifier_core/coordinator.py",
+          "path": "python/amplifier_core/coordinator.py",
           "exists": true,
-          "hash": "ddead941b88aace6"
+          "hash": "d288f5e2f7dd4aa5"
         }
       ]
     },
@@ -742,9 +742,9 @@
       "sources": [
         {
           "repo": "amplifier-core",
-          "path": "amplifier_core/hooks.py",
+          "path": "python/amplifier_core/hooks.py",
           "exists": true,
-          "hash": "767d53c36ec54525"
+          "hash": "0e762ad3c65cf95f"
         },
         {
           "repo": "amplifier-core",
@@ -759,13 +759,13 @@
       "sources": [
         {
           "repo": "amplifier-core",
-          "path": "amplifier_core/models.py",
+          "path": "python/amplifier_core/models.py",
           "exists": true,
           "hash": "55168832a62ecc9a"
         },
         {
           "repo": "amplifier-core",
-          "path": "amplifier_core/message_models.py",
+          "path": "python/amplifier_core/message_models.py",
           "exists": true,
           "hash": "cd7bc5ad2cd1dda2"
         }
