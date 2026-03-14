@@ -503,7 +503,7 @@
           "repo": "amplifier-core",
           "path": "docs/contracts/README.md",
           "exists": true,
-          "hash": "e3719194c6408d79"
+          "hash": "cc3413843d01bb8a"
         }
       ]
     },
@@ -776,9 +776,9 @@
       "sources": [
         {
           "repo": "amplifier-core",
-          "path": "amplifier_core/events.py",
+          "path": "python/amplifier_core/events.py",
           "exists": true,
-          "hash": "5334e3fbe9fbfb3e"
+          "hash": "e8380f9596cf685e"
         }
       ]
     },
@@ -789,7 +789,7 @@
           "repo": "amplifier-app-cli",
           "path": "amplifier_app_cli/main.py",
           "exists": true,
-          "hash": "25045f2f53262c07"
+          "hash": "f85376256aea0098"
         }
       ]
     },
@@ -852,7 +852,7 @@
           "repo": "amplifier-module-provider-anthropic",
           "path": "amplifier_module_provider_anthropic/__init__.py",
           "exists": true,
-          "hash": "50f738bcdce23f3c"
+          "hash": "1e229728ef05caf2"
         },
         {
           "repo": "amplifier-module-provider-anthropic",
@@ -869,13 +869,13 @@
           "repo": "amplifier-module-provider-openai",
           "path": "amplifier_module_provider_openai/__init__.py",
           "exists": true,
-          "hash": "e4c9630f948634d8"
+          "hash": "f0219e109b72759f"
         },
         {
           "repo": "amplifier-module-provider-openai",
           "path": "README.md",
           "exists": true,
-          "hash": "bb6e08b84fa67b9b"
+          "hash": "719fd8b71cf69b67"
         }
       ]
     },
@@ -886,13 +886,13 @@
           "repo": "amplifier-module-provider-azure-openai",
           "path": "amplifier_module_provider_azure_openai/__init__.py",
           "exists": true,
-          "hash": "0ef684fbb6a452d4"
+          "hash": "28fa9f1f5006f724"
         },
         {
           "repo": "amplifier-module-provider-azure-openai",
           "path": "README.md",
           "exists": true,
-          "hash": "2c0daa41d6927cc7"
+          "hash": "99d6687f6630a47c"
         }
       ]
     },

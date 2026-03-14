@@ -57,25 +57,24 @@ amplifier-app-cli/
 │   ├── bundle.py       # Bundle commands
 │   ├── provider.py     # Provider commands
 │   ├── module.py       # Module commands
-│   ├── source.py       # Source commands
-│   ├── agents.py       # Agent commands
-│   ├── tool.py         # Tool commands
-│   ├── notify.py       # Notification commands
-│   ├── init.py         # Initialization wizard
-│   ├── update.py       # Update command
-│   ├── version.py      # Version command
-│   └── reset.py        # Reset command
-├── session_runner.py    # Session initialization
-├── session_spawner.py   # Agent delegation
-├── session_store.py     # Session persistence
-└── console.py           # Rich console utilities
+│   └── ...
+├── session_runner.py   # Session lifecycle management
+├── session_store.py    # Session persistence
+└── console.py          # Rich console output
 ```
 
-## Key Modules
+## Session Management
 
-- **Commands** - Command-line interface implementations
-- **Session Management** - Session creation, persistence, and resumption
-- **Agent Delegation** - Sub-session spawning and resumption
-- **Display** - Rich console formatting and output
+The CLI manages session lifecycle through `session_runner.py`:
 
-See [CLI Case Study](../../developer_guides/applications/cli_case_study.md) for architectural details.
+```python
+from amplifier_app_cli.session_runner import create_initialized_session, SessionConfig
+
+config = SessionConfig(
+    bundle_name="foundation",
+    provider=None,  # Auto-select
+)
+
+session = await create_initialized_session(config)
+response = await session.execute("Hello!")
+```

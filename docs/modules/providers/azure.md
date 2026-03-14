@@ -90,27 +90,130 @@ Or via environment:
 export AZURE_USE_DEFAULT_CREDENTIAL=true
 ```
 
-## Configuration Reference
+## Configuration
 
-| Option | Type | Env Var | Description |
+| Option | Type | Default | Description |
 |--------|------|---------|-------------|
-| `azure_endpoint` | string | `AZURE_OPENAI_ENDPOINT` | Azure resource endpoint URL |
-| `api_key` | string | `AZURE_OPENAI_API_KEY` | API key (if not using managed identity) |
-| `api_version` | string | `AZURE_OPENAI_API_VERSION` | API version (default: `2024-10-01-preview`) |
-| `deployment_name` | string | - | Default deployment name |
-| `use_managed_identity` | boolean | `AZURE_USE_MANAGED_IDENTITY` | Enable managed identity auth |
-| `managed_identity_client_id` | string | `AZURE_MANAGED_IDENTITY_CLIENT_ID` | Client ID for user-assigned identity |
-| `use_default_credential` | boolean | `AZURE_USE_DEFAULT_CREDENTIAL` | Use DefaultAzureCredential chain |
+| `azure_endpoint` | string | `$AZURE_OPENAI_ENDPOINT` | Azure OpenAI resource endpoint |
+| `api_key` | string | `$AZURE_OPENAI_API_KEY` | API key (if using key auth) |
+| `api_version` | string | `2024-10-01-preview` | Azure API version |
+| `deployment_name` | string | null | Azure deployment name (maps to model) |
+| `default_model` | string | `gpt-5.4` | Default model name |
+| `max_tokens` | integer | `4096` | Maximum output tokens |
+| `temperature` | float | null | Sampling temperature |
+| `reasoning` | string | null | Reasoning effort: `minimal\|low\|medium\|high` |
+| `reasoning_summary` | string | `detailed` | Reasoning verbosity: `auto\|concise\|detailed` |
+| `truncation` | string | `auto` | Automatic context management |
+| `enable_state` | boolean | `false` | Enable stateful conversations |
+| `use_managed_identity` | boolean | `false` | Use Azure Managed Identity |
+| `use_default_credential` | boolean | `false` | Use DefaultAzureCredential |
+| `managed_identity_client_id` | string | null | Client ID for user-assigned identity |
+| `debug` | boolean | `false` | Enable standard debug events |
+| `raw_debug` | boolean | `false` | Enable ultra-verbose raw API I/O logging |
+| `timeout` | float | 600.0 | API timeout in seconds |
+| `max_retries` | int | 5 | Retry attempts before failing |
 
-## Capabilities
+## Deployment Mapping
 
-- Streaming responses
-- Tool/function calling
-- Vision (image inputs)
-- Reasoning models
-- Batch processing
-- JSON mode
+Azure uses deployment names instead of model names. Map them:
 
-## Repository
+```yaml
+providers:
+  - module: provider-azure-openai
+    config:
+      azure_endpoint: https://your-resource.openai.azure.com
+      deployment_name: my-gpt5-deployment
+      default_model: gpt-5.4
+```
 
-**→ [GitHub](https://github.com/microsoft/amplifier-module-provider-azure-openai)**
+Or use environment variables:
+```bash
+export AZURE_OPENAI_DEPLOYMENT_NAME="my-gpt5-deployment"
+```
+
+## Reasoning Configuration
+
+Control reasoning effort and verbosity:
+
+```yaml
+providers:
+  - module: provider-azure-openai
+    config:
+      reasoning: "medium"
+      reasoning_summary: "detailed"
+```
+
+## Tool Calling
+
+Supports OpenAI Responses API tool calling:
+
+```yaml
+providers:
+  - module: provider-azure-openai
+    config:
+      azure_endpoint: https://your-resource.openai.azure.com
+      deployment_name: my-deployment
+```
+
+Tools are automatically available when declared in your configuration.
+
+## Environment Variables
+
+```bash
+# Required
+export AZURE_OPENAI_ENDPOINT="https://your-resource.openai.azure.com"
+
+# Authentication (choose one)
+export AZURE_OPENAI_API_KEY="your-api-key"
+# OR
+export AZURE_USE_MANAGED_IDENTITY=true
+# OR
+export AZURE_USE_DEFAULT_CREDENTIAL=true
+
+# Optional
+export AZURE_OPENAI_API_VERSION="2024-10-01-preview"
+export AZURE_OPENAI_DEPLOYMENT_NAME="my-deployment"
+export AZURE_OPENAI_DEFAULT_MODEL="gpt-5.1-codex"
+```
+
+## Example Configuration
+
+### API Key Authentication
+
+```yaml
+providers:
+  - module: provider-azure-openai
+    source: git+https://github.com/microsoft/amplifier-module-provider-azure-openai@main
+    config:
+      azure_endpoint: https://myresource.openai.azure.com
+      api_key: ${AZURE_OPENAI_API_KEY}
+      deployment_name: my-gpt5-deployment
+      default_model: gpt-5.4
+      max_tokens: 4096
+```
+
+### Managed Identity Authentication
+
+```yaml
+providers:
+  - module: provider-azure-openai
+    source: git+https://github.com/microsoft/amplifier-module-provider-azure-openai@main
+    config:
+      azure_endpoint: https://myresource.openai.azure.com
+      use_managed_identity: true
+      deployment_name: my-gpt5-deployment
+      default_model: gpt-5.4
+```
+
+### DefaultAzureCredential (Development)
+
+```yaml
+providers:
+  - module: provider-azure-openai
+    source: git+https://github.com/microsoft/amplifier-module-provider-azure-openai@main
+    config:
+      azure_endpoint: https://myresource.openai.azure.com
+      use_default_credential: true
+      deployment_name: my-gpt5-deployment
+      default_model: gpt-5.4
+```

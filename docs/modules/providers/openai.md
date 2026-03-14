@@ -25,7 +25,7 @@ providers:
 |--------|------|---------|-------------|
 | `api_key` | string | `$OPENAI_API_KEY` | API key |
 | `base_url` | string | null | Optional custom endpoint (`$OPENAI_BASE_URL`); null = OpenAI default |
-| `default_model` | string | `gpt-5.1-codex` | Default model |
+| `default_model` | string | `gpt-5.4` | Default model |
 | `max_tokens` | integer | `4096` | Maximum output tokens |
 | `temperature` | float | null | Sampling temperature; null = not sent (some models don't support it) |
 | `reasoning` | string | null | Reasoning effort: `minimal\|low\|medium\|high`; null = not sent |
@@ -45,133 +45,114 @@ providers:
 
 | Model | Description |
 |-------|-------------|
-| `gpt-5.1-codex` | GPT-5 optimized for code (default) |
-| `gpt-5.1` | Latest GPT-5 model |
+| `gpt-5.4` | GPT 5.4 (default) |
+| `gpt-5.4-pro` | GPT 5.4 Pro |
+| `gpt-5.1` | GPT 5.1 |
+| `gpt-5.1-codex` | GPT-5.1 codex |
 | `gpt-5-mini` | Smaller, faster GPT-5 |
 | `gpt-5-nano` | Smallest GPT-5 variant |
 | `o3-deep-research` | o3 Deep Research |
 | `o4-mini-deep-research` | o4-mini Deep Research |
 
-## Features
+## Reasoning Configuration
 
-### Responses API Capabilities
-
-- **Reasoning Control** - Adjust reasoning effort (minimal, low, medium, high)
-- **Reasoning Summary Verbosity** - Control detail level (auto, concise, detailed)
-- **Extended Thinking Toggle** - Enables high-effort reasoning with automatic token budgeting
-- **Explicit Reasoning Preservation** - Re-inserts reasoning items for robust multi-turn reasoning
-- **Automatic Context Management** - Optional truncation parameter
-- **Stateful Conversations** - Optional conversation persistence
-- **Native Tools** - Built-in web search, image generation, code interpreter
-- **Structured Output** - JSON schema-based output formatting
-- **Function Calling** - Custom tool use support
-- **Token Counting** - Usage tracking and management
-
-### Reasoning Summary Levels
-
-The `reasoning_summary` config controls verbosity of reasoning blocks:
-
-- **`auto`** - Model decides appropriate detail level
-- **`concise`** - Brief reasoning summaries (faster, fewer tokens)
-- **`detailed`** (default) - Verbose reasoning output similar to Anthropic's extended thinking
-
-**Example:**
+Control the model's reasoning effort and output verbosity:
 
 ```yaml
-# Detailed reasoning (verbose like Anthropic's thinking blocks)
 providers:
   - module: provider-openai
     config:
-      reasoning: "high"
-      reasoning_summary: "detailed"
+      reasoning: "medium"  # minimal|low|medium|high
+      reasoning_summary: "detailed"  # auto|concise|detailed
 ```
 
-### Automatic Context Management
+**Reasoning levels:**
+- `minimal` - Quick responses, minimal reasoning
+- `low` - Light reasoning for simple tasks
+- `medium` - Balanced reasoning for most tasks
+- `high` - Deep reasoning for complex problems
 
-The provider supports automatic conversation history management via the `truncation` parameter (enabled by default):
+**Summary verbosity:**
+- `auto` - Model decides appropriate detail level
+- `concise` - Brief reasoning summaries
+- `detailed` - Verbose reasoning output (similar to Anthropic's thinking blocks)
+
+## Stateful Conversations
+
+Enable conversation persistence across requests:
 
 ```yaml
-config:
-  truncation: "auto"  # Enables automatic context management (default)
-  # OR
-  truncation: null    # Disables automatic truncation (manual control)
+providers:
+  - module: provider-openai
+    config:
+      enable_state: true
 ```
 
-**How it works:**
-- OpenAI automatically removes oldest messages when context limit approached
-- FIFO (first-in, first-out) - most recent messages preserved
-- Transparent to application - no errors or warnings
+With state enabled, the provider tracks conversation history server-side.
 
-### Incomplete Response Auto-Continuation
+## Truncation
 
-The provider automatically handles incomplete responses:
-
-**The Problem**: OpenAI may return `status: "incomplete"` when generation is cut off.
-
-**The Solution**: Automatic continuation using `previous_response_id` (up to 5 attempts).
-
-**Benefits:**
-- Transparent continuation - Makes follow-up calls automatically
-- Output accumulation - Merges reasoning items and messages from all continuations
-- Single response - Returns complete ChatResponse to orchestrator
-- Full observability - Emits `provider:incomplete_continuation` events
-
-### Reasoning State Preservation
-
-The provider preserves reasoning state across conversation **steps** for improved multi-turn performance:
-
-**The Problem**: Reasoning models produce internal reasoning traces that improve subsequent responses when preserved.
-
-**Important Distinction**:
-- **Turn**: User prompt → (possibly multiple API calls) → final assistant response
-- **Step**: Each individual API call within a turn (tool call loops = multiple steps per turn)
-
-**The Solution**: Explicit reasoning re-insertion for robust step-by-step reasoning:
-
-1. **Requests encrypted content** - API call includes `include=["reasoning.encrypted_content"]`
-2. **Stores complete reasoning state** - Both encrypted content and reasoning ID stored in `ThinkingBlock.content`
-3. **Re-inserts reasoning items** - Explicitly converts reasoning blocks back to OpenAI format
-4. **Maintains metadata** - Also tracks reasoning IDs in metadata
-
-### Graceful Error Recovery
-
-The provider implements graceful degradation for incomplete tool call sequences:
-
-**The Problem**: Missing tool results cause API rejection.
-
-**The Solution**: Automatic detection and synthetic result injection.
-
-**How it works:**
-1. Detects missing tool results before API call
-2. Injects synthetic results with `[SYSTEM ERROR: Tool result missing]` message
-3. API accepts request, session continues
-4. LLM can acknowledge error and ask user to retry
-5. Emits `provider:tool_sequence_repaired` event
-
-## Debugging
-
-### Standard Debug
+Automatic context management to handle token limits:
 
 ```yaml
-config:
-  debug: true  # Summary logging with truncated values
+providers:
+  - module: provider-openai
+    config:
+      truncation: "auto"  # auto|none
 ```
 
-### Raw Debug
+When set to `auto`, OpenAI automatically truncates older messages to fit within context limits.
+
+## Tool Calling
+
+The provider automatically detects and processes tool calls from the Responses API:
 
 ```yaml
-config:
-  debug: true
-  raw_debug: true  # Complete API I/O logging
+providers:
+  - module: provider-openai
+    config:
+      default_model: gpt-5.4
 ```
+
+Tools declared in your configuration are available to the model automatically.
+
+## Debug Events
+
+Enable debug logging:
+
+```yaml
+providers:
+  - module: provider-openai
+    config:
+      debug: true  # Standard debug events
+      raw_debug: true  # Ultra-verbose raw API I/O
+```
+
+Events:
+- `llm:request:debug` - Request summary
+- `llm:response:debug` - Response summary
+- `llm:request:raw` - Complete request params
+- `llm:response:raw` - Complete response object
 
 ## Environment Variables
 
 ```bash
 export OPENAI_API_KEY="your-api-key-here"
-export OPENAI_BASE_URL="https://api.openai.com/v1"  # Optional
+export OPENAI_BASE_URL="https://custom-endpoint.com"  # Optional
 ```
 
-## Repository
+## Example Configuration
 
-**→ [GitHub](https://github.com/microsoft/amplifier-module-provider-openai)**
+```yaml
+providers:
+  - module: provider-openai
+    source: git+https://github.com/microsoft/amplifier-module-provider-openai@main
+    config:
+      api_key: ${OPENAI_API_KEY}
+      default_model: gpt-5.4
+      max_tokens: 4096
+      temperature: 0.7
+      reasoning: medium
+      reasoning_summary: detailed
+      truncation: auto
+```

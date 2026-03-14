@@ -18,15 +18,9 @@ Events follow a `namespace:action` naming convention.
 | Event | Description |
 |-------|-------------|
 | `session:start` | Session initialized |
-| `session:start:debug` | Session start with debug details |
-| `session:start:raw` | Session start with raw data |
 | `session:end` | Session cleanup complete |
 | `session:fork` | Child session created |
-| `session:fork:debug` | Session fork with debug details |
-| `session:fork:raw` | Session fork with raw data |
 | `session:resume` | Session resumed |
-| `session:resume:debug` | Session resume with debug details |
-| `session:resume:raw` | Session resume with raw data |
 
 ### Prompt Events
 
@@ -52,30 +46,32 @@ Events follow a `namespace:action` naming convention.
 | `provider:retry` | Retry attempt before LLM call |
 | `provider:throttle` | Pre-emptive throttling triggered |
 | `provider:tool_sequence_repaired` | Tool call sequence repaired |
-| `llm:request` | LLM request (alias) |
-| `llm:request:debug` | LLM request with debug details |
-| `llm:request:raw` | LLM request with raw untruncated data |
-| `llm:response` | LLM response (alias) |
-| `llm:response:debug` | LLM response with debug details |
-| `llm:response:raw` | LLM response with raw untruncated data |
+| `provider:resolve` | Provider resolution |
+| `llm:request` | LLM request |
+| `llm:response` | LLM response |
 
 ### Content Block Events
 
 | Event | Description |
 |-------|-------------|
-| `content_block:start` | Content block streaming started |
-| `content_block:delta` | Content block chunk received |
-| `content_block:end` | Content block streaming complete |
-| `thinking:delta` | Thinking content chunk |
-| `thinking:final` | Thinking content complete |
+| `content_block:start` | Content block started |
+| `content_block:delta` | Content block delta received |
+| `content_block:end` | Content block completed |
+
+### Thinking Events
+
+| Event | Description |
+|-------|-------------|
+| `thinking:delta` | Thinking content delta |
+| `thinking:final` | Thinking content finalized |
 
 ### Tool Events
 
 | Event | Description |
 |-------|-------------|
-| `tool:pre` | Before tool execution |
-| `tool:post` | After tool execution |
-| `tool:error` | Tool execution failed |
+| `tool:pre` | Before tool invocation |
+| `tool:post` | After tool invocation |
+| `tool:error` | Tool invocation error |
 
 ### Context Events
 
@@ -84,55 +80,73 @@ Events follow a `namespace:action` naming convention.
 | `context:pre_compact` | Before context compaction |
 | `context:post_compact` | After context compaction |
 | `context:compaction` | Context compaction occurred |
-| `context:include` | Content included in context |
+| `context:include` | Context include event |
 
 ### Orchestrator Events
 
 | Event | Description |
 |-------|-------------|
 | `orchestrator:complete` | Orchestrator execution complete |
-| `execution:start` | Orchestrator execution begins |
-| `execution:end` | Orchestrator execution completes |
+| `execution:start` | Execution started |
+| `execution:end` | Execution ended |
 
-### User Events
+### User Notification Events
 
 | Event | Description |
 |-------|-------------|
-| `user:notification` | User notification triggered |
+| `user:notification` | User notification |
 
 ### Artifact Events
 
 | Event | Description |
 |-------|-------------|
-| `artifact:write` | Artifact written to storage |
-| `artifact:read` | Artifact read from storage |
+| `artifact:write` | Artifact written |
+| `artifact:read` | Artifact read |
 
-### Policy & Approval Events
+### Policy Events
 
 | Event | Description |
 |-------|-------------|
 | `policy:violation` | Policy violation detected |
-| `approval:required` | Approval requested |
-| `approval:granted` | User approved |
-| `approval:denied` | User denied |
+| `approval:required` | Approval required |
+| `approval:granted` | Approval granted |
+| `approval:denied` | Approval denied |
 
 ### Cancellation Events
 
 | Event | Description |
 |-------|-------------|
-| `cancel:requested` | Cancellation initiated (graceful or immediate) |
-| `cancel:completed` | Cancellation finalized, session stopping |
+| `cancel:requested` | Cancellation requested |
+| `cancel:completed` | Cancellation completed |
 
-## Usage
+## Using Events
 
-Hooks subscribe to events:
+### Register a Hook
 
 ```python
-async def my_hook(event_name, data):
-    if event_name == "tool:pre":
-        print(f"Tool starting: {data['tool_name']}")
+from amplifier_core.events import TOOL_PRE, TOOL_POST
 
-coordinator.hooks.register("tool:pre", my_hook)
+async def log_tool_calls(event: str, data: dict):
+    print(f"{event}: {data}")
+    return HookResult()
+
+# Register for specific events
+coordinator.hooks.register(TOOL_PRE, log_tool_calls)
+coordinator.hooks.register(TOOL_POST, log_tool_calls)
 ```
 
-See [Hook Contract](../../developer/contracts/hook.md) for details.
+### Listen to All Events
+
+```python
+from amplifier_core.events import ALL_EVENTS
+
+async def monitor_all(event: str, data: dict):
+    print(f"Event: {event}")
+    return HookResult()
+
+coordinator.hooks.register(ALL_EVENTS, monitor_all)
+```
+
+## Event Data
+
+Each event carries a `data` dict with event-specific fields. See the hook contract documentation for details on event data structures.

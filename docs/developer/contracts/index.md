@@ -5,42 +5,90 @@ description: Reference documentation for module interfaces
 
 # Module Contracts
 
-Contracts define the interfaces that modules must implement. They are the stable "studs" that allow modules to be developed and swapped independently.
+**Start here for building Amplifier modules.**
 
-## Contract Philosophy
+This directory contains the authoritative guidance for building each type of Amplifier module. Each contract document explains:
 
-- **Stable**: Contracts rarely change
-- **Backward compatible**: Changes are additive
-- **Protocol-based**: Duck typing via structural subtyping
-- **Documented**: Clear expectations and examples
+1. **What it is** - Purpose and responsibilities
+2. **Protocol reference** - Link to interfaces.py with exact line numbers
+3. **Entry point pattern** - How modules are discovered and loaded
+4. **Configuration** - Mount Plan integration
+5. **Canonical example** - Reference implementation
+6. **Validation** - How to verify your module works
 
-## Available Contracts
+---
 
-| Contract | Purpose | Link |
-|----------|---------|------|
-| **Provider** | LLM backend integration | [Provider Contract](provider.md) |
-| **Tool** | Agent capabilities | [Tool Contract](tool.md) |
-| **Hook** | Observability and control | [Hook Contract](hook.md) |
-| **Orchestrator** | Execution loop strategy | [Orchestrator Contract](orchestrator.md) |
-| **Context** | Memory management | [Context Contract](context.md) |
+## Module Types
 
-## Contract Structure
+| Module Type | Contract | Purpose |
+|-------------|----------|---------|
+| **Provider** | [PROVIDER_CONTRACT.md](PROVIDER_CONTRACT.md) | LLM backend integration |
+| **Tool** | [TOOL_CONTRACT.md](TOOL_CONTRACT.md) | Agent capabilities |
+| **Hook** | [HOOK_CONTRACT.md](HOOK_CONTRACT.md) | Lifecycle observation and control |
+| **Orchestrator** | [ORCHESTRATOR_CONTRACT.md](ORCHESTRATOR_CONTRACT.md) | Agent loop execution strategy |
+| **Context** | [CONTEXT_CONTRACT.md](CONTEXT_CONTRACT.md) | Conversation memory management |
 
-Each contract document covers:
+---
 
-1. **Purpose**: What this module type does
-2. **Protocol**: The interface definition
-3. **Mount Function**: How to register with the kernel
-4. **Configuration**: Available options
-5. **Events**: Events emitted/handled
-6. **Examples**: Reference implementations
+## Quick Start Pattern
 
-## Authoritative Sources
+All modules follow this pattern:
 
-The authoritative contract documentation lives in `amplifier-core`:
+```python
+# 1. Implement the Protocol from interfaces.py
+class MyModule:
+    # ... implement required methods
+    pass
 
-- **→ [Provider Contract](https://github.com/microsoft/amplifier-core/blob/main/docs/contracts/PROVIDER_CONTRACT.md)**
-- **→ [Tool Contract](https://github.com/microsoft/amplifier-core/blob/main/docs/contracts/TOOL_CONTRACT.md)**
-- **→ [Hook Contract](https://github.com/microsoft/amplifier-core/blob/main/docs/contracts/HOOK_CONTRACT.md)**
-- **→ [Orchestrator Contract](https://github.com/microsoft/amplifier-core/blob/main/docs/contracts/ORCHESTRATOR_CONTRACT.md)**
-- **→ [Context Contract](https://github.com/microsoft/amplifier-core/blob/main/docs/contracts/CONTEXT_CONTRACT.md)**
+# 2. Provide mount() function
+async def mount(coordinator, config):
+    """Initialize and register module."""
+    instance = MyModule(config)
+    await coordinator.mount("category", instance, name="my-module")
+    return instance  # or cleanup function
+
+# 3. Register entry point in pyproject.toml
+# [project.entry-points."amplifier.modules"]
+# my-module = "my_package:mount"
+```
+
+---
+
+## Source of Truth
+
+**Protocols are in code**, not docs:
+
+- **Protocol definitions**: `python/amplifier_core/interfaces.py`
+- **Data models**: `python/amplifier_core/models.py`
+- **Message models**: `python/amplifier_core/message_models.py` (Pydantic models for request/response envelopes)
+- **Content models**: `python/amplifier_core/content_models.py` (dataclass types for events and streaming)
+- **Rust traits**: `crates/amplifier-core/src/traits.rs` (Rust-side trait definitions)
+- **Rust/Python type mapping**: [../../CONTRACTS.md](../../CONTRACTS.md) (authoritative cross-boundary reference)
+
+These contract documents provide **guidance** that code cannot express. Always read the code docstrings first.
+
+---
+
+## Related Documentation
+
+- [MOUNT_PLAN_SPECIFICATION.md](https://github.com/microsoft/amplifier-core/blob/main/docs/specs/MOUNT_PLAN_SPECIFICATION.md) - Configuration contract
+- [MODULE_SOURCE_PROTOCOL.md](https://github.com/microsoft/amplifier-core/blob/main/docs/MODULE_SOURCE_PROTOCOL.md) - Module loading mechanism
+- [CONTRIBUTION_CHANNELS.md](https://github.com/microsoft/amplifier-core/blob/main/docs/specs/CONTRIBUTION_CHANNELS.md) - Module contribution pattern
+- [DESIGN_PHILOSOPHY.md](https://github.com/microsoft/amplifier-core/blob/main/docs/DESIGN_PHILOSOPHY.md) - Kernel design principles
+
+---
+
+## Validation
+
+Verify your module before release:
+
+```bash
+# Structural validation
+amplifier module validate ./my-module
+```
+
+See individual contract documents for type-specific validation requirements.
+
+---
+
+**For ecosystem overview**: [amplifier](https://github.com/microsoft/amplifier)
