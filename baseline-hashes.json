@@ -903,7 +903,7 @@
           "repo": "amplifier-module-provider-ollama",
           "path": "amplifier_module_provider_ollama/__init__.py",
           "exists": true,
-          "hash": "162353368c59912b"
+          "hash": "2157221802397d84"
         },
         {
           "repo": "amplifier-module-provider-ollama",
@@ -920,7 +920,7 @@
           "repo": "amplifier-module-provider-vllm",
           "path": "amplifier_module_provider_vllm/__init__.py",
           "exists": true,
-          "hash": "5afaa3df033ce1eb"
+          "hash": "a3226dfd96e47149"
         },
         {
           "repo": "amplifier-module-provider-vllm",
