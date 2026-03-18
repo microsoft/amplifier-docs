@@ -12,7 +12,7 @@ concurrency:
 jobs:
   regenerate:
     runs-on: ubuntu-latest
-    timeout-minutes: 60
+    timeout-minutes: 75
     permissions:
       contents: write  # git push
       issues: write    # gh issue create
@@ -223,6 +223,43 @@ jobs:
       - name: Regenerate docs
         if: steps.preflight.outputs.skip != 'true'
         run: |
+          rm -f .recipe-success
           amplifier tool invoke recipes \
             operation=execute \
             recipe_path=recipes/docs-regenerate.yaml
+
+      - name: Verify regeneration result
+        if: steps.preflight.outputs.skip != 'true'
+        run: |
+          python3 << 'PYEOF'
+          import json, os, sys
+
+          # Check how many sections needed regeneration
+          changed = 0
+          try:
+              with open("sync-output/cache/source-hashes.json") as f:
+                  current = json.load(f)
+              with open("baseline-hashes.json") as f:
+                  baseline = json.load(f)
+              for sid, s in current.get("sections", {}).items():
+                  cur_h = {(x.get("repo",""), x.get("path","")): x.get("hash")
+                           for x in s.get("sources", [])}
+                  base_s = baseline.get("sections", {}).get(sid, {})
+                  base_h = {(x.get("repo",""), x.get("path","")): x.get("hash")
+                            for x in base_s.get("sources", [])}
+                  if cur_h != base_h:
+                      changed += 1
+          except FileNotFoundError:
+              pass
+
+          success = os.path.exists(".recipe-success")
+
+          if changed == 0:
+              print("All sections up to date. Nothing needed regeneration.")
+          elif success:
+              print(f"Recipe completed successfully. {changed} sections remain for future batches.")
+          else:
+              print(f"::error::{changed} sections needed regeneration but recipe did not complete successfully.")
+              print("Recipe likely failed due to agent timeout or internal error. Check logs above.")
+              sys.exit(1)
+          PYEOF
