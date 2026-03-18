@@ -25,6 +25,24 @@
 #     * FIX: Commit prompt now contains an explicit IMPORTANT block instructing
 #       git-ops to run `git add baseline-hashes.json` before committing.
 #
+# v5.1.0 (2026-03-18):
+#   - FIX: Source-weighted batch selection to prevent heavy-doc timeouts
+#     * ROOT CAUSE: select-docs treated all docs as equal cost; a 26-source
+#       doc and a 1-source doc both counted as "1" toward batch_limit. When
+#       multiple heavy docs landed in the same batch, zen-architect couldn't
+#       finish within 900s, creating an infinite retry loop (Mar 15-18).
+#     * FIX: Added max_batch_sources context variable (default: 30). Candidates
+#       are sorted by source count ascending (light first), then selected until
+#       either batch_limit or max_batch_sources is hit. Heavy docs run solo.
+#   - FIX: Silent recipe failures now surface as red CI runs
+#     * ROOT CAUSE: amplifier tool invoke recipes exits 0 even on internal
+#       failure; GitHub Actions saw green on every run since Mar 15.
+#     * FIX: Added mark-success step (touch .recipe-success) that only runs
+#       if all prior steps complete. Workflow verifies this file exists.
+#   - Increased agent timeouts from 900s to 1200s for regenerate-docs and
+#     evidence-validation steps (safety margin for solo heavy docs).
+#   - Increased job timeout from 60 to 75 minutes to accommodate.
+#
 # v5.0.0 (2026-02-20):
 #   - Breaking: converted from staged recipe to flat recipe
 #   - Removed: approval gate (evidence validation + semantic diff filter are
@@ -46,6 +64,10 @@ context:
   doc_path: ""
   # Limit number of docs to regenerate per run
   batch_limit: 10
+  # Maximum total source files across all selected docs (weight-based batching)
+  # Heavy docs (17-26 sources) will run in small batches or solo;
+  # light docs (1-2 sources) can batch up to batch_limit
+  max_batch_sources: 30
   # Source directories
   repos_dir: "~/repo/amplifier-sources"
   docs_dir: "./docs"
@@ -77,6 +99,7 @@ steps:
       mode = "{{mode}}"
       doc_path = "{{doc_path}}"
       batch_limit = int("{{batch_limit}}")
+      max_batch_sources = int("{{max_batch_sources}}")
 
       # Load current source hashes
       try:
@@ -113,7 +136,9 @@ steps:
           return cur_hashes != base_hashes
 
       no_baseline = len(baseline.get("sections", {})) == 0
-      selected = []
+
+      # Phase 1: Collect all candidates (no batch limit yet)
+      candidates = []
 
       for section_id, section in current.get("sections", {}).items():
           dp = section.get("doc_path", "")
@@ -135,12 +160,27 @@ steps:
           if not outline_section.get("sources"):
               continue
 
-          selected.append({
+          candidates.append({
               "doc_path": dp,
               "staging_name": make_staging_name(dp),
               "sources": outline_section.get("sources", []),
           })
 
+      # Phase 2: Sort by source count ascending (light docs first, heavy docs last)
+      # This ensures light docs are never blocked by heavy ones in the batch
+      candidates.sort(key=lambda x: len(x["sources"]))
+
+      # Phase 3: Apply dual limits — doc count AND total source weight
+      selected = []
+      total_sources = 0
+      for doc in candidates:
+          doc_sources = len(doc["sources"])
+          # Stop if adding this doc would exceed source budget
+          # (but always allow at least 1 doc so heavy docs aren't permanently skipped)
+          if selected and (total_sources + doc_sources > max_batch_sources):
+              break
+          selected.append(doc)
+          total_sources += doc_sources
           if len(selected) >= batch_limit:
               break
 
@@ -149,6 +189,8 @@ steps:
           "mode": mode,
           "no_baseline": no_baseline,
           "total_sections": len(current.get("sections", {})),
+          "total_candidates": len(candidates),
+          "total_source_weight": total_sources,
           "docs": selected
       }
       print(json.dumps(result))
@@ -300,7 +342,7 @@ steps:
 
       Work through ALL selected docs. Be surgical - the goal is MINIMAL diff.
     output: "regeneration_result"
-    timeout: 900
+    timeout: 1200
 
   # Evidence-based validation: verify all claims against source code
   - id: "evidence-validation"
@@ -369,7 +411,7 @@ steps:
       - Be thorough: check every config table, every feature list, every code example
     output: "evidence_result"
     parse_json: true
-    timeout: 900
+    timeout: 1200
 
   # Semantic diff analysis - auto-filter cosmetic-only changes
   - id: "semantic-diff-filter"
@@ -710,6 +752,16 @@ steps:
     output: "commit_result"
     timeout: 120
 
+
+  # Success marker: only reaches this step if all prior steps completed
+  # The workflow checks for this file to detect silent recipe failures
+  - id: "mark-success"
+    type: "bash"
+    command: |
+      touch .recipe-success
+      echo '{"status": "complete"}'
+    output: "success_marker"
+    timeout: 5
 
   - id: "cleanup-sources"
     type: "bash"
