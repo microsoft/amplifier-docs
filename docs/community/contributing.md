@@ -53,158 +53,173 @@ LLM backend integrations.
 **Reference Implementations:**
 - [provider-anthropic](https://github.com/microsoft/amplifier-module-provider-anthropic)
 - [provider-openai](https://github.com/microsoft/amplifier-module-provider-openai)
-- [provider-mock](https://github.com/microsoft/amplifier-module-provider-mock) - Minimal testing reference
+- [provider-mock](https://github.com/microsoft/amplifier-module-provider-mock)
 
-**Contract:** [Provider Contract](../developer/contracts/provider.md) | **Examples:** [Showcase](../showcase/index.md)
+**Getting Started:**
+
+1. Review the [Provider Contract](../modules/providers/index.md)
+2. Clone a reference provider as template
+3. Implement the Provider protocol
+4. Test with the reference CLI
+5. Publish your provider module
+
+**Learn More:** [Provider Development](../developer/providers.md)
+
+---
 
 #### Tools
 
-Agent capabilities for interacting with systems and data.
+Agent capabilities like filesystem access, web browsing, code execution.
 
 **Reference Implementations:**
 - [tool-filesystem](https://github.com/microsoft/amplifier-module-tool-filesystem)
 - [tool-bash](https://github.com/microsoft/amplifier-module-tool-bash)
 - [tool-web](https://github.com/microsoft/amplifier-module-tool-web)
 
-**Contract:** [Tool Contract](../developer/contracts/tool.md) | **Examples:** [Showcase](../showcase/index.md)
+**Getting Started:**
+
+1. Review the [Tool Contract](../modules/tools/index.md)
+2. Clone a reference tool as template
+3. Implement the Tool protocol
+4. Define your tool's schema
+5. Test with the reference CLI
+6. Publish your tool module
+
+**Learn More:** [Tool Development](../developer/tools.md)
+
+---
 
 #### Orchestrators
 
-Control execution flow and conversation loops.
+Execution loop strategies (basic, streaming, events).
 
 **Reference Implementations:**
-- [orchestrator-loop-basic](https://github.com/microsoft/amplifier-module-orchestrator-loop-basic)
-- [orchestrator-loop-streaming](https://github.com/microsoft/amplifier-module-orchestrator-loop-streaming)
-- [orchestrator-loop-events](https://github.com/microsoft/amplifier-module-orchestrator-loop-events)
+- [loop-basic](https://github.com/microsoft/amplifier-module-loop-basic)
+- [loop-streaming](https://github.com/microsoft/amplifier-module-loop-streaming)
+- [loop-events](https://github.com/microsoft/amplifier-module-loop-events)
 
-**Contract:** [Orchestrator Contract](../developer/contracts/orchestrator.md) | **Examples:** [Showcase](../showcase/index.md)
+**Getting Started:**
+
+1. Review the [Orchestrator Contract](../modules/orchestrators/index.md)
+2. Study reference orchestrators
+3. Implement the Orchestrator protocol
+4. Test with various tool combinations
+5. Publish your orchestrator module
+
+**Learn More:** [Orchestrator Development](../developer/orchestrators.md)
+
+---
 
 #### Contexts
 
-Manage conversation memory and state.
+Memory management strategies (simple, persistent, semantic).
 
 **Reference Implementations:**
 - [context-simple](https://github.com/microsoft/amplifier-module-context-simple)
-- [context-persistent](https://github.com/microsoft/amplifier-module-context-persistent)
 
-**Contract:** [Context Contract](../developer/contracts/context.md) | **Examples:** [Showcase](../showcase/index.md)
+**Getting Started:**
+
+1. Review the [Context Contract](../modules/contexts/index.md)
+2. Study the reference context
+3. Implement the ContextManager protocol
+4. Test compaction strategies
+5. Publish your context module
+
+**Learn More:** [Context Development](../developer/contexts.md)
+
+---
 
 #### Hooks
 
-Observe, guide, and control agent behavior.
+Observability and control (logging, redaction, approval).
 
 **Reference Implementations:**
-- [hook-logging](https://github.com/microsoft/amplifier-module-hook-logging)
-- [hook-approval](https://github.com/microsoft/amplifier-module-hook-approval)
-- [hook-redaction](https://github.com/microsoft/amplifier-module-hook-redaction)
+- [hooks-logging](https://github.com/microsoft/amplifier-module-hooks-logging)
+- [hooks-redaction](https://github.com/microsoft/amplifier-module-hooks-redaction)
 
-**Contract:** [Hook Contract](../developer/contracts/hook.md) | **Examples:** [Showcase](../showcase/index.md)
+**Getting Started:**
 
----
+1. Review the [Hook Contract](../modules/hooks/index.md)
+2. Study reference hooks
+3. Implement hook handlers
+4. Test with event emission
+5. Publish your hook module
 
-### Collections
-
-Package agents, context files, and philosophy documents for specific workflows.
-
-**Reference Implementations:**
-- [collection-toolkit](https://github.com/microsoft/amplifier-collection-toolkit)
-- [collection-design-intelligence](https://github.com/microsoft/amplifier-collection-design-intelligence)
-- [collection-recipes](https://github.com/microsoft/amplifier-collection-recipes)
-
-**Examples:** [Showcase](../showcase/index.md)
+**Learn More:** [Hook Development](../developer/hooks.md)
 
 ---
 
-## The Contribution Process
+## Publishing Your Work
 
-### 1. Choose What to Build
+### Module Naming
 
-Pick an application, module type, or collection that interests you.
+Follow the convention: `amplifier-module-{type}-{name}`
 
-### 2. Find Your Starting Point
+Examples:
+- `amplifier-module-provider-gemini`
+- `amplifier-module-tool-database`
+- `amplifier-module-hook-metrics`
 
-Look at reference implementations or community examples closest to your idea. Clone or fork as a starting point.
+### Repository Structure
 
-!!! tip "Reference Implementations"
-    Some module types have special reference implementations designed for learning:
-    
-    - `provider-mock` - Minimal provider for testing
-    - Most official modules serve as production-ready references
+```
+amplifier-module-tool-yourname/
+├── amplifier_module_tool_yourname/
+│   ├── __init__.py          # mount() function
+│   └── ...
+├── tests/
+├── pyproject.toml
+└── README.md
+```
 
-### 3. Create Your Repository
+### Entry Point
 
-Follow naming conventions:
+Register in `pyproject.toml`:
 
-- Applications: `amplifier-app-{name}`
-- Modules: `amplifier-module-{type}-{name}`
-- Collections: `amplifier-collection-{name}`
+```toml
+[project.entry-points."amplifier.modules"]
+tool-yourname = "amplifier_module_tool_yourname:mount"
+```
 
-### 4. Build Following Contracts
+### Documentation
 
-Each module type has a contract defining the interface. Follow it so your module works with the kernel.
+Include in your README:
 
-**See:** [Developer Contracts](../developer/contracts/index.md)
-
-### 5. Test Thoroughly
-
-- Test with current Amplifier versions
-- Ensure your module works in isolation
-- Verify integration with other modules
-- Document any dependencies
-
-### 6. Publish to GitHub
-
-Make your code publicly reviewable. Include:
-
-- Comprehensive README
-- Installation instructions
-- Usage examples
-- Tests
-- License (typically MIT)
-
-### 7. Add to Showcase
-
-Submit a PR to add your project to the [Showcase](../showcase/index.md) catalog.
+- Purpose and use cases
+- Configuration options
+- Example usage
+- Contract compliance
 
 ---
 
-## What NOT to Contribute To
+## Core Contributions
 
-### ❌ amplifier-core (The Kernel)
+The kernel has a high bar for changes. Most functionality belongs in modules.
 
-The kernel has an extremely high bar for changes:
+**When to contribute to core:**
 
-- Must be backward compatible
-- Requires ≥2 modules to justify new features
-- Needs spec-first design
-- Complete test coverage required
-- If you think you need to change the kernel, you probably don't
+- Bug fixes in existing contracts
+- Performance improvements
+- Protocol clarifications
+- Documentation improvements
 
-**Instead:** Build a module that works within existing contracts.
+**How to contribute:**
 
-### ⚠️ amplifier-app-cli
-
-The reference CLI is used by the core team to build and validate new capabilities. It changes frequently to adopt new features, stays lean to adapt quickly, and is not focused on user experience. Not a good place for easy first issues or incremental improvements.
-
-**Instead:** Build your own application, use hooks to modify behavior, or package workflows as collections.
+1. Open an issue describing the problem
+2. Discuss the solution approach
+3. Submit a PR with tests
+4. Reference the issue in your PR
 
 ---
 
-## Security Considerations
+## Questions?
 
-!!! danger "Critical Security Warning"
-    Modules and applications execute arbitrary code with full system access. Users must review code before installation. Build with security in mind:
-    
-    - Validate all inputs
-    - Handle credentials safely
-    - Document security implications
-    - Never include hardcoded secrets
+- **Slack**: Join the community channel
+- **GitHub Discussions**: Ask questions, share ideas
+- **Issues**: Report bugs, request features
 
 ---
 
-## See Also
+## License
 
-- [Module Development Guide](../developer/module_development.md) - Detailed module creation
-- [Developer Contracts](../developer/contracts/index.md) - Module interfaces
-- [Showcase](../showcase/index.md) - Community projects
-- [Ecosystem](../ecosystem/index.md) - Available modules
+By contributing, you agree to the [Contributor License Agreement](https://cla.opensource.microsoft.com).

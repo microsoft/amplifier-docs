@@ -26,14 +26,17 @@ Scans messages for sensitive patterns and replaces them with `[REDACTED]`:
 - Email addresses
 - Phone numbers
 - Credit card numbers
+- AWS keys, JWT tokens
 - Custom regex patterns
 
 ## Configuration
 
 | Option | Type | Default | Description |
 |--------|------|---------|-------------|
-| `patterns` | list | (built-in) | Additional regex patterns to redact |
-| `replacement` | string | `[REDACTED]` | Replacement text |
+| `rules` | list | `["secrets", "pii-basic"]` | Redaction rule sets to apply |
+| `allowlist` | list | `[]` | Field names to never redact (merged with defaults) |
+| `priority` | int | `10` | Hook priority (lower runs first) |
+| `skip_events` | list | `["tool:pre", "tool:post"]` | Events to skip redaction (feed into LLM context) |
 
 ## Usage
 
@@ -41,9 +44,11 @@ Scans messages for sensitive patterns and replaces them with `[REDACTED]`:
 hooks:
   - module: hooks-redaction
     config:
-      patterns:
-        - "sk-[a-zA-Z0-9]{48}"  # API keys
-        - "ghp_[a-zA-Z0-9]{36}"  # GitHub tokens
+      rules:
+        - "secrets"
+        - "pii-basic"
+      allowlist:
+        - "custom_field_name"
 ```
 
 !!! important "Priority"
@@ -52,10 +57,10 @@ hooks:
 ```yaml
 hooks:
   - module: hooks-redaction
-    priority: 100  # High priority - runs first
+    priority: 10  # High priority - runs first
 
   - module: hooks-logging
-    priority: 50   # Lower priority - runs after redaction
+    priority: 100   # Lower priority - runs after redaction
 ```
 
 ## Repository

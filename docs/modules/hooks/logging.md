@@ -18,40 +18,18 @@ hooks:
   - module: hooks-logging
     source: git+https://github.com/microsoft/amplifier-module-hooks-logging@main
     config:
-      level: INFO
-      output: console
+      priority: 100
 ```
 
 ## Configuration
 
 | Option | Type | Default | Description |
 |--------|------|---------|-------------|
-| `level` | string | `INFO` | Log level: DEBUG, INFO, WARNING, ERROR |
-| `output` | string | `console` | Output target: console, file, or both |
-| `file` | string | - | Log file path (required if output includes "file") |
+| `priority` | int | `100` | Hook priority (lower runs first) |
+| `session_log_template` | string | `~/.amplifier/projects/{project}/sessions/{session_id}/events.jsonl` | Path template for session logs |
 | `auto_discover` | bool | `true` | Auto-discover module events |
+| `strip_raw` | bool | `false` | Strip `raw` field from event data |
 | `additional_events` | list | `[]` | Extra events to log |
-
-## Log Levels
-
-### INFO (Recommended)
-
-- Session lifecycle
-- Tool invocations (name only)
-- Sub-agent activity
-- Errors and warnings
-
-### DEBUG
-
-Shows all details including:
-
-- Tool arguments and results
-- Full message content
-- LLM request/response details (requires `debug: true` on provider)
-
-### WARNING / ERROR
-
-Shows only warnings or critical failures.
 
 ## Features
 
@@ -59,17 +37,6 @@ Shows only warnings or critical failures.
 - **Auto-discovery** - Modules declare observable events
 - **Standard Python logging** - No external dependencies
 - **Flexible output** - Console, file, or both
-
-## Example Output
-
-```
-2025-10-06 12:00:00 [INFO] === Session Started ===
-2025-10-06 12:00:01 [INFO] Tool invoked: grep
-2025-10-06 12:00:02 [INFO] Tool completed: grep ✓
-2025-10-06 12:00:05 [INFO] Sub-agent spawning: architect
-2025-10-06 12:00:10 [INFO] Sub-agent completed: architect
-2025-10-06 12:00:11 [INFO] === Session Ended ===
-```
 
 ## Repository
 

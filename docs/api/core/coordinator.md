@@ -23,12 +23,8 @@ The coordinator is created by `AmplifierSession` and provides infrastructure con
 
 | Property | Type | Description |
 |----------|------|-------------|
-| `session` | `AmplifierSession` | Parent session reference |
-| `session_id` | `str` | Current session ID |
-| `parent_id` | `str \| None` | Parent session ID for child sessions |
-| `config` | `dict` | Session configuration/mount plan |
 | `hooks` | `HookRegistry` | Hook registry for event emission |
-| `mount_points` | `dict` | All mount points (orchestrator, providers, tools, context, hooks) |
+| `cancellation` | `CancellationToken` | Cancellation token for graceful shutdown |
 
 ### Methods
 
@@ -42,98 +38,76 @@ await coordinator.mount("providers", my_provider, name="anthropic")
 await coordinator.mount("orchestrator", my_orchestrator)  # Single module, no name needed
 ```
 
-#### `unmount(mount_point, name=None)`
+#### `get_capability(name)`
 
-Unmount a module from a mount point.
-
-```python
-await coordinator.unmount("tools", "my-tool")
-```
-
-#### `get(mount_point, name=None)`
-
-Get a mounted module or dict of modules.
+Query a registered capability.
 
 ```python
-# Get single-module mount points
-orchestrator = coordinator.get("orchestrator")
-context = coordinator.get("context")
-
-# Get all modules at a mount point
-all_providers = coordinator.get("providers")  # Returns dict[str, Provider]
-all_tools = coordinator.get("tools")          # Returns dict[str, Tool]
-
-# Get specific module by name
-provider = coordinator.get("providers", "anthropic")
-tool = coordinator.get("tools", "bash")
+events = coordinator.get_capability("observability.events") or []
+working_dir = coordinator.get_capability("session.working_dir")
 ```
-
-#### `register_cleanup(cleanup_fn)`
-
-Register a cleanup function to be called on shutdown.
 
 #### `register_capability(name, value)`
 
-Register a capability for inter-module communication.
+Register a capability that other modules can query.
 
 ```python
-coordinator.register_capability("agents.list", list_agents_fn)
+coordinator.register_capability("session.working_dir", "/path/to/project")
 ```
 
-#### `get_capability(name)`
+#### `register_contributor(channel, source, fn)`
 
-Get a registered capability.
-
-```python
-list_agents = coordinator.get_capability("agents.list")
-```
-
-#### `register_contributor(channel, name, callback)`
-
-Register a contributor for a contribution channel.
+Register a contributor function for pull-based aggregation.
 
 ```python
 coordinator.register_contributor(
     "observability.events",
-    "tool-filesystem",
-    lambda: ["filesystem:read", "filesystem:write"]
+    "my-module",
+    lambda: ["my:event:1", "my:event:2"]
 )
 ```
 
-#### `collect_contributions(channel) -> list[Any]`
+#### `process_hook_result(result, event, source)`
 
-Collect contributions from all registered contributors for a channel.
+Process hook results and apply actions.
 
 ```python
-events = await coordinator.collect_contributions("observability.events")
+result = await coordinator.process_hook_result(
+    hook_result, "tool:pre", tool_name
+)
+if result.action == "deny":
+    return f"Operation denied: {result.reason}"
 ```
 
-### Emitting Events
+## Capability Registry
 
-Events are emitted via the hook registry:
+The capability registry enables loose coupling between modules:
 
 ```python
-await coordinator.hooks.emit("tool:pre", {"name": "bash", "input": "ls"})
+# Provider registers model info
+coordinator.register_capability("provider.model_info", {
+    "context_window": 200_000,
+    "max_output_tokens": 8192
+})
+
+# Context manager queries it
+model_info = coordinator.get_capability("provider.model_info")
+if model_info:
+    budget = model_info["context_window"] - model_info["max_output_tokens"]
 ```
 
-### Module Loading
+## Contribution Channels
 
-Modules are loaded via the mount plan during session initialization:
+Contribution channels enable pull-based aggregation:
 
 ```python
-# Mount plan specifies modules to load
-config = {
-    "session": {
-        "orchestrator": "loop-basic",
-        "context": "context-simple"
-    },
-    "providers": [{"module": "provider-anthropic"}],
-    "tools": [{"module": "tool-bash"}]
-}
+# Multiple modules register contributors
+coordinator.register_contributor("observability.events", "mod-a", 
+    lambda: ["event:a1", "event:a2"])
+coordinator.register_contributor("observability.events", "mod-b",
+    lambda: ["event:b1"])
 
-# Session initialization loads and mounts all modules
-async with AmplifierSession(config=config) as session:
-    # All modules are now mounted and accessible via coordinator
-    orchestrator = session.coordinator.get("orchestrator")
-    tools = session.coordinator.get("tools")
+# Consumer pulls all contributions
+all_events = coordinator.get_capability("observability.events")
+# Result: ["event:a1", "event:a2", "event:b1"]
 ```

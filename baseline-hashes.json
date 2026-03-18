@@ -733,7 +733,7 @@
           "repo": "amplifier-core",
           "path": "python/amplifier_core/coordinator.py",
           "exists": true,
-          "hash": "d288f5e2f7dd4aa5"
+          "hash": "4e4d0a8e5006464c"
         }
       ]
     },
@@ -1170,7 +1170,7 @@
           "repo": "amplifier-module-context-simple",
           "path": "amplifier_module_context_simple/__init__.py",
           "exists": true,
-          "hash": "6a5c81e9a75cd1d6"
+          "hash": "9a67a12dadb560ca"
         },
         {
           "repo": "amplifier-module-context-simple",
@@ -1227,7 +1227,7 @@
           "repo": "amplifier-module-hooks-logging",
           "path": "amplifier_module_hooks_logging/__init__.py",
           "exists": true,
-          "hash": "071023377dc2bde3"
+          "hash": "3d205f02b0a29a50"
         },
         {
           "repo": "amplifier-module-hooks-logging",
@@ -1261,7 +1261,7 @@
           "repo": "amplifier-module-hooks-redaction",
           "path": "amplifier_module_hooks_redaction/__init__.py",
           "exists": true,
-          "hash": "ef7f6d61d4b8f5ba"
+          "hash": "4af5c3974e35eb79"
         },
         {
           "repo": "amplifier-module-hooks-redaction",
@@ -1405,7 +1405,7 @@
           "repo": "amplifier-core",
           "path": "README.md",
           "exists": true,
-          "hash": "78e3ab20b0604c49"
+          "hash": "748e242e28dc0ba4"
         }
       ]
     },
