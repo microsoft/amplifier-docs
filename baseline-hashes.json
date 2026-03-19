@@ -811,37 +811,25 @@
           "repo": "amplifier-module-provider-anthropic",
           "path": "README.md",
           "exists": true,
-          "hash": "b242c750111b0ac3"
+          "hash": "055e5112eb545b90"
+        },
+        {
+          "repo": "amplifier-module-provider-openai",
+          "path": "README.md",
+          "exists": true,
+          "hash": "719fd8b71cf69b67"
         },
         {
           "repo": "amplifier-module-provider-azure-openai",
           "path": "README.md",
           "exists": true,
-          "hash": "2c0daa41d6927cc7"
-        },
-        {
-          "repo": "amplifier-module-provider-mock",
-          "path": "README.md",
-          "exists": true,
-          "hash": "f31148626066ae76"
+          "hash": "99d6687f6630a47c"
         },
         {
           "repo": "amplifier-module-provider-ollama",
           "path": "README.md",
           "exists": true,
           "hash": "0344355c9b2b1584"
-        },
-        {
-          "repo": "amplifier-module-provider-openai",
-          "path": "README.md",
-          "exists": true,
-          "hash": "bb6e08b84fa67b9b"
-        },
-        {
-          "repo": "amplifier-module-provider-vllm",
-          "path": "README.md",
-          "exists": true,
-          "hash": "d87b8c5c11ac3420"
         }
       ]
     },
