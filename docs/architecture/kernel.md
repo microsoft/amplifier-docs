@@ -123,11 +123,11 @@ When requirements are vague:
 
 ### Module Responsibilities (Policies)
 
-**Providers**: Which model, what parameters
-**Tools**: How to execute capabilities
-**Orchestrators**: Execution strategy (basic, streaming, planning)
-**Hooks**: What to log, where to log, what to redact
-**Context**: Compaction strategy, summarization approach
+**Providers**: Which model, what parameters  
+**Tools**: How to execute capabilities  
+**Orchestrators**: Execution strategy (basic, streaming, planning)  
+**Hooks**: What to log, where to log, what to redact  
+**Context**: Compaction strategy, summarization approach  
 **Agents**: Configuration overlays for sub-sessions
 
 ### Evolution Without Breaking Modules
@@ -146,57 +146,15 @@ When requirements are vague:
 - Clear deprecation notices + dual-path support
 - Long sunset periods
 
-## The Rust Kernel
-
-amplifier-core is implemented in Rust with Python bindings via PyO3:
-
-```
-+---------------------------------------------------------------+
-| RUST KERNEL (crates/amplifier-core/)                          |
-| * Session lifecycle       * Event system                      |
-| * Coordinator             * Hook registry                     |
-| * Type-safe contracts     * Cancellation tokens               |
-+----------------------------+----------------------------------+
-                             | PyO3 bridge (bindings/python/)
-                             v
-+---------------------------------------------------------------+
-| PYTHON BINDINGS (python/amplifier_core/)                      |
-| * Same public API          * Pydantic models                  |
-| * Module loader (Python)   * Backward-compatible imports      |
-+----------------------------+----------------------------------+
-                             | protocols (Tool, Provider, etc.)
-                             v
-+---------------------------------------------------------------+
-| MODULES (Userspace - Swappable)                               |
-| * Providers: LLM backends (Anthropic, OpenAI, Azure, Ollama) |
-| * Tools: Capabilities (filesystem, bash, web, search)        |
-| * Orchestrators: Execution loops (basic, streaming, events)  |
-| * Contexts: Memory management (simple, persistent)           |
-| * Hooks: Observability (logging, redaction, approval)        |
-+---------------------------------------------------------------+
-```
-
-**Key features**:
-- **Zero changes** for Python consumers - same imports, same API
-- **Type-safe core** with Protocol-based modules
-- **Fast event dispatch** via Rust implementation
-- **Backward compatible** - existing modules work unchanged
-
-The `RUST_AVAILABLE` flag (on `amplifier_core._engine`) indicates whether the Rust engine loaded successfully. When available:
-- Top-level imports (`from amplifier_core import AmplifierSession`) return Rust-backed types
-- Submodule imports (`from amplifier_core.session import AmplifierSession`) return Python types for backward compatibility
-- `HookRegistry` uses the Rust implementation for all hook dispatch
-- `CancellationToken` uses the Rust implementation
-
 ## Module Design: Bricks & Studs
 
 ### The LEGO Model
 
 Think of software as LEGO bricks:
 
-**Brick** = Self-contained module with clear responsibility
-**Stud** = Interface/protocol where bricks connect
-**Blueprint** = Specification (docs define target state)
+**Brick** = Self-contained module with clear responsibility  
+**Stud** = Interface/protocol where bricks connect  
+**Blueprint** = Specification (docs define target state)  
 **Builder** = AI generates code from spec
 
 ### Key Practices
@@ -228,104 +186,126 @@ Think of software as LEGO bricks:
 - Multiple variants possible (try different approaches)
 - AI-native workflow (specify → generate → test)
 
-## Session Management
+## Implementation Patterns
 
-The kernel provides session lifecycle management:
+### Vertical Slices
 
-```python
-from amplifier_core import AmplifierSession
+- Implement complete end-to-end paths first
+- Start with core user journeys
+- Get data flowing through all layers early
+- Add features horizontally only after core flows work
 
-# Create session with mount plan
-session = AmplifierSession(
-    config=config,
-    session_id=None,           # Auto-generated if None
-    parent_id=None,            # None for top-level, UUID for child
-    approval_system=None,      # App-layer approval policy
-    display_system=None,       # App-layer display policy
-    is_resumed=False           # True if resuming existing session
-)
+### Iterative Development
 
-# Initialize (load modules)
-await session.initialize()
+- 80/20 principle: high-value, low-effort first
+- One working feature > multiple partial features
+- Validate with real usage before enhancing
+- Be willing to refactor early work as patterns emerge
 
-# Execute prompt
-response = await session.execute(prompt)
+### Testing Strategy
 
-# Cleanup
-await session.cleanup()
-```
+- Emphasis on integration tests (full flow)
+- Manual testability as design goal
+- Critical path testing initially
+- Unit tests for complex logic and edge cases
+- Testing pyramid: 60% unit, 30% integration, 10% end-to-end
 
-**Session states** (tracked in `SessionStatus`):
-- `created` - Session initialized but not yet executed
-- `running` - Currently executing a prompt
-- `completed` - Execution finished successfully
-- `failed` - Execution encountered an error
-- `cancelled` - User cancelled execution
+**What to test**:
+- ✅ Runtime invariants (catch real bugs)
+- ✅ Edge cases (boundary conditions)
+- ✅ Integration behavior (full flow)
+- ❌ Things obvious from reading code (constant values)
+- ❌ Redundant with code inspection
 
-**Lifecycle events** (emitted by kernel):
-- `session:start` - New session begins
-- `session:resume` - Session resumed
-- `session:fork` - Child session created
-- `session:end` - Session cleanup
+### Error Handling
 
-### Session Forking (Child Sessions)
+- Handle common errors robustly
+- Log detailed information for debugging
+- Provide clear error messages to users
+- Fail fast and visibly during development
+- Never silent fallbacks that hide bugs
 
-The kernel supports parent-child relationships:
+### Simplicity Guidelines
 
-```python
-# Create child session
-child_session = AmplifierSession(
-    config=child_config,
-    session_id="generated-child-id",
-    parent_id=parent_session.session_id,  # Links to parent
-    approval_system=parent_approval,
-    display_system=parent_display
-)
-```
+**Start minimal**:
+- Begin with simplest implementation meeting current needs
+- Don't build for hypothetical future requirements
+- Add complexity only when requirements demand it
 
-**W3C Trace Context pattern**:
-- Root session ID becomes the `trace_id`
-- All child sessions inherit the same `trace_id`
-- Child sessions have unique `child_span` identifiers
-- Enables distributed tracing across agent hierarchies
+**Question everything**:
+- Does this abstraction justify its existence?
+- Can we solve this more directly?
+- What's the maintenance cost?
 
-**Key features**:
-- Kernel emits `session:fork` event with parent_id
-- Child sessions inherit UX systems (approval, display)
-- Full transcript saved with metadata
-- Configuration preserved for resume
+**Areas to embrace complexity**:
+- Security (never compromise fundamentals)
+- Data integrity (consistency and reliability)
+- Core user experience (smooth primary flows)
+- Error visibility (make problems diagnosable)
+
+**Areas to aggressively simplify**:
+- Internal abstractions (minimize layers)
+- Generic "future-proof" code (YAGNI)
+- Edge case handling (common cases first)
+- Framework usage (only what you need)
+- State management (keep simple and explicit)
+
+## Decision Framework
+
+When faced with implementation decisions, ask:
+
+1. **Necessity**: "Do we actually need this right now?"
+2. **Simplicity**: "What's the simplest way to solve this?"
+3. **Directness**: "Can we solve this more directly?"
+4. **Value**: "Does the complexity add proportional value?"
+5. **Maintenance**: "How easy will this be to understand later?"
+
+### Library vs Custom Code
+
+**Evolution pattern** (both valid):
+- Start simple → Custom code for basic needs
+- Growing complexity → Switch to library when requirements expand
+- Hitting limits → Back to custom when outgrowing library
+
+**Questions to ask**:
+- How well does this library align with actual needs?
+- Are we fighting the library or working with it?
+- Is integration clean or requiring workarounds?
+- Will future requirements stay within library's capabilities?
+
+**Stay flexible**: Keep library integration minimal and isolated so you can switch approaches when needs change.
 
 ## Anti-Patterns (What to Resist)
 
 ### In Kernel Development
 
-❌ Adding defaults or config resolution inside kernel
-❌ File I/O or search paths in kernel (app layer responsibility)
-❌ Provider selection, orchestration strategy, tool routing (policies)
-❌ Logging to stdout or private files (use unified JSONL only)
+❌ Adding defaults or config resolution inside kernel  
+❌ File I/O or search paths in kernel (app layer responsibility)  
+❌ Provider selection, orchestration strategy, tool routing (policies)  
+❌ Logging to stdout or private files (use unified JSONL only)  
 ❌ Breaking backward compatibility without migration path
 
 ### In Module Development
 
-❌ Depending on kernel internals (use protocols only)
-❌ Inventing ad-hoc event names (use canonical taxonomy)
-❌ Private log files (write via `context.log` only)
-❌ Failing to emit events for observable actions
+❌ Depending on kernel internals (use protocols only)  
+❌ Inventing ad-hoc event names (use canonical taxonomy)  
+❌ Private log files (write via `context.log` only)  
+❌ Failing to emit events for observable actions  
 ❌ Crashing kernel on module failure (non-interference)
 
 ### In Design
 
-❌ Over-general modules trying to do everything
-❌ Copying patterns without understanding rationale
-❌ Optimizing the wrong thing (looks over function)
-❌ Over-engineering for hypothetical futures
+❌ Over-general modules trying to do everything  
+❌ Copying patterns without understanding rationale  
+❌ Optimizing the wrong thing (looks over function)  
+❌ Over-engineering for hypothetical futures  
 ❌ Clever code over clear code
 
 ### In Process
 
-❌ "Let's add a flag in kernel for this use case" → Module instead
-❌ "We'll break the API now; adoption is small" → Backward compat sacred
-❌ "We'll add it to kernel and figure out policy later" → Policy first at edges
+❌ "Let's add a flag in kernel for this use case" → Module instead  
+❌ "We'll break the API now; adoption is small" → Backward compat sacred  
+❌ "We'll add it to kernel and figure out policy later" → Policy first at edges  
 ❌ "This needs to be in kernel for speed" → Prove with benchmarks first
 
 ## Governance & Evolution
@@ -353,6 +333,38 @@ child_session = AmplifierSession(
 - Modules adapt to kernel (not vice versa)
 - Compete through better policies
 
+## Quick Reference
+
+### For Kernel Work
+
+**Questions before adding to kernel**:
+1. Is this a mechanism many policies could use?
+2. Do ≥2 modules need this?
+3. Does it preserve backward compatibility?
+4. Is the interface minimal and stable?
+
+**If any "no"** → Prototype as module first
+
+### For Module Work
+
+**Module author checklist**:
+- [ ] Implements protocol only (no kernel internals)
+- [ ] Emits canonical events where appropriate
+- [ ] Uses `context.log` (no private logging)
+- [ ] Handles own failures (non-interference)
+- [ ] Tests include isolation verification
+
+### For Design Decisions
+
+**Use the Linux kernel lens**:
+- Scheduling strategy? → Orchestrator module (userspace)
+- Provider selection? → App layer policy
+- Tool behavior? → Tool module
+- Security policy? → Hook module
+- Logging destination? → Hook module
+
+**Remember**: If two teams might want different behavior → Module, not kernel.
+
 ## Summary
 
 **Amplifier succeeds by**:
@@ -367,9 +379,3 @@ child_session = AmplifierSession(
 Build mechanisms in kernel. Build policies in modules. Use Linux kernel as your decision metaphor. Keep it simple, keep it observable, keep it regeneratable.
 
 **When in doubt**: Could another team want different behavior? If yes → Module. If no → Maybe kernel, but prove with ≥2 implementations first.
-
-## See Also
-
-- [Architecture Overview](overview.md) - High-level system architecture
-- [Module System](modules.md) - Module loading and coordination
-- [Design Philosophy](https://github.com/microsoft/amplifier-core/blob/main/docs/DESIGN_PHILOSOPHY.md) - Complete philosophy document

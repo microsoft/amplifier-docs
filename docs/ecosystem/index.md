@@ -68,25 +68,51 @@ The **amplifier-foundation** library provides higher-level functionality for app
 
 | Category | Count | Examples |
 |----------|-------|----------|
-| Providers | 8 | Anthropic, OpenAI, Azure, Gemini, Ollama, GitHub ... |
-| Tools | 9 | Filesystem, Bash, Web, Search, Task, Todo, Skills, MCP ... |
-| Contexts | 2 | Simple (in-memory), Persistent (file-backed) |
-| Hooks | 10+ | Logging, Redaction, Approval, Backup, Status ... |
+| Providers | 8 | Anthropic, OpenAI, Azure, Gemini, Ollama, GitHub Copilot |
+| Tools | 9 | Filesystem, Bash, Web, Search, Task, MCP, Slash Commands |
 | Orchestrators | 3 | Basic, Streaming, Events |
+| Contexts | 2 | Simple (in-memory), Persistent (file-backed) |
+| Hooks | 10+ | Logging, Approval, Redaction, Streaming UI, Schedulers |
+| Bundles | 20+ | Recipes, Browser Tester, Design Intelligence, Python Dev, LSP |
+
+**See the full catalog**: [Amplifier Component Catalog](https://github.com/microsoft/amplifier/blob/main/docs/MODULES.md)
 
 ---
 
-## Explore Components
+## Community Ecosystem
 
-**Browse by category:**
+The Amplifier community has created applications, bundles, and modules:
 
-- **[Providers](../modules/providers/index.md)** - Connect to AI model backends
-- **[Tools](../modules/tools/index.md)** - Extend agent capabilities
-- **[Orchestrators](../modules/orchestrators/index.md)** - Control execution flow
-- **[Contexts](../modules/contexts/index.md)** - Manage conversation memory
-- **[Hooks](../modules/hooks/index.md)** - Observe and control behavior
+- **Community Applications** - Standalone apps built with Amplifier (transcribe, blog creator, voice assistant)
+- **Community Bundles** - Composable capability bundles (deepwiki, memory, parallax-discovery, perplexity)
+- **Community Modules** - Providers, tools, and hooks from the community
 
-**Build your own:**
+**Browse community contributions**: [MODULES.md - Community Sections](https://github.com/microsoft/amplifier/blob/main/docs/MODULES.md#community-applications)
 
-- **[Developer Guide](../developer_guides/index.md)** - Learn to build custom modules
-- **[Module Contracts](https://github.com/microsoft/amplifier-core/blob/main/docs/contracts/README.md)** - Technical specifications
+!!! warning "Security Notice"
+    Community components execute code in your environment with full access. Only use from trusted sources. Review code before installation.
+
+---
+
+## Module Architecture
+
+All modules follow the same pattern:
+
+1. **Entry point**: Implement `mount(coordinator, config)` function
+2. **Registration**: Register capabilities with the coordinator
+3. **Isolation**: Handle errors gracefully, never crash the kernel
+4. **Contracts**: Follow one of the stable interfaces (Tool, Provider, Hook, etc.)
+
+For technical details, see:
+- **[Module Contracts](https://github.com/microsoft/amplifier-core/blob/main/docs/contracts/README.md)** - Authoritative contract specifications
+- **[Module Development Guide](../developer/module_development.md)** - How to create modules
+
+---
+
+## Getting Started
+
+**Using modules**: See the [Modules Overview](../modules/index.md)
+
+**Creating modules**: See the [Module Development Guide](../developer/module_development.md)
+
+**Creating bundles**: See the [Bundle System Guide](../developer_guides/foundation/amplifier_foundation/bundle_system.md)

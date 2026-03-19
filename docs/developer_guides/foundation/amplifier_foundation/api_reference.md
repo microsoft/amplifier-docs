@@ -18,7 +18,7 @@ from amplifier_foundation import Bundle, BundleRegistry, load_bundle
 ## Core Classes
 
 | Export | Source | Purpose |
-|--------|--------|---------|
+|--------|--------|---------| 
 | `Bundle` | `bundle.py` | Composable unit with mount plan config |
 | `BundleRegistry` | `registry.py` | Named bundle management and loading |
 | `BundleValidator` | `validator.py` | Bundle structure validation |
@@ -29,7 +29,7 @@ from amplifier_foundation import Bundle, BundleRegistry, load_bundle
 ## Convenience Functions
 
 | Export | Source | Purpose |
-|--------|--------|---------|
+|--------|--------|---------| 
 | `load_bundle` | `registry.py` | Load bundle from URI |
 | `validate_bundle` | `validator.py` | Validate bundle, return result |
 | `validate_bundle_or_raise` | `validator.py` | Validate bundle, raise on error |
@@ -37,7 +37,7 @@ from amplifier_foundation import Bundle, BundleRegistry, load_bundle
 ## Exceptions
 
 | Export | Source | Purpose |
-|--------|--------|---------|
+|--------|--------|---------| 
 | `BundleError` | `exceptions.py` | Base exception |
 | `BundleNotFoundError` | `exceptions.py` | Bundle not found |
 | `BundleLoadError` | `exceptions.py` | Bundle load/parse failed |
@@ -47,18 +47,18 @@ from amplifier_foundation import Bundle, BundleRegistry, load_bundle
 ## Protocols
 
 | Export | Source | Purpose |
-|--------|--------|---------|
+|--------|--------|---------| 
 | `MentionResolverProtocol` | `mentions/protocol.py` | @mention resolution contract |
 | `SourceResolverProtocol` | `sources/protocol.py` | URI resolution contract |
 | `SourceHandlerProtocol` | `sources/protocol.py` | Source type handler contract |
 | `SourceHandlerWithStatusProtocol` | `sources/protocol.py` | Source handler with status support |
-| `SourceStatus` | `sources/protocol.py` | Source status information |
+| `SourceStatus` | `sources/protocol.py` | Source status enum |
 | `CacheProviderProtocol` | `cache/protocol.py` | Cache provider contract |
 
 ## Reference Implementations
 
 | Export | Source | Purpose |
-|--------|--------|---------|
+|--------|--------|---------| 
 | `BaseMentionResolver` | `mentions/resolver.py` | Default @mention resolver |
 | `SimpleSourceResolver` | `sources/resolver.py` | Git/file source resolver |
 | `SimpleCache` | `cache/simple.py` | In-memory cache |
@@ -67,7 +67,7 @@ from amplifier_foundation import Bundle, BundleRegistry, load_bundle
 ## Mentions
 
 | Export | Source | Purpose |
-|--------|--------|---------|
+|--------|--------|---------| 
 | `parse_mentions` | `mentions/parser.py` | Extract @mentions from text |
 | `load_mentions` | `mentions/loader.py` | Load @mention content (async) |
 | `ContentDeduplicator` | `mentions/deduplicator.py` | SHA-256 content deduplication |
@@ -77,18 +77,18 @@ from amplifier_foundation import Bundle, BundleRegistry, load_bundle
 ## I/O Utilities
 
 | Export | Source | Purpose |
-|--------|--------|---------|
+|--------|--------|---------| 
 | `read_yaml` | `io/yaml.py` | Read YAML file (async) |
 | `write_yaml` | `io/yaml.py` | Write YAML file (async) |
 | `parse_frontmatter` | `io/frontmatter.py` | Parse YAML frontmatter |
 | `read_with_retry` | `io/files.py` | Read with cloud sync retry (async) |
 | `write_with_retry` | `io/files.py` | Write with cloud sync retry (async) |
-| `write_with_backup` | `io/files.py` | Write file with backup (async) |
+| `write_with_backup` | `io/files.py` | Write with backup (async) |
 
 ## Dict Utilities
 
 | Export | Source | Purpose |
-|--------|--------|---------|
+|--------|--------|---------| 
 | `deep_merge` | `dicts/merge.py` | Deep merge dictionaries |
 | `merge_module_lists` | `dicts/merge.py` | Merge module lists by ID |
 | `get_nested` | `dicts/navigation.py` | Get nested dict value by path |
@@ -97,7 +97,7 @@ from amplifier_foundation import Bundle, BundleRegistry, load_bundle
 ## Path Utilities
 
 | Export | Source | Purpose |
-|--------|--------|---------|
+|--------|--------|---------| 
 | `parse_uri` | `paths/resolution.py` | Parse source URI |
 | `ParsedURI` | `paths/resolution.py` | Parsed URI dataclass |
 | `normalize_path` | `paths/resolution.py` | Normalize/resolve path |
@@ -109,7 +109,7 @@ from amplifier_foundation import Bundle, BundleRegistry, load_bundle
 ## Session Capabilities
 
 | Export | Source | Purpose |
-|--------|--------|---------|
+|--------|--------|---------| 
 | `get_working_dir` | `session/capabilities.py` | Get session working directory from coordinator |
 | `set_working_dir` | `session/capabilities.py` | Update session working directory dynamically |
 | `WORKING_DIR_CAPABILITY` | `session/capabilities.py` | Capability name constant (`"session.working_dir"`) |
@@ -119,33 +119,33 @@ from amplifier_foundation import Bundle, BundleRegistry, load_bundle
 Utilities for spawning sub-sessions with provider/model preferences.
 
 | Export | Source | Purpose |
-|--------|--------|---------|
+|--------|--------|---------| 
 | `ProviderPreference` | `spawn_utils.py` | Dataclass for provider/model preference (supports glob patterns) |
 | `ModelResolutionResult` | `spawn_utils.py` | Result of model pattern resolution |
 | `apply_provider_preferences` | `spawn_utils.py` | Apply ordered preferences to mount plan |
-| `apply_provider_preferences_with_resolution` | `spawn_utils.py` | Apply preferences with detailed resolution result |
+| `apply_provider_preferences_with_resolution` | `spawn_utils.py` | Apply preferences with resolution result |
 | `resolve_model_pattern` | `spawn_utils.py` | Resolve glob patterns (e.g., `claude-haiku-*`) to concrete model names |
 | `is_glob_pattern` | `spawn_utils.py` | Check if model string contains glob characters |
 
 ## Serialization Utilities
 
 | Export | Source | Purpose |
-|--------|--------|---------|
-| `sanitize_for_json` | `serialization.py` | Sanitize data for JSON serialization |
-| `sanitize_message` | `serialization.py` | Sanitize message for JSON serialization |
+|--------|--------|---------| 
+| `sanitize_for_json` | `serialization.py` | Sanitize values for JSON serialization |
+| `sanitize_message` | `serialization.py` | Sanitize message for logging |
 
 ## Tracing Utilities
 
 | Export | Source | Purpose |
-|--------|--------|---------|
+|--------|--------|---------| 
 | `generate_sub_session_id` | `tracing.py` | Generate sub-session ID from parent |
 
 ## Updates
 
 | Export | Source | Purpose |
-|--------|--------|---------|
-| `BundleStatus` | `updates.py` | Bundle update status information |
-| `check_bundle_status` | `updates.py` | Check if bundle has updates available |
+|--------|--------|---------| 
+| `BundleStatus` | `updates.py` | Bundle status dataclass |
+| `check_bundle_status` | `updates.py` | Check for bundle updates |
 | `update_bundle` | `updates.py` | Update bundle to latest version |
 
 ## Reading the Source
@@ -202,9 +202,3 @@ from amplifier_foundation import load_mentions, BaseMentionResolver
 resolver = BaseMentionResolver(bundles={"foundation": foundation_bundle})
 results = await load_mentions("See @foundation:context/guidelines.md", resolver)
 ```
-
-## Next Steps
-
-- [Bundle System Deep Dive](bundle_system.md) - Loading, composition, and validation
-- [Common Patterns](patterns.md) - Best practices and common usage patterns
-- [Examples](examples/) - Practical examples and tutorials

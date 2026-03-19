@@ -223,7 +223,7 @@
           "repo": "amplifier-foundation",
           "path": "docs/BUNDLE_GUIDE.md",
           "exists": true,
-          "hash": "a8b6b3c6edb476d2"
+          "hash": "6ccbeaaa9996453a"
         },
         {
           "repo": "amplifier-foundation",
@@ -316,7 +316,7 @@
           "repo": "amplifier-foundation",
           "path": "amplifier_foundation/registry.py",
           "exists": true,
-          "hash": "907f232add3ed283"
+          "hash": "8ef4d68cc1561a01"
         }
       ]
     },
@@ -633,7 +633,7 @@
           "repo": "amplifier-core",
           "path": "python/amplifier_core/__init__.py",
           "exists": true,
-          "hash": "016efd28d33e5b49"
+          "hash": "aecf5bc0009dfab9"
         },
         {
           "repo": "amplifier-core",
@@ -645,7 +645,7 @@
           "repo": "amplifier-core",
           "path": "python/amplifier_core/coordinator.py",
           "exists": true,
-          "hash": "d288f5e2f7dd4aa5"
+          "hash": "4e4d0a8e5006464c"
         }
       ]
     },
@@ -1380,13 +1380,13 @@
           "repo": "amplifier",
           "path": "docs/MODULES.md",
           "exists": true,
-          "hash": "e6ff9452de45f912"
+          "hash": "4e74f184d11fd96c"
         },
         {
           "repo": "amplifier-core",
           "path": "docs/contracts/README.md",
           "exists": true,
-          "hash": "e3719194c6408d79"
+          "hash": "cc3413843d01bb8a"
         }
       ]
     },
