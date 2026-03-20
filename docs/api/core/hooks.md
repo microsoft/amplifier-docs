@@ -63,140 +63,144 @@ responses = await coordinator.hooks.emit_and_collect("decision:tool_resolution",
 Set default fields that will be merged with events emitted via `emit()`.
 
 ```python
-coordinator.hooks.set_default_fields(session_id=session.session_id, parent_id=session.parent_id)
+coordinator.hooks.set_default_fields(session_id=session.session_id, path=path)
 ```
 
-Note: These defaults only apply to `emit()`, not `emit_and_collect()`.
+Defaults are automatically merged into event data for all subsequent `emit()` calls.
 
 ## HookResult
 
-Returned by hook handlers to control execution flow.
-
-**Source**: [amplifier_core/models.py](https://github.com/microsoft/amplifier-core/blob/main/amplifier_core/models.py)
-
-### Actions
-
-| Action | Description |
-|--------|-------------|
-| `continue` | Continue execution (default) |
-| `deny` | Block the operation |
-| `modify` | Modify the event data |
-| `inject_context` | Inject message into agent context |
-| `ask_user` | Request user approval |
-
-### Action Precedence
-
-When multiple handlers return different actions, they are resolved by precedence (highest to lowest):
-
-1. **`deny`** — Blocking, short-circuits immediately
-2. **`ask_user`** — Blocking, requires user approval
-3. **`inject_context`** — Non-blocking, multiple results merged
-4. **`modify`** — Non-blocking, chains data through handlers
-5. **`continue`** — Non-blocking, default pass-through
-
-**Key principle**: Blocking actions (`deny`, `ask_user`) always take precedence over non-blocking actions.
+Return value from hook handlers indicating what action to take.
 
 ### Fields
 
-```python
-class HookResult(BaseModel):
-    action: str = "continue"
+**`action`** (required)
+- Type: `Literal["continue", "deny", "modify", "inject_context", "ask_user"]`
+- Description: Action to take after hook execution
 
-    # For deny/modify
-    reason: str = None
-    data: dict = None
+**`data`** (optional)
+- Type: `dict[str, Any] | None`
+- Description: Modified event data (for `action="modify"`)
 
-    # For inject_context
-    context_injection: str = None
-    context_injection_role: str = "system"
-    ephemeral: bool = False
+**`reason`** (optional)
+- Type: `str | None`
+- Description: Explanation for deny/modification
 
-    # For ask_user
-    approval_prompt: str = None
-    approval_options: list[str] = None
-    approval_timeout: float = 300.0
-    approval_default: str = "deny"
+**`context_injection`** (optional)
+- Type: `str | None`
+- Description: Text to inject into agent's context (for `action="inject_context"`)
 
-    # Output control
-    suppress_output: bool = False
-    user_message: str = None
-    user_message_level: str = "info"
+**`context_injection_role`** (optional)
+- Type: `Literal["system", "user", "assistant"]`
+- Default: `"system"`
+- Description: Role for injected message
 
-    # Injection placement control
-    append_to_last_tool_result: bool = False
-```
+**`ephemeral`** (optional)
+- Type: `bool`
+- Default: `False`
+- Description: If `True`, injection is temporary (only for current LLM call)
 
-### Field Details
+**`approval_prompt`** (optional)
+- Type: `str | None`
+- Description: Question to ask user (for `action="ask_user"`)
 
-**Context Injection**:
-- `context_injection`: Text to inject into agent's conversation (default limit: 10 KB per injection, configurable via `session.injection_size_limit`)
-- `context_injection_role`: Role for injected message (`"system"`, `"user"`, or `"assistant"`, default: `"system"`)
-- `ephemeral`: If `True`, injection is temporary (only for current LLM call, not stored in conversation history)
+**`approval_options`** (optional)
+- Type: `list[str] | None`
+- Default: `["Allow", "Deny"]`
+- Description: User choice options
 
-**Approval Gates**:
-- `approval_prompt`: Question to ask user
-- `approval_options`: User choice options (default: `["Allow", "Deny"]`)
-- `approval_timeout`: Seconds to wait for user response (default: 300.0)
-- `approval_default`: Default decision on timeout (`"allow"` or `"deny"`, default: `"deny"`)
+**`approval_timeout`** (optional)
+- Type: `float`
+- Default: `300.0`
+- Description: Seconds to wait for user response
 
-**Output Control**:
-- `suppress_output`: Hide hook's stdout/stderr from user transcript
-- `user_message`: Message to display to user (separate from `context_injection`)
-- `user_message_level`: Severity level (`"info"`, `"warning"`, or `"error"`, default: `"info"`)
+**`approval_default`** (optional)
+- Type: `Literal["allow", "deny"]`
+- Default: `"deny"`
+- Description: Default decision on timeout
+
+**`suppress_output`** (optional)
+- Type: `bool`
+- Default: `False`
+- Description: Hide hook's stdout/stderr from user
+
+**`user_message`** (optional)
+- Type: `str | None`
+- Description: Message to display to user
+
+**`user_message_level`** (optional)
+- Type: `Literal["info", "warning", "error"]`
+- Default: `"info"`
+- Description: Severity level for user message
+
+**`append_to_last_tool_result`** (optional)
+- Type: `bool`
+- Default: `False`
+- Description: Append ephemeral injection to last tool result instead of creating new message
 
 ### Examples
 
-**Continue (observe only)**:
 ```python
-return HookResult(action="continue")
-```
+from amplifier_core.models import HookResult
 
-**Deny operation**:
-```python
-return HookResult(
-    action="deny",
-    reason="Production files require approval"
-)
-```
+# Simple observation
+HookResult(action="continue")
 
-**Inject context (automated feedback)**:
-```python
-return HookResult(
+# Block operation
+HookResult(action="deny", reason="Access denied")
+
+# Inject context
+HookResult(
     action="inject_context",
-    context_injection="Linter found 3 issues:\n- ...",
-    user_message="Found linting issues",
-    user_message_level="warning"
+    context_injection="Found 3 linting errors...",
+    user_message="Linting issues detected"
 )
-```
 
-**Request approval**:
-```python
-return HookResult(
+# Request approval
+HookResult(
     action="ask_user",
     approval_prompt="Allow write to production file?",
-    approval_options=["Allow once", "Allow always", "Deny"]
+    approval_default="deny"
 )
 ```
 
-## Best Practices
+## Common Patterns
 
-### Security
-- Respect the configured `session.injection_size_limit` (default: 10 KB, `None` for unlimited)
-- Use `approval_default="deny"` for security-sensitive operations
-- All context injections are automatically logged with provenance
+### Context Injection (Automated Feedback)
 
-### Performance
-- Keep pre-tool hooks fast to avoid blocking
-- Use `asyncio` for external calls (linters, APIs)
-- Consider token usage when injecting feedback (configurable via `session.injection_budget_per_turn`, default: 10,000 tokens/turn)
+```python
+async def validation_hook(event: str, data: dict) -> HookResult:
+    validation_errors = validate(data["tool_result"])
+    
+    if validation_errors:
+        return HookResult(
+            action="inject_context",
+            context_injection=f"Validation errors:\n{format_errors(validation_errors)}",
+            user_message="Validation found issues",
+            suppress_output=True
+        )
+    
+    return HookResult(action="continue")
+```
 
-### User Experience
-- Make `approval_prompt` and `user_message` self-explanatory
-- Use appropriate `user_message_level` (info/warning/error)
-- Use `suppress_output=True` for verbose processing
-- Context injection enables immediate correction (no waiting for next turn)
+### Approval Gates
 
-## Related Documentation
+```python
+async def production_protection_hook(event: str, data: dict) -> HookResult:
+    file_path = data["tool_input"]["file_path"]
+    
+    if "/production/" in file_path:
+        return HookResult(
+            action="ask_user",
+            approval_prompt=f"Allow write to production file: {file_path}?",
+            approval_options=["Allow once", "Allow always", "Deny"],
+            approval_default="deny"
+        )
+    
+    return HookResult(action="continue")
+```
 
-- **[Events](../../architecture/events.md)** - Complete list of canonical events
-- **[HOOKS_API.md](https://github.com/microsoft/amplifier-core/blob/main/docs/HOOKS_API.md)** - Comprehensive hooks API reference with patterns
+## See Also
+
+- [Hook Contract](../../developer/contracts/hook.md) - Full contract specification
+- [Hooks Guide](../guides/hooks.md) - Tutorial introduction
