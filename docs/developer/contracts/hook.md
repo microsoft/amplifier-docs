@@ -17,9 +17,20 @@ Hooks enable:
 - **Approval gates** - Dynamic permission requests
 - **Output control** - Clean user experience
 
+## Detailed API Reference
+
+**See [HOOKS_API.md](https://github.com/microsoft/amplifier-core/blob/main/docs/HOOKS_API.md)** for complete documentation including:
+
+- HookResult actions and fields
+- Registration patterns
+- Common patterns with examples
+- Best practices
+
+This contract provides the essentials. The API reference contains full details.
+
 ## Protocol Definition
 
-**Source**: `amplifier_core/interfaces.py`
+**Source**: `amplifier_core/interfaces.py` → `class HookHandler(Protocol)`
 
 ```python
 @runtime_checkable
@@ -160,7 +171,7 @@ hooks:
       log_level: "info"
 ```
 
-See [MOUNT_PLAN_SPECIFICATION.md](../specs/MOUNT_PLAN_SPECIFICATION.md) for full schema.
+See [MOUNT_PLAN_SPECIFICATION.md](https://github.com/microsoft/amplifier-core/blob/main/docs/specs/MOUNT_PLAN_SPECIFICATION.md) for full schema.
 
 ## Observability
 
@@ -174,7 +185,7 @@ coordinator.register_contributor(
 )
 ```
 
-See [CONTRIBUTION_CHANNELS.md](../specs/CONTRIBUTION_CHANNELS.md) for the pattern.
+See [CONTRIBUTION_CHANNELS.md](https://github.com/microsoft/amplifier-core/blob/main/docs/specs/CONTRIBUTION_CHANNELS.md) for the pattern.
 
 ## Canonical Example
 
@@ -212,7 +223,7 @@ Additional examples:
 Use test utilities from `amplifier_core/testing.py`:
 
 ```python
-from amplifier_core.testing import MockCoordinator, EventRecorder
+from amplifier_core.testing import EventRecorder
 from amplifier_core.models import HookResult
 
 @pytest.mark.asyncio
@@ -228,7 +239,7 @@ async def test_hook_handler():
 
 @pytest.mark.asyncio
 async def test_hook_registration():
-    coordinator = MockCoordinator()
+    coordinator = create_test_coordinator()
     cleanup = await mount(coordinator, {})
 
     # Verify handlers registered
@@ -260,7 +271,6 @@ assert events[0][0] == "tool:pre"  # events are (event_name, data) tuples
 amplifier module validate ./my-hook --type hook
 ```
 
-## See Also
+---
 
-- [HOOKS_API.md](../HOOKS_API.md) - Complete hook system reference
-- [README.md](index.md) - All contracts
+**Related**: [HOOKS_API.md](https://github.com/microsoft/amplifier-core/blob/main/docs/HOOKS_API.md) | [README.md](https://github.com/microsoft/amplifier-core/blob/main/docs/contracts/README.md)

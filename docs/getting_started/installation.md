@@ -85,57 +85,57 @@ source ~/.bashrc  # or ~/.zshrc for zsh
 
 ```bash
 export ANTHROPIC_API_KEY="your-key"
-amplifier provider use anthropic
+amplifier provider add anthropic
 ```
 
 ### OpenAI
 
 ```bash
 export OPENAI_API_KEY="your-key"
-amplifier provider use openai
+amplifier provider add openai
 ```
 
 ### Azure OpenAI
 
 ```bash
 export AZURE_OPENAI_API_KEY="your-key"
-export AZURE_OPENAI_ENDPOINT="https://your-resource.openai.azure.com"
-amplifier provider use azure-openai
+amplifier provider add azure-openai
 ```
 
 ### Google Gemini
 
 ```bash
 export GOOGLE_API_KEY="your-key"
-amplifier provider use google
+amplifier provider add google
 ```
 
-### Ollama (Local)
+### Ollama (Local, Free)
 
 ```bash
-# No API key needed
-amplifier provider use ollama
+# Start Ollama server first
+ollama serve
+
+# Configure Amplifier
+amplifier provider add ollama
 ```
 
-## Verifying Installation
+No API key needed - runs locally on your machine.
+
+## Verify Installation
 
 ```bash
 # Check version
 amplifier --version
 
 # Test with a simple prompt
-amplifier run "Hello! Can you help me with Python?"
+amplifier run "Hello, world!"
 ```
 
-## Upgrading
+## Next Steps
 
-```bash
-# Check for updates
-amplifier update --check-only
-
-# Update Amplifier and modules
-amplifier update
-```
+- **[Quick Start Guide](../quick_start.md)** - Learn basic commands
+- **[Bundle Guide](../bundles/index.md)** - Configure your agent
+- **[Examples](../examples/index.md)** - See Amplifier in action
 
 ## Troubleshooting
 
@@ -143,41 +143,56 @@ amplifier update
 
 If `amplifier` command is not found after installation:
 
-```bash
-# Verify UV installation
-uv --version
+1. **Check UV installation**:
+   ```bash
+   uv --version
+   ```
 
-# Reinstall
-uv tool install --force git+https://github.com/microsoft/amplifier
-```
+2. **Verify tool installation**:
+   ```bash
+   uv tool list
+   ```
 
-### Python Version
-
-Amplifier requires Python 3.11+. Check your version:
-
-```bash
-python --version
-# or
-python3 --version
-```
+3. **Add to PATH** (if needed):
+   ```bash
+   export PATH="$HOME/.local/bin:$PATH"
+   ```
 
 ### API Key Issues
 
-Verify your API keys are set:
+If provider setup fails:
 
-```bash
-echo $ANTHROPIC_API_KEY
-echo $OPENAI_API_KEY
-```
+1. **Verify environment variable**:
+   ```bash
+   echo $ANTHROPIC_API_KEY  # Should print your key
+   ```
 
-Test provider connectivity:
+2. **Check provider configuration**:
+   ```bash
+   amplifier provider list
+   ```
 
-```bash
-amplifier provider test <provider-name>
-```
+3. **Test provider connectivity**:
+   ```bash
+   amplifier provider test anthropic
+   ```
 
-## Next Steps
+### Module Loading Errors
 
-- [Getting Started Guide](index.md) - Quick introduction
-- [CLI Reference](../user_guide/cli.md) - Complete command reference
-- [Configuration](../user_guide/configuration.md) - Advanced configuration options
+If modules fail to load:
+
+1. **Update Amplifier**:
+   ```bash
+   uv tool upgrade amplifier
+   ```
+
+2. **Clear module cache**:
+   ```bash
+   rm -rf ~/.amplifier/modules/
+   ```
+
+3. **Reinstall with fresh dependencies**:
+   ```bash
+   uv tool uninstall amplifier
+   uv tool install git+https://github.com/microsoft/amplifier
+   ```

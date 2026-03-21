@@ -21,14 +21,40 @@ The `amplifier-core` package provides the kernel APIs.
 from amplifier_core import (
     AmplifierSession,
     ModuleCoordinator,
+    HookRegistry,
     HookResult,
     ToolResult,
+    CancellationToken,
 )
 
-from amplifier_core.events import (
-    SESSION_START,
-    SESSION_END,
-    TOOL_PRE,
-    TOOL_POST,
+# LLM error taxonomy
+from amplifier_core import (
+    LLMError,
+    RateLimitError,
+    AuthenticationError,
+    ContextLengthError,
+    ContentFilterError,
+    InvalidRequestError,
+    ProviderUnavailableError,
+)
+
+# Message models
+from amplifier_core import (
+    ChatRequest,
+    ChatResponse,
+    Message,
+    TextBlock,
+    ThinkingBlock,
+    ToolCallBlock,
+    ToolResultBlock,
+)
+
+# Testing utilities
+from amplifier_core import (
+    MockCoordinator,
+    MockTool,
+    MockContextManager,
+    EventRecorder,
+    create_test_coordinator,
 )
 ```

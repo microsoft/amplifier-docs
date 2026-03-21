@@ -31,10 +31,13 @@ class Orchestrator(Protocol):
         providers: dict[str, Provider],
         tools: dict[str, Tool],
         hooks: HookRegistry,
+        **kwargs,
     ) -> str:
         """Execute the orchestration loop."""
         ...
 ```
+
+> **`coordinator` injection**: The kernel (`session.py`) passes `coordinator=<ModuleCoordinator>` via kwargs at runtime so orchestrators can process hook results and coordinate module interactions. Implementations may accept `coordinator` as an explicit keyword argument or simply absorb it through `**kwargs`.
 
 ## Mount Function
 
@@ -76,33 +79,26 @@ Orchestrators **MUST** emit these events:
 
 | Event | When | Data |
 |-------|------|------|
+| `execution:start` | **At the very beginning of execute()** | prompt |
 | `prompt:submit` | Received prompt | prompt |
 | `provider:request` | Before LLM call | messages, model |
 | `provider:stream` | During streaming (optional) | chunk |
 | `provider:response` | After LLM call | response, usage |
 | `tool:pre` | Before tool execution | tool_name, tool_input |
-| `tool:post` | After successful tool execution | tool_name, tool_result |
-| `tool:error` | Tool execution failed | tool_name, error |
-| `orchestrator:complete` | Execution finished | orchestrator, turn_count, status |
+| `tool:post` | After tool execution | tool_result |
+| `tool:error` | Tool failed | tool_name, error |
+| `orchestrator:complete` | **At the end of execute()** | orchestrator, turn_count, status |
+| `execution:end` | **On ALL exit paths** | response, status |
 
-### Required: orchestrator:complete Event
+### Required: execution:start and execution:end
 
-**All orchestrators MUST emit `orchestrator:complete`** at the end of their `execute()` method:
+**All orchestrators MUST emit `execution:start` and `execution:end`** to mark the boundaries of every `execute()` invocation. These events are the primary observability signal used by the kernel for session lifecycle tracking, metrics, and tracing.
 
-```python
-await hooks.emit("orchestrator:complete", {
-    "orchestrator": "my-orchestrator",  # Your orchestrator name
-    "turn_count": iteration_count,       # Number of LLM turns
-    "status": "success"                  # "success", "incomplete", or "cancelled"
-})
-```
-
-### Required: execution:start and execution:end Events
-
-**All orchestrators MUST emit `execution:start` and `execution:end`** to mark execution boundaries:
+- `execution:start` MUST be emitted at the **very beginning** of `execute()`, before any other work
+- `execution:end` MUST be emitted on **ALL exit paths** — normal completion, error, and cancellation
 
 ```python
-async def execute(self, prompt, context, providers, tools, hooks, coordinator=None):
+async def execute(self, prompt, context, providers, tools, hooks, **kwargs):
     # REQUIRED: Emit at the very start of execute()
     await hooks.emit("execution:start", {"prompt": prompt})
 
@@ -132,6 +128,27 @@ async def execute(self, prompt, context, providers, tools, hooks, coordinator=No
         })
         raise
 ```
+
+| Event | Field | Type | Description |
+|-------|-------|------|-------------|
+| `execution:start` | `prompt` | string | The user prompt passed to `execute()` |
+| `execution:end` | `response` | string | Final response string (empty on error/cancellation) |
+| `execution:end` | `status` | string | `"completed"`, `"cancelled"`, or `"error"` |
+
+> **Constants**: `execution:start` and `execution:end` are defined in `amplifier_core.events` (Python) and `amplifier_core::events` (Rust). Use the constants rather than string literals.
+
+### Required: orchestrator:complete Event
+
+**All orchestrators MUST emit `orchestrator:complete`** at the end of their `execute()` method. This event enables:
+- Session analytics and debugging
+- Hooks that trigger on turn completion (e.g., session naming)
+- Observability and monitoring
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `orchestrator` | string | Name of the orchestrator module |
+| `turn_count` | int | Number of LLM call iterations |
+| `status` | string | Exit status: `"success"`, `"incomplete"`, or `"cancelled"` |
 
 ## Hook Processing
 
@@ -210,11 +227,11 @@ session:
 # Orchestrator-specific config can be passed via providers/tools config
 ```
 
-See [MOUNT_PLAN_SPECIFICATION.md](../specs/MOUNT_PLAN_SPECIFICATION.md) for full schema.
+See [MOUNT_PLAN_SPECIFICATION.md](https://github.com/microsoft/amplifier-core/blob/main/docs/specs/MOUNT_PLAN_SPECIFICATION.md) for full schema.
 
 ## Observability
 
-Orchestrators **MUST** register the custom events they emit via the `observability.events` contribution channel:
+Orchestrators **MUST** register the custom events they emit via the `observability.events` contribution channel. This enables runtime introspection of which events are available and allows tooling, dashboards, and other modules to discover orchestrator-specific signals.
 
 ```python
 coordinator.register_contributor(
@@ -228,9 +245,9 @@ coordinator.register_contributor(
 )
 ```
 
-> **Note**: The standard `execution:start`, `execution:end`, and `orchestrator:complete` events are registered by the kernel and do not need to be re-registered.
+> **Note**: The standard `execution:start`, `execution:end`, and `orchestrator:complete` events are registered by the kernel and do not need to be re-registered. Only register events that are unique to your orchestrator module.
 
-See [CONTRIBUTION_CHANNELS.md](../specs/CONTRIBUTION_CHANNELS.md) for the pattern.
+See [CONTRIBUTION_CHANNELS.md](https://github.com/microsoft/amplifier-core/blob/main/docs/specs/CONTRIBUTION_CHANNELS.md) for the pattern.
 
 ## Canonical Example
 
@@ -250,7 +267,7 @@ Additional examples:
 
 ### Required
 
-- [ ] Implements `execute(prompt, context, providers, tools, hooks, coordinator=None) -> str`
+- [ ] Implements `execute(prompt, context, providers, tools, hooks, **kwargs) -> str`
 - [ ] `mount()` function with entry point in pyproject.toml
 - [ ] **Emits `execution:start` with `{prompt}` at the very beginning of `execute()`**
 - [ ] **Emits `execution:end` with `{response, status}` on ALL exit paths (success, error, cancellation)**
@@ -273,7 +290,7 @@ Use test utilities from `amplifier_core/testing.py`:
 
 ```python
 from amplifier_core.testing import (
-    MockCoordinator,
+    create_test_coordinator,
     MockTool,
     MockContextManager,
     ScriptedOrchestrator,
@@ -319,7 +336,6 @@ assert result == "Response 1"
 amplifier module validate ./my-orchestrator --type orchestrator
 ```
 
-## See Also
+---
 
-- [README.md](index.md) - All contracts
-- [CONTEXT_CONTRACT.md](CONTEXT_CONTRACT.md) - Memory management
+**Related**: [README.md](https://github.com/microsoft/amplifier-core/blob/main/docs/contracts/README.md) | [CONTEXT_CONTRACT.md](context.md)

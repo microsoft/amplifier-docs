@@ -29,6 +29,15 @@ class Tool(Protocol):
         """Human-readable description for LLM."""
         ...
 
+    @property
+    def input_schema(self) -> dict[str, Any]:
+        """JSON Schema describing the tool's input parameters.
+
+        Returns an empty dict by default for backward compatibility
+        with tools that predate this convention.
+        """
+        return {}
+
     async def execute(
         self,
         input: dict[str, Any]
@@ -38,7 +47,7 @@ class Tool(Protocol):
 ```
 
 !!! note "Input Schema"
-    The `input_schema` property is not part of the formal Protocol but is commonly implemented by tools as a class attribute. Orchestrators use it to generate tool definitions for LLMs.
+    `input_schema` has a concrete default (`return {}`) and is excluded from `isinstance()` structural checks so that tools written before this field was introduced continue to satisfy the protocol without modification. Callers that need the schema should always use `getattr(tool, "input_schema", {})` for maximum compatibility.
 
 ## Mount Function
 
@@ -58,16 +67,9 @@ from typing import Any
 
 @dataclass
 class ToolResult:
-    success: bool                    # Whether execution succeeded
-    output: str | None = None        # Output for LLM context
-    error: dict | None = None        # Error details if failed
-    metadata: dict = field(default_factory=dict)  # Additional metadata
-    
-    def get_serialized_output(self) -> str:
-        """Serialize output for context inclusion."""
-        if self.error:
-            return f"Error: {self.error.get('message', 'Unknown error')}"
-        return self.output or ""
+    success: bool = True                 # Whether execution succeeded
+    output: Any | None = None            # Output for LLM context
+    error: dict[str, Any] | None = None  # Error details if failed
 ```
 
 ## Input Schema
@@ -75,20 +77,99 @@ class ToolResult:
 Tools declare their parameters using JSON Schema:
 
 ```python
-input_schema = {
-    "type": "object",
-    "properties": {
-        "file_path": {
-            "type": "string",
-            "description": "Path to the file"
+@property
+def input_schema(self) -> dict[str, Any]:
+    """JSON schema defining the tool's parameters"""
+    return {
+        "type": "object",
+        "properties": {
+            "file_path": {
+                "type": "string",
+                "description": "Path to the file to read"
+            },
+            "encoding": {
+                "type": "string",
+                "description": "File encoding (default: utf-8)",
+                "default": "utf-8"
+            }
         },
-        "content": {
-            "type": "string",
-            "description": "Content to write"
+        "required": ["file_path"]
+    }
+```
+
+Orchestrators use this schema to generate tool definitions for LLMs.
+
+## Example Implementation
+
+```python
+from amplifier_core.models import ToolResult
+
+class CalculatorTool:
+    @property
+    def name(self) -> str:
+        return "calculator"
+
+    @property
+    def description(self) -> str:
+        return "Perform arithmetic calculations"
+
+    @property
+    def input_schema(self) -> dict:
+        return {
+            "type": "object",
+            "properties": {
+                "operation": {
+                    "type": "string",
+                    "enum": ["add", "subtract", "multiply", "divide"]
+                },
+                "a": {"type": "number"},
+                "b": {"type": "number"}
+            },
+            "required": ["operation", "a", "b"]
         }
-    },
-    "required": ["file_path", "content"]
-}
+
+    async def execute(self, input: dict) -> ToolResult:
+        try:
+            op = input["operation"]
+            a = input["a"]
+            b = input["b"]
+
+            if op == "add":
+                result = a + b
+            elif op == "subtract":
+                result = a - b
+            elif op == "multiply":
+                result = a * b
+            elif op == "divide":
+                if b == 0:
+                    return ToolResult(
+                        success=False,
+                        error={"message": "Division by zero"}
+                    )
+                result = a / b
+            else:
+                return ToolResult(
+                    success=False,
+                    error={"message": f"Unknown operation: {op}"}
+                )
+
+            return ToolResult(
+                success=True,
+                output=str(result)
+            )
+
+        except Exception as e:
+            return ToolResult(
+                success=False,
+                error={"message": str(e), "type": type(e).__name__}
+            )
+
+
+async def mount(coordinator, config=None):
+    """Entry point for module loading."""
+    tool = CalculatorTool()
+    await coordinator.mount("tools", tool, name=tool.name)
+    return None  # No cleanup needed
 ```
 
 ## Configuration
@@ -98,123 +179,104 @@ Tools receive configuration via Mount Plan:
 ```yaml
 tools:
   - module: my-tool
+    source: git+https://github.com/org/my-tool@main
     config:
-      max_retries: 3
-      timeout: 30
+      max_size: 1048576
+      allowed_paths:
+        - /home/user/projects
 ```
 
-Access config in mount function:
+See [MOUNT_PLAN_SPECIFICATION.md](https://github.com/microsoft/amplifier-core/blob/main/docs/specs/MOUNT_PLAN_SPECIFICATION.md) for full schema.
+
+## Observability
+
+Register lifecycle events:
 
 ```python
-async def mount(coordinator, config=None):
-    config = config or {}
-    max_retries = config.get("max_retries", 3)
-    tool = MyTool(max_retries=max_retries)
-    await coordinator.mount("tools", tool, name=tool.name)
+coordinator.register_contributor(
+    "observability.events",
+    "my-tool",
+    lambda: ["my-tool:started", "my-tool:completed", "my-tool:error"]
+)
 ```
 
-## Error Handling
+Standard tool events emitted by orchestrators:
+- `tool:pre` - Before tool execution
+- `tool:post` - After successful execution
+- `tool:error` - On execution failure
 
-Tools should return errors rather than raise exceptions:
+## Canonical Example
 
-```python
-async def execute(self, input: dict[str, Any]) -> ToolResult:
-    try:
-        result = await self._do_work(input)
-        return ToolResult(success=True, output=result)
-    except FileNotFoundError as e:
-        return ToolResult(
-            success=False,
-            error={"type": "not_found", "message": str(e)}
-        )
-    except Exception as e:
-        return ToolResult(
-            success=False,
-            error={"type": "unknown", "message": str(e)}
-        )
-```
+**Reference implementation**: [amplifier-module-tool-filesystem](https://github.com/microsoft/amplifier-module-tool-filesystem)
 
-## Example: Complete Tool
+Study this module for:
+- Tool protocol implementation
+- Input validation patterns
+- Error handling and result formatting
+- Configuration integration
 
-```python
-from amplifier_core.interfaces import Tool
-from amplifier_core.models import ToolResult
+Additional examples:
+- [amplifier-module-tool-bash](https://github.com/microsoft/amplifier-module-tool-bash) - Command execution
+- [amplifier-module-tool-web](https://github.com/microsoft/amplifier-module-tool-web) - Web access
 
-class ReadFileTool:
-    """Read file contents."""
-    
-    input_schema = {
-        "type": "object",
-        "properties": {
-            "file_path": {
-                "type": "string",
-                "description": "Path to file to read"
-            }
-        },
-        "required": ["file_path"]
-    }
-    
-    @property
-    def name(self) -> str:
-        return "read_file"
-    
-    @property
-    def description(self) -> str:
-        return "Read the contents of a file"
-    
-    async def execute(self, input: dict) -> ToolResult:
-        file_path = input.get("file_path")
-        if not file_path:
-            return ToolResult(
-                success=False,
-                error={"message": "file_path is required"}
-            )
-        
-        try:
-            with open(file_path, 'r') as f:
-                content = f.read()
-            return ToolResult(success=True, output=content)
-        except FileNotFoundError:
-            return ToolResult(
-                success=False,
-                error={"message": f"File not found: {file_path}"}
-            )
-        except Exception as e:
-            return ToolResult(
-                success=False,
-                error={"message": str(e)}
-            )
+## Validation Checklist
 
-# Entry point
-async def mount(coordinator, config=None):
-    tool = ReadFileTool()
-    await coordinator.mount("tools", tool, name=tool.name)
-    return None  # No cleanup needed
-```
+### Required
+
+- [ ] Implements Tool protocol (name, description, execute)
+- [ ] `mount()` function with entry point in pyproject.toml
+- [ ] Returns `ToolResult` from execute()
+- [ ] Handles errors gracefully (returns success=False, doesn't crash)
+
+### Recommended
+
+- [ ] Provides JSON schema via `input_schema` property
+- [ ] Validates input before processing
+- [ ] Logs operations at appropriate levels
+- [ ] Registers observability events
 
 ## Testing
 
+Use test utilities from `amplifier_core/testing.py`:
+
 ```python
-import pytest
-from amplifier_core.testing import MockCoordinator
+from amplifier_core.testing import MockTool
 
 @pytest.mark.asyncio
-async def test_read_file_tool():
-    tool = ReadFileTool()
-    
-    # Test successful read
-    result = await tool.execute({"file_path": "test.txt"})
+async def test_tool_execution():
+    tool = MyTool(config={})
+
+    result = await tool.execute({
+        "required_param": "value"
+    })
+
     assert result.success
-    assert result.output is not None
-    
-    # Test file not found
-    result = await tool.execute({"file_path": "nonexistent.txt"})
-    assert not result.success
-    assert result.error is not None
+    assert result.error is None
 ```
 
-## See Also
+### MockTool for Testing Orchestrators
 
-- [Hook Contract](hook.md) - Tool execution hooks
-- [Orchestrator Contract](orchestrator.md) - Tool invocation
-- [Module Contracts](index.md) - All contracts
+```python
+from amplifier_core.testing import MockTool
+
+mock_tool = MockTool(
+    name="test_tool",
+    description="Test tool",
+    return_value="mock result"
+)
+
+# After use
+assert mock_tool.call_count == 1
+assert mock_tool.last_input == {...}
+```
+
+## Quick Validation Command
+
+```bash
+# Structural validation
+amplifier module validate ./my-tool --type tool
+```
+
+---
+
+**Related**: [README.md](https://github.com/microsoft/amplifier-core/blob/main/docs/contracts/README.md) | [HOOK_CONTRACT.md](hook.md)
