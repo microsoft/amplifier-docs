@@ -1,28 +1,45 @@
 ---
-title: Orchestrator Contract
-description: Execution loop strategy contract
+contract_type: module_specification
+module_type: orchestrator
+contract_version: 1.0.0
+last_modified: 2026-03-05
+related_files:
+  - path: ../../python/amplifier_core/interfaces.py#Orchestrator
+    relationship: protocol_definition
+  - path: ../../python/amplifier_core/content_models.py
+    relationship: event_content_types
+  - path: ../specs/MOUNT_PLAN_SPECIFICATION.md
+    relationship: configuration
+  - path: ../specs/CONTRIBUTION_CHANNELS.md
+    relationship: observability
+  - path: ../../python/amplifier_core/testing.py#ScriptedOrchestrator
+    relationship: test_utilities
+canonical_example: https://github.com/microsoft/amplifier-module-loop-basic
 ---
 
 # Orchestrator Contract
 
-Orchestrators control how agents execute: the loop structure, tool handling, and response generation.
+Orchestrators implement the agent execution loop strategy.
+
+---
 
 ## Purpose
 
-Orchestrators define the execution strategy:
+Orchestrators control **how** agents execute:
+- **Basic loops** - Simple prompt → response → tool → response cycles
+- **Streaming** - Real-time response delivery
+- **Event-driven** - Complex multi-step workflows
+- **Custom strategies** - Domain-specific execution patterns
 
-- **Basic**: Simple request/response loop
-- **Streaming**: Real-time token streaming via hooks
-- **Events**: Event-driven architecture with callbacks
+**Key principle**: The orchestrator is **policy**, not mechanism. Swap orchestrators to change agent behavior without modifying the kernel.
 
-## Protocol
+---
+
+## Protocol Definition
+
+**Source**: `amplifier_core/interfaces.py` → `class Orchestrator(Protocol)`
 
 ```python
-from typing import Protocol, runtime_checkable
-from amplifier_core.interfaces import ContextManager, Provider, Tool
-from amplifier_core.hooks import HookRegistry
-
-@runtime_checkable
 class Orchestrator(Protocol):
     async def execute(
         self,
@@ -31,66 +48,154 @@ class Orchestrator(Protocol):
         providers: dict[str, Provider],
         tools: dict[str, Tool],
         hooks: HookRegistry,
-        **kwargs,
+        **kwargs: Any,
     ) -> str:
-        """Execute the orchestration loop."""
+        """
+        Execute the agent loop with given prompt.
+
+        Args:
+            prompt: User input prompt
+            context: Context manager for conversation state
+            providers: Available LLM providers (keyed by name)
+            tools: Available tools (keyed by name)
+            hooks: Hook registry for lifecycle events
+            **kwargs: Additional kernel-injected arguments (see note below)
+
+        Returns:
+            Final response string
+        """
         ...
 ```
 
-> **`coordinator` injection**: The kernel (`session.py`) passes `coordinator=<ModuleCoordinator>` via kwargs at runtime so orchestrators can process hook results and coordinate module interactions. Implementations may accept `coordinator` as an explicit keyword argument or simply absorb it through `**kwargs`.
+> **`coordinator` injection**: The kernel (`session.py`) passes
+> `coordinator=<ModuleCoordinator>` via kwargs at runtime so orchestrators can
+> process hook results and coordinate module interactions. Implementations may
+> accept `coordinator` as an explicit keyword argument or simply absorb it
+> through `**kwargs`.
 
-## Mount Function
-
-```python
-async def mount(coordinator, config=None):
-    config = config or {}
-    orchestrator = MyOrchestrator(config)
-    await coordinator.mount("session", orchestrator, name="orchestrator")
-    return None
-```
+---
 
 ## Execution Flow
 
-Typical orchestrator flow:
+A typical orchestrator implements this flow:
 
 ```
-1. Add user prompt to context
-2. Loop:
-   a. Get messages from context (with dynamic token budget)
-   b. Emit provider:request
-   c. Call provider.complete()
-   d. Emit provider:response
-   e. Add response to context
-   f. Parse tool calls
-   g. If no tools: return response
-   h. For each tool:
-      - Emit tool:pre
-      - Execute tool
-      - Emit tool:post
-      - Add result to context
-   i. Continue loop
-3. Emit orchestrator:complete (REQUIRED)
-4. Return final response
+User Prompt
+    ↓
+Add to Context
+    ↓
+┌─────────────────────────────────────┐
+│  LOOP until response has no tools   │
+│                                     │
+│  1. emit("provider:request")        │
+│  2. provider.complete(messages)     │
+│  3. emit("provider:response")       │
+│  4. Add response to context         │
+│                                     │
+│  If tool_calls:                     │
+│    for each tool_call:              │
+│      5. emit("tool:pre")            │
+│      6. tool.execute(input)         │
+│      7. emit("tool:post")           │
+│      8. Add result to context       │
+│                                     │
+│  Continue loop...                   │
+└─────────────────────────────────────┘
+    ↓
+Return final text response
 ```
 
-## Events
+---
 
-Orchestrators **MUST** emit these events:
+## Entry Point Pattern
 
-| Event | When | Data |
-|-------|------|------|
-| `execution:start` | **At the very beginning of execute()** | prompt |
-| `prompt:submit` | Received prompt | prompt |
-| `provider:request` | Before LLM call | messages, model |
-| `provider:stream` | During streaming (optional) | chunk |
-| `provider:response` | After LLM call | response, usage |
-| `tool:pre` | Before tool execution | tool_name, tool_input |
-| `tool:post` | After tool execution | tool_result |
-| `tool:error` | Tool failed | tool_name, error |
-| `orchestrator:complete` | **At the end of execute()** | orchestrator, turn_count, status |
-| `execution:end` | **On ALL exit paths** | response, status |
+### mount() Function
 
-### Required: execution:start and execution:end
+```python
+async def mount(coordinator: ModuleCoordinator, config: dict) -> Orchestrator | Callable | None:
+    """
+    Initialize and return orchestrator instance.
+
+    Returns:
+        - Orchestrator instance
+        - Cleanup callable
+        - None for graceful degradation
+    """
+    orchestrator = MyOrchestrator(config=config)
+    await coordinator.mount("session", orchestrator, name="orchestrator")
+    return orchestrator
+```
+
+### pyproject.toml
+
+```toml
+[project.entry-points."amplifier.modules"]
+my-orchestrator = "my_orchestrator:mount"
+```
+
+---
+
+## Implementation Requirements
+
+### Event Emission
+
+Orchestrators must emit lifecycle events for observability:
+
+```python
+async def execute(self, prompt, context, providers, tools, hooks):
+    # Before LLM call
+    await hooks.emit("provider:request", {
+        "provider": provider_name,
+        "messages": messages,
+        "model": model_name
+    })
+
+    response = await provider.complete(request)
+
+    # After LLM call
+    await hooks.emit("provider:response", {
+        "provider": provider_name,
+        "response": response,
+        "usage": response.usage
+    })
+
+    # Before tool execution
+    await hooks.emit("tool:pre", {
+        "tool_name": tool_call.name,
+        "tool_input": tool_call.arguments
+    })
+
+    result = await tool.execute(tool_call.arguments)
+
+    # After tool execution
+    await hooks.emit("tool:post", {
+        "tool_name": tool_call.name,
+        "tool_input": tool_call.arguments,
+        "tool_result": result
+    })
+
+    # REQUIRED: At the end of execute(), emit orchestrator:complete
+    await hooks.emit("orchestrator:complete", {
+        "orchestrator": "my-orchestrator",  # Your orchestrator name
+        "turn_count": iteration_count,       # Number of LLM turns
+        "status": "success"                  # "success", "incomplete", or "cancelled"
+    })
+```
+
+#### Required: orchestrator:complete Event
+
+**All orchestrators MUST emit `orchestrator:complete`** at the end of their `execute()` method. This event enables:
+- Session analytics and debugging
+- Hooks that trigger on turn completion (e.g., session naming)
+- Observability and monitoring
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `orchestrator` | string | Name of the orchestrator module |
+| `turn_count` | int | Number of LLM call iterations |
+| `status` | string | Exit status: `"success"`, `"incomplete"`, or `"cancelled"` |
+
+#### Required: execution:start and execution:end Events
 
 **All orchestrators MUST emit `execution:start` and `execution:end`** to mark the boundaries of every `execute()` invocation. These events are the primary observability signal used by the kernel for session lifecycle tracking, metrics, and tracing.
 
@@ -135,22 +240,10 @@ async def execute(self, prompt, context, providers, tools, hooks, **kwargs):
 | `execution:end` | `response` | string | Final response string (empty on error/cancellation) |
 | `execution:end` | `status` | string | `"completed"`, `"cancelled"`, or `"error"` |
 
-> **Constants**: `execution:start` and `execution:end` are defined in `amplifier_core.events` (Python) and `amplifier_core::events` (Rust). Use the constants rather than string literals.
+> **Constants**: `execution:start` and `execution:end` are defined in `amplifier_core.events`
+> (Python) and `amplifier_core::events` (Rust). Use the constants rather than string literals.
 
-### Required: orchestrator:complete Event
-
-**All orchestrators MUST emit `orchestrator:complete`** at the end of their `execute()` method. This event enables:
-- Session analytics and debugging
-- Hooks that trigger on turn completion (e.g., session naming)
-- Observability and monitoring
-
-| Field | Type | Description |
-|-------|------|-------------|
-| `orchestrator` | string | Name of the orchestrator module |
-| `turn_count` | int | Number of LLM call iterations |
-| `status` | string | Exit status: `"success"`, `"incomplete"`, or `"cancelled"` |
-
-## Hook Processing
+### Hook Processing
 
 Handle HookResult actions:
 
@@ -160,7 +253,7 @@ pre_result = await hooks.emit("tool:pre", data)
 
 if pre_result.action == "deny":
     # Don't execute tool
-    return ToolResult(is_error=True, output=pre_result.reason)
+    return ToolResult(success=False, output=pre_result.reason)
 
 if pre_result.action == "modify":
     # Use modified data
@@ -177,10 +270,10 @@ if pre_result.action == "ask_user":
     # Request approval (requires approval provider)
     approved = await request_approval(pre_result)
     if not approved:
-        return ToolResult(is_error=True, output="User denied")
+        return ToolResult(success=False, output="User denied")
 ```
 
-## Context Management
+### Context Management
 
 Manage conversation state:
 
@@ -202,7 +295,7 @@ await context.add_message({
 messages = await context.get_messages_for_request()
 ```
 
-## Provider Selection
+### Provider Selection
 
 Handle multiple providers:
 
@@ -214,6 +307,8 @@ provider = providers[provider_name]
 # Or allow per-request provider selection
 provider_name = request_options.get("provider", default_provider_name)
 ```
+
+---
 
 ## Configuration
 
@@ -227,11 +322,15 @@ session:
 # Orchestrator-specific config can be passed via providers/tools config
 ```
 
-See [MOUNT_PLAN_SPECIFICATION.md](https://github.com/microsoft/amplifier-core/blob/main/docs/specs/MOUNT_PLAN_SPECIFICATION.md) for full schema.
+See [MOUNT_PLAN_SPECIFICATION.md](../specs/MOUNT_PLAN_SPECIFICATION.md) for full schema.
+
+---
 
 ## Observability
 
-Orchestrators **MUST** register the custom events they emit via the `observability.events` contribution channel. This enables runtime introspection of which events are available and allows tooling, dashboards, and other modules to discover orchestrator-specific signals.
+Orchestrators **MUST** register the custom events they emit via the `observability.events`
+contribution channel. This enables runtime introspection of which events are available and allows
+tooling, dashboards, and other modules to discover orchestrator-specific signals.
 
 ```python
 coordinator.register_contributor(
@@ -245,9 +344,13 @@ coordinator.register_contributor(
 )
 ```
 
-> **Note**: The standard `execution:start`, `execution:end`, and `orchestrator:complete` events are registered by the kernel and do not need to be re-registered. Only register events that are unique to your orchestrator module.
+> **Note**: The standard `execution:start`, `execution:end`, and `orchestrator:complete` events are
+> registered by the kernel and do not need to be re-registered. Only register events that are
+> unique to your orchestrator module.
 
-See [CONTRIBUTION_CHANNELS.md](https://github.com/microsoft/amplifier-core/blob/main/docs/specs/CONTRIBUTION_CHANNELS.md) for the pattern.
+See [CONTRIBUTION_CHANNELS.md](../specs/CONTRIBUTION_CHANNELS.md) for the pattern.
+
+---
 
 ## Canonical Example
 
@@ -262,6 +365,8 @@ Study this module for:
 Additional examples:
 - [amplifier-module-loop-streaming](https://github.com/microsoft/amplifier-module-loop-streaming) - Real-time streaming
 - [amplifier-module-loop-events](https://github.com/microsoft/amplifier-module-loop-events) - Event-driven patterns
+
+---
 
 ## Validation Checklist
 
@@ -284,13 +389,15 @@ Additional examples:
 - [ ] Handles provider errors gracefully
 - [ ] Supports streaming via async generators
 
+---
+
 ## Testing
 
 Use test utilities from `amplifier_core/testing.py`:
 
 ```python
 from amplifier_core.testing import (
-    create_test_coordinator,
+    MockCoordinator,
     MockTool,
     MockContextManager,
     ScriptedOrchestrator,
@@ -329,6 +436,8 @@ result = await orchestrator.execute(...)
 assert result == "Response 1"
 ```
 
+---
+
 ## Quick Validation Command
 
 ```bash
@@ -338,4 +447,4 @@ amplifier module validate ./my-orchestrator --type orchestrator
 
 ---
 
-**Related**: [README.md](https://github.com/microsoft/amplifier-core/blob/main/docs/contracts/README.md) | [CONTEXT_CONTRACT.md](context.md)
+**Related**: [README.md](README.md) | [CONTEXT_CONTRACT.md](CONTEXT_CONTRACT.md)

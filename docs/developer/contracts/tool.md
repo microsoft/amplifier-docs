@@ -1,32 +1,53 @@
 ---
-title: Tool Contract
-description: Agent capability contract
+contract_type: module_specification
+module_type: tool
+contract_version: 1.0.0
+last_modified: 2025-01-29
+related_files:
+  - path: ../../python/amplifier_core/interfaces.py#Tool
+    relationship: protocol_definition
+  - path: ../../python/amplifier_core/models.py#ToolResult
+    relationship: result_model
+  - path: ../../python/amplifier_core/message_models.py#ToolCall
+    relationship: invocation_model
+  - path: ../specs/MOUNT_PLAN_SPECIFICATION.md
+    relationship: configuration
+  - path: ../../python/amplifier_core/testing.py#MockTool
+    relationship: test_utilities
+canonical_example: https://github.com/microsoft/amplifier-module-tool-filesystem
 ---
 
 # Tool Contract
 
-Tools provide capabilities that agents can invoke.
+Tools provide capabilities that agents can invoke during execution.
+
+---
 
 ## Purpose
 
-Tools extend what agents can do: read files, execute commands, search the web, delegate to sub-agents, etc.
+Tools extend agent capabilities beyond pure conversation:
+- **Filesystem operations** - Read, write, edit files
+- **Command execution** - Run shell commands
+- **Web access** - Fetch URLs, search
+- **Task delegation** - Spawn sub-agents
+- **Custom capabilities** - Domain-specific operations
 
-## Protocol
+---
+
+## Protocol Definition
+
+**Source**: `amplifier_core/interfaces.py` → `class Tool(Protocol)`
 
 ```python
-from typing import Protocol, runtime_checkable, Any
-from amplifier_core.models import ToolResult
-
-@runtime_checkable
 class Tool(Protocol):
     @property
     def name(self) -> str:
-        """Unique tool identifier."""
+        """Tool name for invocation."""
         ...
 
     @property
     def description(self) -> str:
-        """Human-readable description for LLM."""
+        """Human-readable tool description."""
         ...
 
     @property
@@ -38,139 +59,156 @@ class Tool(Protocol):
         """
         return {}
 
-    async def execute(
-        self,
-        input: dict[str, Any]
-    ) -> ToolResult:
-        """Execute the tool."""
+    async def execute(self, input: dict[str, Any]) -> ToolResult:
+        """
+        Execute tool with given input.
+
+        Args:
+            input: Tool-specific input parameters
+
+        Returns:
+            Tool execution result
+        """
         ...
 ```
 
-!!! note "Input Schema"
-    `input_schema` has a concrete default (`return {}`) and is excluded from `isinstance()` structural checks so that tools written before this field was introduced continue to satisfy the protocol without modification. Callers that need the schema should always use `getattr(tool, "input_schema", {})` for maximum compatibility.
+> **Note:** `input_schema` has a concrete default (`return {}`) and is excluded from
+> `isinstance()` structural checks so that tools written before this field was introduced
+> continue to satisfy the protocol without modification.  Callers that need the schema
+> should always use `getattr(tool, "input_schema", {})` for maximum compatibility.
 
-## Mount Function
+---
+
+## Data Models
+
+### ToolCall (Input)
+
+**Source**: `amplifier_core/message_models.py`
 
 ```python
-async def mount(coordinator, config=None):
-    config = config or {}
-    tool = MyTool(config)
-    await coordinator.mount("tools", tool, name=tool.name)
-    return cleanup_function  # or None
+class ToolCall(BaseModel):
+    id: str                    # Unique ID for correlation
+    name: str                  # Tool name to invoke
+    arguments: dict[str, Any]  # Tool-specific parameters
 ```
 
-## ToolResult
+### ToolResult (Output)
+
+**Source**: `amplifier_core/models.py`
 
 ```python
-from dataclasses import dataclass, field
-from typing import Any
-
-@dataclass
-class ToolResult:
-    success: bool = True                 # Whether execution succeeded
-    output: Any | None = None            # Output for LLM context
+class ToolResult(BaseModel):
+    success: bool = True              # Whether execution succeeded
+    output: Any | None = None         # Tool output (typically str or dict)
     error: dict[str, Any] | None = None  # Error details if failed
 ```
 
-## Input Schema
+---
 
-Tools declare their parameters using JSON Schema:
+## Entry Point Pattern
+
+### mount() Function
+
+```python
+async def mount(coordinator: ModuleCoordinator, config: dict) -> Tool | Callable | None:
+    """
+    Initialize and register tool.
+
+    Returns:
+        - Tool instance
+        - Cleanup callable (for resource cleanup)
+        - None for graceful degradation
+    """
+    tool = MyTool(config=config)
+    await coordinator.mount("tools", tool, name="my-tool")
+    return tool
+```
+
+### pyproject.toml
+
+```toml
+[project.entry-points."amplifier.modules"]
+my-tool = "my_tool:mount"
+```
+
+---
+
+## Implementation Requirements
+
+### Name and Description
+
+Tools must provide clear identification:
+
+```python
+class MyTool:
+    @property
+    def name(self) -> str:
+        return "my_tool"  # Used for invocation
+
+    @property
+    def description(self) -> str:
+        return "Performs specific action with given parameters."
+```
+
+**Best practices**:
+- `name`: Short, snake_case, unique across mounted tools
+- `description`: Clear explanation of what the tool does and expects
+
+### execute() Method
+
+Handle inputs and return structured results:
+
+```python
+async def execute(self, input: dict[str, Any]) -> ToolResult:
+    try:
+        # Validate input
+        required_param = input.get("required_param")
+        if not required_param:
+            return ToolResult(
+                success=False,
+                error={"message": "required_param is required"}
+            )
+
+        # Do the work
+        result = await self._do_work(required_param)
+
+        return ToolResult(
+            success=True,
+            output=result
+        )
+
+    except Exception as e:
+        return ToolResult(
+            success=False,
+            error={"message": str(e), "type": type(e).__name__}
+        )
+```
+
+### Tool Schema (Optional but Recommended)
+
+Provide JSON schema for input validation:
 
 ```python
 @property
 def input_schema(self) -> dict[str, Any]:
-    """JSON schema defining the tool's parameters"""
+    """Return JSON schema for tool input."""
     return {
         "type": "object",
         "properties": {
-            "file_path": {
+            "required_param": {
                 "type": "string",
-                "description": "Path to the file to read"
+                "description": "Description of parameter"
             },
-            "encoding": {
-                "type": "string",
-                "description": "File encoding (default: utf-8)",
-                "default": "utf-8"
+            "optional_param": {
+                "type": "integer",
+                "default": 10
             }
         },
-        "required": ["file_path"]
+        "required": ["required_param"]
     }
 ```
 
-Orchestrators use this schema to generate tool definitions for LLMs.
-
-## Example Implementation
-
-```python
-from amplifier_core.models import ToolResult
-
-class CalculatorTool:
-    @property
-    def name(self) -> str:
-        return "calculator"
-
-    @property
-    def description(self) -> str:
-        return "Perform arithmetic calculations"
-
-    @property
-    def input_schema(self) -> dict:
-        return {
-            "type": "object",
-            "properties": {
-                "operation": {
-                    "type": "string",
-                    "enum": ["add", "subtract", "multiply", "divide"]
-                },
-                "a": {"type": "number"},
-                "b": {"type": "number"}
-            },
-            "required": ["operation", "a", "b"]
-        }
-
-    async def execute(self, input: dict) -> ToolResult:
-        try:
-            op = input["operation"]
-            a = input["a"]
-            b = input["b"]
-
-            if op == "add":
-                result = a + b
-            elif op == "subtract":
-                result = a - b
-            elif op == "multiply":
-                result = a * b
-            elif op == "divide":
-                if b == 0:
-                    return ToolResult(
-                        success=False,
-                        error={"message": "Division by zero"}
-                    )
-                result = a / b
-            else:
-                return ToolResult(
-                    success=False,
-                    error={"message": f"Unknown operation: {op}"}
-                )
-
-            return ToolResult(
-                success=True,
-                output=str(result)
-            )
-
-        except Exception as e:
-            return ToolResult(
-                success=False,
-                error={"message": str(e), "type": type(e).__name__}
-            )
-
-
-async def mount(coordinator, config=None):
-    """Entry point for module loading."""
-    tool = CalculatorTool()
-    await coordinator.mount("tools", tool, name=tool.name)
-    return None  # No cleanup needed
-```
+---
 
 ## Configuration
 
@@ -186,7 +224,9 @@ tools:
         - /home/user/projects
 ```
 
-See [MOUNT_PLAN_SPECIFICATION.md](https://github.com/microsoft/amplifier-core/blob/main/docs/specs/MOUNT_PLAN_SPECIFICATION.md) for full schema.
+See [MOUNT_PLAN_SPECIFICATION.md](../specs/MOUNT_PLAN_SPECIFICATION.md) for full schema.
+
+---
 
 ## Observability
 
@@ -205,6 +245,8 @@ Standard tool events emitted by orchestrators:
 - `tool:post` - After successful execution
 - `tool:error` - On execution failure
 
+---
+
 ## Canonical Example
 
 **Reference implementation**: [amplifier-module-tool-filesystem](https://github.com/microsoft/amplifier-module-tool-filesystem)
@@ -218,6 +260,8 @@ Study this module for:
 Additional examples:
 - [amplifier-module-tool-bash](https://github.com/microsoft/amplifier-module-tool-bash) - Command execution
 - [amplifier-module-tool-web](https://github.com/microsoft/amplifier-module-tool-web) - Web access
+
+---
 
 ## Validation Checklist
 
@@ -235,12 +279,14 @@ Additional examples:
 - [ ] Logs operations at appropriate levels
 - [ ] Registers observability events
 
+---
+
 ## Testing
 
 Use test utilities from `amplifier_core/testing.py`:
 
 ```python
-from amplifier_core.testing import MockTool
+from amplifier_core.testing import MockCoordinator, MockTool
 
 @pytest.mark.asyncio
 async def test_tool_execution():
@@ -261,14 +307,14 @@ from amplifier_core.testing import MockTool
 
 mock_tool = MockTool(
     name="test_tool",
-    description="Test tool",
-    return_value="mock result"
+    output="mock result"
 )
 
 # After use
 assert mock_tool.call_count == 1
-assert mock_tool.last_input == {...}
 ```
+
+---
 
 ## Quick Validation Command
 
@@ -279,4 +325,4 @@ amplifier module validate ./my-tool --type tool
 
 ---
 
-**Related**: [README.md](https://github.com/microsoft/amplifier-core/blob/main/docs/contracts/README.md) | [HOOK_CONTRACT.md](hook.md)
+**Related**: [README.md](README.md) | [HOOK_CONTRACT.md](HOOK_CONTRACT.md)

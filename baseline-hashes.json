@@ -80,7 +80,7 @@
           "repo": "amplifier-app-cli",
           "path": "amplifier_app_cli/main.py",
           "exists": true,
-          "hash": "f85376256aea0098"
+          "hash": "588cc92c4e92c998"
         },
         {
           "repo": "amplifier-app-cli",
@@ -537,7 +537,7 @@
           "repo": "amplifier-core",
           "path": "python/amplifier_core/interfaces.py",
           "exists": true,
-          "hash": "8fc1bf5010aa6ad0"
+          "hash": "358864167cfb6c0e"
         }
       ]
     },
@@ -571,7 +571,7 @@
           "repo": "amplifier-core",
           "path": "python/amplifier_core/interfaces.py",
           "exists": true,
-          "hash": "8fc1bf5010aa6ad0"
+          "hash": "358864167cfb6c0e"
         }
       ]
     },
@@ -588,7 +588,7 @@
           "repo": "amplifier-core",
           "path": "python/amplifier_core/interfaces.py",
           "exists": true,
-          "hash": "8fc1bf5010aa6ad0"
+          "hash": "358864167cfb6c0e"
         }
       ]
     },
@@ -750,7 +750,7 @@
           "repo": "amplifier-core",
           "path": "docs/HOOKS_API.md",
           "exists": true,
-          "hash": "dfd18e677b713322"
+          "hash": "c322e0427f7328cb"
         }
       ]
     },
@@ -789,7 +789,7 @@
           "repo": "amplifier-app-cli",
           "path": "amplifier_app_cli/main.py",
           "exists": true,
-          "hash": "f85376256aea0098"
+          "hash": "588cc92c4e92c998"
         }
       ]
     },

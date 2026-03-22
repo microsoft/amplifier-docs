@@ -1,16 +1,29 @@
 ---
-title: Context Contract
-description: Memory management contract
+contract_type: module_specification
+module_type: context
+contract_version: 2.1.0
+last_modified: 2026-01-01
+related_files:
+  - path: ../../python/amplifier_core/interfaces.py#ContextManager
+    relationship: protocol_definition
+  - path: ../specs/MOUNT_PLAN_SPECIFICATION.md
+    relationship: configuration
+  - path: ../specs/CONTRIBUTION_CHANNELS.md
+    relationship: observability
+  - path: ../../python/amplifier_core/testing.py#MockContextManager
+    relationship: test_utilities
+canonical_example: https://github.com/microsoft/amplifier-module-context-simple
 ---
 
 # Context Contract
 
 Context managers handle conversation memory and message storage.
 
+---
+
 ## Purpose
 
 Context managers control **what the agent remembers**:
-
 - **Message storage** - Store conversation history
 - **Request preparation** - Return messages that fit within token limits
 - **Persistence** - Optionally persist across sessions
@@ -20,12 +33,13 @@ Context managers control **what the agent remembers**:
 
 **Mechanism vs Policy**: Orchestrators provide the mechanism (request messages, make LLM calls). Context managers provide the policy (what to return, when to compact, how to fit within limits).
 
+---
+
 ## Protocol Definition
 
 **Source**: `amplifier_core/interfaces.py` → `class ContextManager(Protocol)`
 
 ```python
-@runtime_checkable
 class ContextManager(Protocol):
     async def add_message(self, message: dict[str, Any]) -> None:
         """Add a message to the context."""
@@ -64,6 +78,8 @@ class ContextManager(Protocol):
         """Clear all messages."""
         ...
 ```
+
+---
 
 ## Message Format
 
@@ -109,6 +125,8 @@ Messages follow a standard structure:
 }
 ```
 
+---
+
 ## Entry Point Pattern
 
 ### mount() Function
@@ -137,6 +155,8 @@ async def mount(coordinator: ModuleCoordinator, config: dict) -> ContextManager 
 [project.entry-points."amplifier.modules"]
 my-context = "my_context:mount"
 ```
+
+---
 
 ## Implementation Requirements
 
@@ -275,6 +295,8 @@ async def clear(self) -> None:
     self._token_count = 0
 ```
 
+---
+
 ## Internal Compaction
 
 Compaction is an **internal implementation detail** of the context manager. It happens automatically when `get_messages_for_request()` is called and the context exceeds thresholds.
@@ -282,6 +304,34 @@ Compaction is an **internal implementation detail** of the context manager. It h
 ### Non-Destructive Compaction (REQUIRED)
 
 **Critical Design Principle**: Compaction MUST be **ephemeral** - it returns a compacted VIEW without modifying the stored history.
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                    NON-DESTRUCTIVE COMPACTION                   │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│  messages[]                    get_messages_for_request()       │
+│  ┌──────────┐                  ┌──────────┐                     │
+│  │ msg 1    │                  │ msg 1    │  (compacted view)   │
+│  │ msg 2    │   ──────────▶    │ [summ]   │                     │
+│  │ msg 3    │   ephemeral      │ msg N    │                     │
+│  │ ...      │   compaction     └──────────┘                     │
+│  │ msg N    │                                                   │
+│  └──────────┘                  get_messages()                   │
+│       │                        ┌──────────┐                     │
+│       │                        │ msg 1    │  (FULL history)     │
+│       └───────────────────▶    │ msg 2    │                     │
+│         unchanged              │ msg 3    │                     │
+│                                │ ...      │                     │
+│                                │ msg N    │                     │
+│                                └──────────┘                     │
+│                                                                 │
+│  Key: Internal state is NEVER modified by compaction.           │
+│       Compaction produces temporary views for LLM requests.     │
+│       Full history is always available via get_messages().      │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
+```
 
 **Why Non-Destructive?**:
 - **Transcript integrity**: Full conversation history is preserved for replay/debugging
@@ -367,6 +417,54 @@ async def _compact_internal(self) -> None:
     })
 ```
 
+### Compaction Strategies
+
+Different strategies for different use cases:
+
+#### Simple Truncation
+
+Keep N most recent messages (with tool pair preservation):
+
+```python
+# Find safe truncation point
+keep_from = len(self._messages) - keep_count
+# Adjust to not split tool pairs
+while keep_from > 0 and self._messages[keep_from].get("role") == "tool":
+    keep_from -= 1
+self._messages = self._messages[keep_from:]
+```
+
+#### Summarization
+
+Use LLM to summarize older messages:
+
+```python
+# Summarize old messages
+old_messages = self._messages[:-keep_recent]
+summary = await summarize(old_messages)
+
+# Replace with summary
+self._messages = [
+    {"role": "system", "content": f"Previous conversation summary: {summary}"},
+    *self._messages[-keep_recent:]
+]
+```
+
+#### Importance-Based
+
+Keep messages based on importance score:
+
+```python
+scored = [(m, self._score_importance(m)) for m in self._messages]
+scored.sort(key=lambda x: x[1], reverse=True)
+# Keep high-importance messages, but preserve tool pairs
+self._messages = self._reorder_preserving_tool_pairs(
+    [m for m, _ in scored[:keep_count]]
+)
+```
+
+---
+
 ## Configuration
 
 Context managers receive configuration via Mount Plan:
@@ -379,7 +477,9 @@ session:
 # Context config can be passed via top-level config
 ```
 
-See [MOUNT_PLAN_SPECIFICATION.md](https://github.com/microsoft/amplifier-core/blob/main/docs/specs/MOUNT_PLAN_SPECIFICATION.md) for full schema.
+See [MOUNT_PLAN_SPECIFICATION.md](../specs/MOUNT_PLAN_SPECIFICATION.md) for full schema.
+
+---
 
 ## Observability
 
@@ -397,7 +497,9 @@ Standard events to emit:
 - `context:pre_compact` - Before compaction (include message_count, token_count)
 - `context:post_compact` - After compaction (include new counts)
 
-See [CONTRIBUTION_CHANNELS.md](https://github.com/microsoft/amplifier-core/blob/main/docs/specs/CONTRIBUTION_CHANNELS.md) for the pattern.
+See [CONTRIBUTION_CHANNELS.md](../specs/CONTRIBUTION_CHANNELS.md) for the pattern.
+
+---
 
 ## Canonical Example
 
@@ -410,6 +512,8 @@ Study this module for:
 
 Additional examples:
 - [amplifier-module-context-persistent](https://github.com/microsoft/amplifier-module-context-persistent) - File-based persistence
+
+---
 
 ## Validation Checklist
 
@@ -428,6 +532,8 @@ Additional examples:
 - [ ] Preserves system messages during compaction
 - [ ] Thread-safe for concurrent access
 - [ ] Configurable thresholds
+
+---
 
 ## Testing
 
@@ -495,6 +601,23 @@ async def test_compaction_preserves_tool_pairs():
 
     # Every tool result should have matching tool use
     assert tool_result_ids.issubset(tool_use_ids), "Orphaned tool results found!"
+
+
+@pytest.mark.asyncio
+async def test_session_resume():
+    """Verify set_messages works for session resume."""
+    context = MyContextManager(max_tokens=1000)
+
+    saved_messages = [
+        {"role": "user", "content": "Previous conversation"},
+        {"role": "assistant", "content": "Previous response"}
+    ]
+
+    await context.set_messages(saved_messages)
+
+    messages = await context.get_messages()
+    assert len(messages) == 2
+    assert messages[0]["content"] == "Previous conversation"
 ```
 
 ### MockContextManager for Testing
@@ -512,6 +635,8 @@ messages = await context.get_messages_for_request()
 assert len(context.messages) == 1
 ```
 
+---
+
 ## Quick Validation Command
 
 ```bash
@@ -521,4 +646,4 @@ amplifier module validate ./my-context --type context
 
 ---
 
-**Related**: [README.md](https://github.com/microsoft/amplifier-core/blob/main/docs/contracts/README.md) | [ORCHESTRATOR_CONTRACT.md](orchestrator.md)
+**Related**: [README.md](README.md) | [ORCHESTRATOR_CONTRACT.md](ORCHESTRATOR_CONTRACT.md)
