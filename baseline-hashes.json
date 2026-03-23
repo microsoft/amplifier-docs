@@ -80,7 +80,7 @@
           "repo": "amplifier-app-cli",
           "path": "amplifier_app_cli/main.py",
           "exists": true,
-          "hash": "588cc92c4e92c998"
+          "hash": "77dfec7ef06503f4"
         },
         {
           "repo": "amplifier-app-cli",
@@ -132,7 +132,7 @@
           "repo": "amplifier-app-cli",
           "path": "amplifier_app_cli/session_spawner.py",
           "exists": true,
-          "hash": "f0570d5f3a609026"
+          "hash": "53832d3ca7f0c3a9"
         }
       ]
     },
@@ -446,7 +446,7 @@
           "repo": "amplifier-app-cli",
           "path": "amplifier_app_cli/main.py",
           "exists": true,
-          "hash": "f85376256aea0098"
+          "hash": "77dfec7ef06503f4"
         },
         {
           "repo": "amplifier-app-cli",
@@ -514,13 +514,13 @@
           "repo": "amplifier-core",
           "path": "docs/contracts/PROVIDER_CONTRACT.md",
           "exists": true,
-          "hash": "18298f59c21023e5"
+          "hash": "dbf2a14f597e80f1"
         },
         {
           "repo": "amplifier-core",
           "path": "python/amplifier_core/interfaces.py",
           "exists": true,
-          "hash": "654cce5b1701754a"
+          "hash": "358864167cfb6c0e"
         }
       ]
     },
@@ -789,7 +789,7 @@
           "repo": "amplifier-app-cli",
           "path": "amplifier_app_cli/main.py",
           "exists": true,
-          "hash": "588cc92c4e92c998"
+          "hash": "77dfec7ef06503f4"
         }
       ]
     },

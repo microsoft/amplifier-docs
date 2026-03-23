@@ -53,19 +53,61 @@ See [CLI Reference](../../user_guide/cli.md) for complete usage documentation.
 amplifier-app-cli/
 ├── main.py              # Entry point, CLI group
 ├── commands/            # Command implementations
-│   ├── run.py          # Run command
-│   ├── session.py      # Session commands
-│   ├── bundle.py       # Bundle management
-│   ├── provider.py     # Provider management
-│   ├── module.py       # Module management
-│   ├── routing.py      # Routing configuration
-│   └── ...
+│   ├── run.py
+│   ├── session.py
+│   ├── bundle.py
+│   ├── provider.py
+│   ├── module.py
+│   ├── source.py
+│   ├── routing.py
+│   ├── agents.py
+│   ├── allowed_dirs.py
+│   ├── denied_dirs.py
+│   ├── tool.py
+│   ├── notify.py
+│   ├── init.py
+│   ├── update.py
+│   ├── version.py
+│   └── reset.py
 ├── session_runner.py    # Session initialization
 ├── session_spawner.py   # Agent delegation
-└── console.py          # Rich UI components
+├── console.py           # Rich console utilities
+└── ui/                  # UI components
+    ├── error_display.py
+    ├── render_message.py
+    └── approval_system.py
 ```
 
-## Related Documentation
+## Session Management
 
-- [CLI Reference](../../user_guide/cli.md) - Complete command reference
+The CLI uses `SessionStore` for persistent session storage and `SessionConfig` for configuration. Sessions are created via `create_initialized_session()` which handles:
+
+- Session initialization
+- Bundle preparation
+- Configuration resolution
+- Transcript restoration (for resume)
+
+## Agent Delegation
+
+Agent delegation is implemented in `session_spawner.py` using:
+
+- `spawn_sub_session()` - Create child sessions with agent overlays
+- `resume_sub_session()` - Resume existing sub-sessions
+- Configuration merging with tool/hook inheritance filtering
+- State persistence for multi-turn conversations
+
+## Interactive Mode
+
+Interactive sessions use `interactive_chat()` which provides:
+
+- REPL loop with prompt history
+- Ctrl+C cancellation handling
+- Multi-line input support
+- Command processing (`/help`, `/mode`, `/config`, etc.)
+- Session state persistence
+
+## Related
+
+- [CLI Reference](../../user_guide/cli.md) - User documentation
+- [Session Guide](../../user_guide/sessions.md) - Session concepts
 - [CLI Case Study](../../developer_guides/applications/cli_case_study.md) - Implementation patterns
