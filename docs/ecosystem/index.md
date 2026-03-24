@@ -1,118 +1,169 @@
 ---
 title: Ecosystem
-description: Amplifier modules and libraries
+description: Amplifier ecosystem components and modules
 ---
 
 # Ecosystem
 
-Amplifier's modular architecture provides a rich ecosystem of components you can mix and match.
+The Amplifier ecosystem consists of modular components that combine to create AI agent systems. This page provides an overview of the ecosystem structure and available components.
 
----
+## Ecosystem Layers
+
+```
+┌─────────────────────────────────────────────┐
+│  Applications                               │
+│  User-facing apps that compose capabilities │
+└─────────────────┬───────────────────────────┘
+                  │
+┌─────────────────▼───────────────────────────┐
+│  Bundles                                    │
+│  Composable configuration packages          │
+└─────────────────┬───────────────────────────┘
+                  │
+┌─────────────────▼───────────────────────────┐
+│  Runtime Modules                            │
+│  Providers, Tools, Orchestrators, Hooks     │
+└─────────────────┬───────────────────────────┘
+                  │
+┌─────────────────▼───────────────────────────┐
+│  Kernel (amplifier-core)                    │
+│  Ultra-thin kernel providing mechanisms     │
+└─────────────────────────────────────────────┘
+```
+
+## Core Components
+
+### Kernel
+
+The foundational layer that provides module loading, event emission, and coordination.
+
+| Component | Description | Repository |
+|-----------|-------------|------------|
+| **amplifier-core** | Ultra-thin kernel for modular AI agent system | [amplifier-core](https://github.com/microsoft/amplifier-core) |
+
+### Applications
+
+User-facing applications that compose libraries and modules.
+
+| Component | Description | Repository |
+|-----------|-------------|------------|
+| **amplifier** | Main project - installs amplifier-app-cli via `uv tool install` | [amplifier](https://github.com/microsoft/amplifier) |
+| **amplifier-app-cli** | Reference CLI application | [amplifier-app-cli](https://github.com/microsoft/amplifier-app-cli) |
+
+### Libraries
+
+Foundational libraries used by applications (not used directly by runtime modules).
+
+| Component | Description | Repository |
+|-----------|-------------|------------|
+| **amplifier-foundation** | Foundational library for bundles, module resolution, and shared utilities | [amplifier-foundation](https://github.com/microsoft/amplifier-foundation) |
+
+**Architectural Boundary**: Libraries are consumed by applications. Runtime modules only depend on amplifier-core.
 
 ## Runtime Modules
 
-Modules are loaded dynamically at runtime based on your profile configuration. They extend the kernel with capabilities.
+Runtime modules implement specific capabilities and are loaded dynamically based on configuration.
 
-<div class="grid cards" markdown>
+### Module Types
 
--   :material-cloud-outline: **[Providers](../modules/providers/index.md)**
+- **[Providers](../modules/providers/)** - LLM backend integrations (Anthropic, OpenAI, Gemini, etc.)
+- **[Tools](../modules/tools/)** - Agent capabilities (filesystem, bash, web, etc.)
+- **[Orchestrators](../modules/orchestrators/)** - Execution loop strategies (basic, streaming, events)
+- **[Contexts](../modules/contexts/)** - Memory management (simple, persistent)
+- **[Hooks](../modules/hooks/)** - Observability and control (logging, approval, redaction, etc.)
 
-    ---
+See the [full module catalog](https://github.com/microsoft/amplifier/blob/main/docs/MODULES.md) for complete listings of:
 
-    Connect to AI model providers like Anthropic, OpenAI, Azure, and Ollama.
+- Official runtime modules (providers, tools, orchestrators, contexts, hooks)
+- Bundles (recipes, browser-tester, design-intelligence, python-dev, etc.)
+- Community applications and bundles
+- Community modules
 
--   :material-tools: **[Tools](../modules/tools/index.md)**
+## Bundles
 
-    ---
+Composable configuration packages that combine providers, behaviors, agents, and context into reusable units.
 
-    Extend agent capabilities with filesystem, bash, web, search, and task delegation.
+Bundles enable:
 
--   :material-play-circle-outline: **[Orchestrators](../modules/orchestrators/index.md)**
+- **Reusable configurations** - Pre-configured setups for common use cases
+- **Behavior composition** - Combine multiple capabilities
+- **Agent libraries** - Collections of specialized agents
+- **Context resources** - Skills, prompts, and knowledge bases
 
-    ---
+### Using Bundles
 
-    Control execution loops: basic, streaming, or event-driven.
+```bash
+# Add a bundle to the registry
+amplifier bundle add git+https://github.com/microsoft/amplifier-bundle-recipes@main
 
--   :material-memory: **[Contexts](../modules/contexts/index.md)**
+# Use a bundle
+amplifier bundle use recipes
 
-    ---
+# Check for updates
+amplifier bundle update --check
+```
 
-    Manage conversation state with in-memory or persistent storage.
+See the [Bundle Guide](https://github.com/microsoft/amplifier-foundation/blob/main/docs/BUNDLE_GUIDE.md) for creating your own bundles.
 
--   :material-hook: **[Hooks](../modules/hooks/index.md)**
+## Module Discovery
 
-    ---
+Modules are discovered via:
 
-    Observe, guide, and control agent behavior with logging, approval, and more.
+1. **Python Entry Points** - Standard entry points in `pyproject.toml`
+2. **Environment Variables** - `AMPLIFIER_MODULES=/path/to/modules`
+3. **Explicit Search Paths** - `ModuleLoader(search_paths=[...])`
 
-</div>
+## Module Contracts
 
----
+All modules implement standard protocols:
 
-## Foundation Library
+| Module Type | Required Interface | Purpose |
+|-------------|-------------------|---------|
+| Provider | `complete()`, `parse_tool_calls()`, `get_info()` | LLM backends |
+| Tool | `name`, `description`, `input_schema`, `execute()` | Agent actions |
+| Orchestrator | `execute()` | Execution loops |
+| Context | `add_message()`, `get_messages()`, `compact()` | Memory |
+| Hook | `__call__(event, data) -> HookResult` | Observability |
 
-The **amplifier-foundation** library provides higher-level functionality for applications (like the CLI). It is **not** used by runtime modules.
+See [Module Contracts](../reference/contracts/) for detailed specifications.
 
-| Library | Description | Repository |
-|---------|-------------|------------|
-| **[amplifier-foundation](../developer_guides/foundation/amplifier_foundation/index.md)** | Bundle composition, profiles, config, module resolution, and utilities | [GitHub](https://github.com/microsoft/amplifier-foundation) |
+## Community Contributions
 
-!!! info "Architectural Boundary"
-    Libraries are consumed by applications. Runtime modules only depend on `amplifier-core` and never use libraries directly.
+The Amplifier community builds:
 
----
+- **Applications** - Domain-specific UIs and tools
+- **Bundles** - Specialized capability packages
+- **Modules** - Custom providers, tools, and hooks
 
-## Quick Reference
+> **SECURITY WARNING**: Community components execute arbitrary code in your environment with full access to your filesystem, network, and credentials. Only use components from sources you trust. Review code before installation.
 
-**Total Official Components**: 45+
+See the [full community catalog](https://github.com/microsoft/amplifier/blob/main/docs/MODULES.md#community-applications) for:
 
-| Category | Count | Examples |
-|----------|-------|----------|
-| Providers | 8 | Anthropic, OpenAI, Azure, Gemini, Ollama, GitHub Copilot |
-| Tools | 9 | Filesystem, Bash, Web, Search, Task, MCP, Slash Commands |
-| Orchestrators | 3 | Basic, Streaming, Events |
-| Contexts | 2 | Simple (in-memory), Persistent (file-backed) |
-| Hooks | 10+ | Logging, Approval, Redaction, Streaming UI, Schedulers |
-| Bundles | 20+ | Recipes, Browser Tester, Design Intelligence, Python Dev, LSP |
+- Community applications
+- Community bundles
+- Community modules (providers, tools, hooks)
 
-**See the full catalog**: [Amplifier Component Catalog](https://github.com/microsoft/amplifier/blob/main/docs/MODULES.md)
+## Building Components
 
----
+Amplifier can help you build Amplifier components! See:
 
-## Community Ecosystem
+- [Module Development Guide](../developer/module_development.md) - Creating custom modules
+- [Bundle Guide](https://github.com/microsoft/amplifier-foundation/blob/main/docs/BUNDLE_GUIDE.md) - Creating custom bundles
+- [DEVELOPER.md](https://github.com/microsoft/amplifier/blob/main/docs/DEVELOPER.md) - Using AI to create modules
 
-The Amplifier community has created applications, bundles, and modules:
+## Module Source Resolution
 
-- **Community Applications** - Standalone apps built with Amplifier (transcribe, blog creator, voice assistant)
-- **Community Bundles** - Composable capability bundles (deepwiki, memory, parallax-discovery, perplexity)
-- **Community Modules** - Providers, tools, and hooks from the community
+Modules can come from:
 
-**Browse community contributions**: [MODULES.md - Community Sections](https://github.com/microsoft/amplifier/blob/main/docs/MODULES.md#community-applications)
+- **Git repositories** - `git+https://github.com/org/repo@branch`
+- **Local paths** - `/path/to/module`
+- **Python packages** - `amplifier-module-tool-bash`
 
-!!! warning "Security Notice"
-    Community components execute code in your environment with full access. Only use from trusted sources. Review code before installation.
+The `ModuleSourceResolver` handles flexible module sourcing.
 
----
+## Next Steps
 
-## Module Architecture
-
-All modules follow the same pattern:
-
-1. **Entry point**: Implement `mount(coordinator, config)` function
-2. **Registration**: Register capabilities with the coordinator
-3. **Isolation**: Handle errors gracefully, never crash the kernel
-4. **Contracts**: Follow one of the stable interfaces (Tool, Provider, Hook, etc.)
-
-For technical details, see:
-- **[Module Contracts](https://github.com/microsoft/amplifier-core/blob/main/docs/contracts/README.md)** - Authoritative contract specifications
-- **[Module Development Guide](../developer/module_development.md)** - How to create modules
-
----
-
-## Getting Started
-
-**Using modules**: See the [Modules Overview](../modules/index.md)
-
-**Creating modules**: See the [Module Development Guide](../developer/module_development.md)
-
-**Creating bundles**: See the [Bundle System Guide](../developer_guides/foundation/amplifier_foundation/bundle_system.md)
+- **[Module Catalog](https://github.com/microsoft/amplifier/blob/main/docs/MODULES.md)** - Complete catalog of all components
+- **[Module Contracts](../reference/contracts/)** - Protocol specifications
+- **[Architecture Overview](../architecture/overview/)** - How components fit together
+- **[Module System](../architecture/modules/)** - Module loading and coordination

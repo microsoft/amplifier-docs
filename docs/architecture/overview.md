@@ -62,270 +62,319 @@ session = AmplifierSession(config)  # Validates required fields
 await session.initialize()  # Discovers and loads all modules
 
 # Modules mount via coordinator
-await coordinator.mount("tools", tool_instance, name="my-tool")
+await coordinator.mount("tools", tool_instance)
+coordinator.hooks.register("tool:pre", hook_function)
 
-# Session executes
-response = await session.execute(prompt)
+# Events flow through the kernel
+await hooks.emit("tool:pre", {...})
 ```
-
-The kernel is implemented in **Rust** with Python bindings via PyO3:
-- Same API for Python consumers
-- Type-safe session management
-- Fast event dispatch
-- Efficient hook processing
 
 ### Layer 3: Modules
 
-Modules implement specific functionality:
-
-| Module Type | Examples | Mount Point |
-|-------------|----------|-------------|
-| **Providers** | Anthropic, OpenAI, Azure | `providers` |
-| **Tools** | Filesystem, Bash, Web | `tools` |
-| **Orchestrators** | Basic loop, Streaming | `orchestrator` |
-| **Contexts** | Simple, Persistent | `context` |
-| **Hooks** | Logging, Approval | (registered) |
+Modules implement policies using kernel mechanisms:
 
 ```python
-# Modules discovered via entry points
-[project.entry-points."amplifier.modules"]
-tool-filesystem = "amplifier_module_tool_filesystem:mount"
+# Provider module
+class AnthropicProvider:
+    async def complete(self, request: ChatRequest) -> ChatResponse:
+        # Decide: which model, what parameters, how to call API
+        ...
 
-# Module implements protocol
-class MyTool:
-    @property
-    def name(self) -> str: return "my_tool"
-    
-    @property
-    def description(self) -> str: return "Does X"
-    
-    async def execute(self, input: dict) -> ToolResult: ...
+# Tool module
+class BashTool:
+    async def execute(self, input: dict) -> ToolResult:
+        # Decide: safety checks, command execution, result formatting
+        ...
+
+# Hook module
+async def logging_hook(event: str, data: dict) -> HookResult:
+    # Decide: what to log, where to log, how to redact
+    ...
 ```
 
 ## Data Flow
 
-```
-User Prompt
-    ↓
-Application Layer
-    ↓ (mount plan)
-Kernel (AmplifierSession)
-    ↓ (load modules)
-Coordinator
-    ↓ (orchestrator.execute())
-Orchestrator Module
-    ↓ (context.get_messages())
-Context Manager
-    ↓ (provider.complete())
-Provider Module
-    ↓ (tool.execute())
-Tool Modules
-    ↓ (hooks.emit())
-Hook Modules
-    ↓
-Final Response
-```
-
-## Event Flow
-
-The kernel emits lifecycle events through the hook system:
+### 1. Session Initialization
 
 ```
-session:start → execution:start → provider:request → provider:response
+Application
+    ↓ (Mount Plan)
+Kernel validates config
+    ↓ (Discovers modules via entry points / filesystem)
+ModuleLoader
+    ↓ (Calls mount() for each module)
+Modules register with Coordinator
     ↓
-tool:pre → tool:post (repeat for each tool)
-    ↓
-execution:end → orchestrator:complete → session:end
+Session ready
 ```
 
-**Hook modules observe events**:
-- Log to files (hooks-logging)
-- Request approval (hooks-approval)
-- Redact secrets (hooks-redaction)
-- Custom observability (your hooks)
+### 2. Request Execution
+
+```
+User prompt
+    ↓
+Application → Session.execute(prompt)
+    ↓
+Kernel → Orchestrator.execute()
+    ↓
+Orchestrator:
+    ├─ Get messages from Context
+    ├─ Call Provider.complete()
+    ├─ Parse tool calls
+    ├─ Execute Tools (via Tool.execute())
+    ├─ Add results to Context
+    └─ Repeat until final response
+    ↓
+Return response to Application
+```
+
+### 3. Event Flow
+
+```
+Module emits event
+    ↓
+Kernel → Hooks.emit(event, data)
+    ↓
+Hook Registry dispatches to all registered hooks
+    ↓
+Each Hook returns HookResult
+    ↓
+Kernel processes results (deny, modify, inject context, etc.)
+```
 
 ## Module Contracts
 
-Modules communicate via stable protocols:
+All modules use Python `Protocol` (structural typing):
 
 ```python
-# Provider Protocol
-class Provider(Protocol):
+# No inheritance required - just implement the interface
+class MyTool:
     @property
     def name(self) -> str: ...
-    def get_info(self) -> ProviderInfo: ...
-    async def list_models(self) -> list[ModelInfo]: ...
-    async def complete(self, request: ChatRequest) -> ChatResponse: ...
-    def parse_tool_calls(self, response: ChatResponse) -> list[ToolCall]: ...
-
-# Tool Protocol
-class Tool(Protocol):
-    @property
-    def name(self) -> str: ...
+    
     @property
     def description(self) -> str: ...
-    async def execute(self, input: dict[str, Any]) -> ToolResult: ...
-
-# Orchestrator Protocol
-class Orchestrator(Protocol):
-    async def execute(
-        self, prompt: str, context: ContextManager,
-        providers: dict[str, Provider], tools: dict[str, Tool],
-        hooks: HookRegistry
-    ) -> str: ...
-
-# ContextManager Protocol
-class ContextManager(Protocol):
-    async def add_message(self, message: dict[str, Any]) -> None: ...
-    async def get_messages_for_request(
-        self, token_budget: int | None = None,
-        provider: Any | None = None
-    ) -> list[dict[str, Any]]: ...
-    async def get_messages(self) -> list[dict[str, Any]]: ...
-    async def set_messages(self, messages: list[dict[str, Any]]) -> None: ...
-    async def clear(self) -> None: ...
-
-# HookHandler Protocol
-class HookHandler(Protocol):
-    async def __call__(self, event: str, data: dict[str, Any]) -> HookResult: ...
+    
+    @property
+    def input_schema(self) -> dict: ...
+    
+    async def execute(self, input: dict) -> ToolResult: ...
 ```
 
-Protocols use structural subtyping (duck typing) - no inheritance required.
+### Module Types
 
-## Configuration Flow
+| Type | Protocol | Required Methods | Purpose |
+|------|----------|------------------|---------|
+| Provider | `Provider` | `name`, `complete()`, `parse_tool_calls()`, `get_info()`, `list_models()` | LLM backends |
+| Tool | `Tool` | `name`, `description`, `input_schema`, `execute()` | Agent capabilities |
+| Orchestrator | `Orchestrator` | `execute()` | Execution loops |
+| ContextManager | `ContextManager` | `add_message()`, `get_messages()`, `compact()` | Memory |
+| Hook | Callable | `__call__(event, data) -> HookResult` | Observability |
 
-```
-User Settings (~/.amplifier/settings.yaml)
-    ↓ (profile selection)
-Profile Config
-    ↓ (bundle loading)
-Bundle Config
-    ↓ (CLI overrides)
-Mount Plan
-    ↓ (validation)
-AmplifierSession(config)
-    ↓ (module loading)
-Running Session
-```
+## Coordinator
 
-## The Rust Kernel
+The `ModuleCoordinator` provides infrastructure to modules:
 
-amplifier-core is implemented in Rust with Python bindings:
-
-```
-┌─────────────────────────────────────────────────┐
-│  RUST KERNEL (crates/amplifier-core/)           │
-│  * Session lifecycle   * Event system           │
-│  * Coordinator         * Hook registry          │
-│  * Type-safe contracts * Cancellation tokens    │
-└────────────────────┬────────────────────────────┘
-                     │ PyO3 bridge
-                     ▼
-┌─────────────────────────────────────────────────┐
-│  PYTHON BINDINGS (python/amplifier_core/)       │
-│  * Same public API    * Pydantic models         │
-│  * Module loader      * Backward-compatible     │
-└────────────────────┬────────────────────────────┘
-                     │ protocols
-                     ▼
-┌─────────────────────────────────────────────────┐
-│  MODULES (Python, WASM, gRPC)                   │
-│  * Providers, Tools, Orchestrators, Contexts... │
-└─────────────────────────────────────────────────┘
+```python
+class ModuleCoordinator:
+    # Session context
+    session_id: str
+    config: dict[str, Any]
+    
+    # Module registration
+    async def mount(category: str, module: Any, name: str) -> None
+    def get(category: str, name: str | None = None) -> Any
+    
+    # Hook system
+    hooks: HookRegistry
+    
+    # Capability checks
+    def check_capability(name: str) -> bool
+    def get_capability(name: str) -> Any
 ```
 
-**Key features**:
-- Zero changes for Python consumers
-- Type-safe core with Protocol-based modules
-- Fast event dispatch
-- Efficient hook processing
-- Cancellation primitives
+Modules receive the coordinator when mounted and use it to:
+- Register themselves
+- Access other modules
+- Emit events via hooks
+- Check capabilities
 
-## Design Principles
+## Mount Plan Specification
 
-### Mechanism vs Policy
+Mount Plans are simple dictionaries:
 
-The kernel provides **mechanisms** (capabilities), modules provide **policies** (decisions):
+```python
+{
+    "session": {
+        "orchestrator": "loop-streaming",  # Module ID
+        "context": "context-simple"         # Module ID
+    },
+    "providers": [
+        {
+            "module": "provider-anthropic",  # Required
+            "name": "claude",                # Optional
+            "source": "git+https://...",     # Optional
+            "config": {...}                  # Optional
+        }
+    ],
+    "tools": [...],
+    "hooks": [...]
+}
+```
 
-| Mechanism (Kernel) | Policy (Modules) |
-|-------------------|------------------|
-| Load modules | Which modules to load |
-| Emit events | What to log, where |
-| Manage sessions | Orchestration strategy |
-| Register hooks | Security policies |
+The kernel validates structure and loads referenced modules.
 
-### Stable Contracts
+## Event System
 
-- **Backward compatible**: Old modules work with new kernel
-- **Protocol-based**: Duck typing, no inheritance
-- **Additive evolution**: Add features, don't break existing
-- **Documented**: Clear expectations and examples
+Canonical events flow through the `HookRegistry`:
 
-### Event-First Observability
+```python
+# Kernel emits events
+await hooks.emit("tool:pre", {
+    "tool_name": "bash",
+    "tool_input": {"command": "ls -la"}
+})
 
-- If it's important → emit a canonical event
-- If it's not observable → it didn't happen
-- One JSONL stream = single source of truth
-- Hooks observe without blocking
+# Hooks observe and optionally control
+async def approval_hook(event: str, data: dict) -> HookResult:
+    if requires_approval(data):
+        if not await get_user_approval(data):
+            return HookResult(action="deny", reason="User denied")
+    return HookResult(action="continue")
+```
+
+Events include:
+- `execution:start`, `execution:end`
+- `prompt:submit`, `prompt:complete`
+- `provider:request`, `provider:response`, `provider:error`
+- `tool:pre`, `tool:post`, `tool:error`
+- `content_block:start`, `content_block:end`
+- Custom events from modules
+
+## Module Discovery
+
+Three discovery methods (priority order):
+
+1. **Python Entry Points**
+   ```toml
+   [project.entry-points."amplifier.modules"]
+   tool-bash = "amplifier_module_tool_bash:mount"
+   ```
+
+2. **Explicit Search Paths**
+   ```python
+   loader = ModuleLoader(search_paths=[Path("/custom/modules")])
+   ```
+
+3. **Environment Variables**
+   ```bash
+   export AMPLIFIER_MODULES=/path/to/modules:/other/path
+   ```
+
+## Polyglot Module Loading
+
+Modules can be written in any language via four transport types:
+
+| Transport | Usage | Integration |
+|-----------|-------|-------------|
+| `python` | Direct Python import | Native performance |
+| `rust` | Native linking (Rust host) or gRPC sidecar (Python host) | Compiled binary |
+| `wasm` | In-process WASM runtime | Sandboxed execution |
+| `grpc` | External service | Remote/microservices |
+
+The module declares its transport in `amplifier.toml`. The host runtime decides how to load it.
 
 ## Session Lifecycle
 
-```python
-# Create session
-session = AmplifierSession(
-    config=config,
-    session_id=None,           # Auto-generated
-    parent_id=None,            # None for top-level
-    approval_system=None,      # App-layer policy
-    display_system=None,       # App-layer policy
-    is_resumed=False           # Controls event emission
-)
-
-# Initialize (load modules)
-await session.initialize()
-
-# Execute prompt
-response = await session.execute(prompt)
-
-# Cleanup
-await session.cleanup()
+```
+┌─────────────────────────────────────────────────┐
+│ 1. Creation: AmplifierSession(config)           │
+│    - Validates Mount Plan                       │
+│    - Creates Coordinator                        │
+└────────────┬────────────────────────────────────┘
+             │
+┌────────────▼────────────────────────────────────┐
+│ 2. Initialization: await session.initialize()  │
+│    - Discovers modules                          │
+│    - Loads and mounts modules                   │
+│    - Registers hooks                            │
+└────────────┬────────────────────────────────────┘
+             │
+┌────────────▼────────────────────────────────────┐
+│ 3. Execution: await session.execute(prompt)    │
+│    - Orchestrator drives agent loop             │
+│    - Modules interact via Coordinator           │
+│    - Events flow through hooks                  │
+└────────────┬────────────────────────────────────┘
+             │
+┌────────────▼────────────────────────────────────┐
+│ 4. Cleanup: await session.cleanup()            │
+│    - Modules clean up resources                 │
+│    - Final events emitted                       │
+└─────────────────────────────────────────────────┘
 ```
 
-**Session states**:
-- `created` - Initialized but not yet executed
-- `running` - Currently executing
-- `completed` - Finished successfully
-- `failed` - Encountered error
-- `cancelled` - User cancelled
+## Key Design Patterns
 
-**Lifecycle events**:
-- `session:start` - New session begins
-- `session:resume` - Session resumed
-- `session:fork` - Child session created
-- `session:end` - Session cleanup
+### 1. Dependency Injection
 
-## Child Sessions (Forking)
-
-Sessions can spawn child sessions for agent delegation:
+Modules receive all dependencies via the `coordinator`:
 
 ```python
-child_session = AmplifierSession(
-    config=child_config,
-    session_id="child-id",
-    parent_id=parent_session.session_id,  # Links to parent
-    approval_system=parent_approval,
-    display_system=parent_display
-)
+async def mount(coordinator: ModuleCoordinator, config: dict) -> None:
+    # No global state or imports of other modules
+    tool = MyTool(config)
+    await coordinator.mount("tools", tool, name="my-tool")
 ```
 
-**W3C Trace Context pattern**:
-- Root session ID becomes the `trace_id`
-- All children inherit the same `trace_id`
-- Enables distributed tracing across agent hierarchies
+### 2. Event-Driven Communication
 
-## See Also
+Modules communicate via events, not direct calls:
 
-- [Kernel Philosophy](kernel.md) - Design principles
-- [Module System](modules.md) - Module loading and coordination
-- [Module Contracts](../developer/contracts/index.md) - Protocol specifications
-- [Design Philosophy](https://github.com/microsoft/amplifier-core/blob/main/docs/DESIGN_PHILOSOPHY.md) - Complete philosophy
+```python
+# Module emits event
+await coordinator.hooks.emit("custom:event", {"data": "..."})
+
+# Other modules observe
+coordinator.hooks.register("custom:event", my_handler)
+```
+
+### 3. Protocol-Based Contracts
+
+No inheritance required - just implement the interface:
+
+```python
+# This works without extending any base class
+class MyOrchestrator:
+    async def execute(self, prompt, context, providers, tools, hooks):
+        # Implementation
+        ...
+```
+
+### 4. Configuration Over Code
+
+Behavior changes via configuration, not code changes:
+
+```yaml
+# Change orchestrator without touching code
+session:
+  orchestrator: loop-streaming  # Was: loop-basic
+```
+
+## Backward Compatibility
+
+The kernel maintains strict backward compatibility:
+
+- **Stable APIs**: Session, Coordinator, Module contracts
+- **Additive changes**: New optional fields, capabilities
+- **Deprecation windows**: Long sunset periods
+- **Version detection**: Modules can check kernel version
+
+Modules can break their own APIs - they compete at the edges.
+
+## Next Steps
+
+- **[Kernel Philosophy](../kernel/)** - Learn kernel design principles
+- **[Module System](../modules/)** - Understand module loading
+- **[Mount Plans](../mount_plans/)** - Configuration specification
+- **[Event System](../events/)** - Canonical events reference

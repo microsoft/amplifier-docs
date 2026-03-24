@@ -52,89 +52,102 @@ Amplifier follows a Linux kernel-inspired architecture where a tiny, stable core
 │  • Manages sessions and agents                                  │
 └──────┬──────────────────────────────────────────────────────────┘
        │
-       ▼
-┌─────────────────────────────────────────────────────────────────┐
-│  Kernel (amplifier-core) - ~2,600 lines                         │
+       │ Mount Plan (config dictionary)
+       │
+┌──────▼──────────────────────────────────────────────────────────┐
+│  Kernel Layer (amplifier-core)                                  │
 │  • Validates Mount Plans                                        │
-│  • Loads modules via entry points                               │
-│  • Coordinates session lifecycle                                │
-│  • Emits canonical events via hooks                             │
+│  • Discovers and loads modules                                  │
+│  • Provides Coordinator infrastructure                          │
+│  • Emits canonical events                                       │
 └──────┬──────────────────────────────────────────────────────────┘
        │
-       ▼
-┌─────────────────────────────────────────────────────────────────┐
-│  Modules (Userspace)                                            │
-│  • Providers: LLM backends (Anthropic, OpenAI, Azure, Ollama)   │
-│  • Tools: Agent capabilities (filesystem, bash, web, search)    │
-│  • Orchestrators: Execution loops (basic, streaming, events)    │
-│  • Contexts: Memory management (simple, persistent)             │
-│  • Hooks: Observability & control (logging, approval, redaction)│
+       │ Coordinator (session_id, config, hooks, mount points)
+       │
+┌──────▼──────────────────────────────────────────────────────────┐
+│  Module Layer (Competing Implementations)                       │
+│                                                                  │
+│  Providers         Tools            Orchestrators               │
+│  ┌──────────┐     ┌──────────┐     ┌──────────┐                │
+│  │ Anthropic│     │Filesystem│     │  Basic   │                │
+│  │  OpenAI  │     │   Bash   │     │Streaming │                │
+│  │  Gemini  │     │   Web    │     │  Events  │                │
+│  └──────────┘     └──────────┘     └──────────┘                │
+│                                                                  │
+│  Context Managers  Hooks                                        │
+│  ┌──────────┐     ┌──────────┐                                 │
+│  │  Simple  │     │ Logging  │                                 │
+│  │Persistent│     │Redaction │                                 │
+│  └──────────┘     │ Approval │                                 │
+│                    └──────────┘                                 │
 └─────────────────────────────────────────────────────────────────┘
 ```
 
-## Key Concepts
+## Core Principles
 
-| Concept | Description |
-|---------|-------------|
-| **Kernel** | Ultra-thin core providing mechanisms only |
-| **Module** | Swappable component implementing a contract |
-| **Mount Plan** | Configuration specifying which modules to load |
-| **Event** | Observable occurrence in the system |
-| **Hook** | Module that observes/controls events |
-| **Session** | Single conversation lifecycle |
-| **Coordinator** | Infrastructure context for modules |
-| **Context Manager** | Memory management with compaction |
-| **Agent** | Configuration overlay for specialized sub-sessions |
+### 1. Mechanisms, Not Policies
 
-## Design Principles
+The kernel provides **capabilities**, not **decisions**:
 
-### Mechanism, Not Policy
+- ✅ Kernel: "You can load modules, emit events, register hooks"
+- ❌ Kernel: "Use this specific provider, log to this location"
 
-The kernel provides **capabilities** without **decisions**:
+**Litmus test**: "Could two teams want different behavior?" → If yes, it's policy → Module, not kernel.
 
-| Kernel Provides (Mechanism) | Modules Decide (Policy) |
-| --------------------------- | ----------------------- |
-| Module loading              | Which modules to load   |
-| Event emission              | What to log, where      |
-| Session lifecycle           | Orchestration strategy  |
-| Hook registration           | Security policies       |
-| Context plumbing            | Compaction strategy     |
+### 2. Ruthless Simplicity
 
-### Directness Over Abstraction
+- KISS taken to heart: as simple as possible, but no simpler
+- Minimize abstractions - every layer must justify existence
+- Start minimal, grow as needed
+- Code you don't write has no bugs
 
-- Clear code paths over layered abstractions
-- Explicit dependencies over hidden coupling
-- Direct communication over complex messaging
-- Simple data flow over elaborate state management
+### 3. Small, Stable, Boring Kernel
 
-### Hooks for Everything Observable
+- Kernel changes rarely, maintains backward compatibility always
+- Easy to reason about by single maintainer
+- Favor deletion over accretion
+- Innovation happens at edges (modules)
 
-- All important operations emit events
-- Hooks can observe, modify, or block
-- Streaming output via hooks, not callbacks
-- Validation and approval via hooks
-- Debug logging via hooks
+### 4. Modular Design ("Bricks & Studs")
 
-## Module Types
+- Each module = self-contained "brick" with clear responsibility
+- Interfaces = "studs" that allow independent regeneration
+- Prefer regeneration over editing
+- Stable contracts enable parallel development
 
-| Type | Purpose | Examples |
-|------|---------|----------|
-| **Provider** | LLM backends | Anthropic, OpenAI, Azure, Ollama |
-| **Tool** | Agent capabilities | Filesystem, Bash, Web, Search |
-| **Orchestrator** | Execution loops | Basic, Streaming, Events |
-| **Context** | Memory management | Simple, Persistent |
-| **Hook** | Observability | Logging, Approval, Redaction, Streaming UI |
+### 5. Event-First Observability
 
-## Configuration Layers
+- If it's important → emit a canonical event
+- If it's not observable → it didn't happen
+- One JSONL stream = single source of truth
+- Hooks observe without blocking
 
-```
-Bundle (YAML/Markdown)
-    ↓ compose
-Mount Plan (dict)
-    ↓ validate
-Session (running)
-```
+### 6. Text-First, Inspectable
 
-- **Bundles**: Composable configuration units (amplifier-foundation)
-- **Mount Plans**: Final configuration for the kernel
-- **Sessions**: Running instances with mounted modules
+- Human-readable, diffable, versionable representations
+- JSON schemas for validation
+- No hidden state, no magic globals
+- Explicit > implicit
+
+## The Linux Kernel Analogy
+
+Amplifier mirrors Linux kernel concepts:
+
+| Linux Concept | Amplifier Analog | Purpose |
+|---------------|------------------|---------|
+| Ring 0 kernel | `amplifier-core` | Mechanisms only, never policy |
+| Syscalls | Session operations | Few, sharp APIs |
+| Loadable drivers | Modules | Compete at edges |
+| Signals/Netlink | Event bus / hooks | Observe and control |
+| /proc & dmesg | JSONL logs | Single canonical stream |
+| Capabilities | Approval system | Deny-by-default |
+| Scheduler | Orchestrator modules | Swap execution strategies |
+| VM/Memory | Context manager | Conversation memory |
+
+## Next Steps
+
+- **[Overview](overview/)** - Understand how all pieces fit together
+- **[Kernel Philosophy](kernel/)** - Learn what belongs in the kernel (and what doesn't)
+- **[Module System](modules/)** - Discover how modules are loaded and coordinated
+- **[Mount Plans](mount_plans/)** - Understand the configuration contract
+- **[Event System](events/)** - Explore the observability infrastructure

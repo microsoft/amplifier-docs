@@ -599,7 +599,7 @@
           "repo": "amplifier-core",
           "path": "docs/DESIGN_PHILOSOPHY.md",
           "exists": true,
-          "hash": "09f95174e27a37fc"
+          "hash": "dc8aad2f7a2e6e44"
         }
       ]
     },
@@ -610,7 +610,7 @@
           "repo": "amplifier-core",
           "path": "docs/DESIGN_PHILOSOPHY.md",
           "exists": true,
-          "hash": "09f95174e27a37fc"
+          "hash": "dc8aad2f7a2e6e44"
         },
         {
           "repo": "amplifier-core",
@@ -662,7 +662,7 @@
           "repo": "amplifier-core",
           "path": "python/amplifier_core/loader.py",
           "exists": true,
-          "hash": "14a1ede07c0d3277"
+          "hash": "b1a8486a9593999e"
         }
       ]
     },
@@ -982,7 +982,7 @@
           "repo": "amplifier-module-tool-bash",
           "path": "amplifier_module_tool_bash/__init__.py",
           "exists": true,
-          "hash": "2a2e0dbf1bee8fe3"
+          "hash": "2af9272c12277cd9"
         },
         {
           "repo": "amplifier-module-tool-bash",
@@ -1090,7 +1090,7 @@
           "repo": "amplifier-module-loop-basic",
           "path": "amplifier_module_loop_basic/__init__.py",
           "exists": true,
-          "hash": "7af2e5929fdfe5b3"
+          "hash": "0ccf7a1e5fef955b"
         },
         {
           "repo": "amplifier-module-loop-basic",
@@ -1107,7 +1107,7 @@
           "repo": "amplifier-module-loop-streaming",
           "path": "amplifier_module_loop_streaming/__init__.py",
           "exists": true,
-          "hash": "7895d45d44c39090"
+          "hash": "931425dd859e83b4"
         },
         {
           "repo": "amplifier-module-loop-streaming",
@@ -1124,7 +1124,7 @@
           "repo": "amplifier-module-loop-events",
           "path": "amplifier_module_loop_events/__init__.py",
           "exists": true,
-          "hash": "0c3aa15de0ff6f54"
+          "hash": "8706f9bf16e834b9"
         },
         {
           "repo": "amplifier-module-loop-events",
@@ -1334,7 +1334,7 @@
           "repo": "amplifier-module-hooks-streaming-ui",
           "path": "amplifier_module_hooks_streaming_ui/__init__.py",
           "exists": true,
-          "hash": "f7305e0289bc523f"
+          "hash": "f8697e85ee9811cb"
         },
         {
           "repo": "amplifier-module-hooks-streaming-ui",
@@ -1368,7 +1368,7 @@
           "repo": "amplifier",
           "path": "docs/MODULES.md",
           "exists": true,
-          "hash": "4e74f184d11fd96c"
+          "hash": "f89fa9c9b4bce22e"
         },
         {
           "repo": "amplifier-core",
