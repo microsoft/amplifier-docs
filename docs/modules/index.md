@@ -11,11 +11,11 @@ Amplifier's functionality is provided by swappable modules. Each module type has
 
 | Type | Purpose | Mount Point |
 |------|---------|-------------|
-| **[Providers](providers/index.md)** | LLM backend integrations | `providers` |
+| **[Providers](providers/index.md)** | LLM backend integration | `providers` |
 | **[Tools](tools/index.md)** | Agent capabilities | `tools` |
-| **[Orchestrators](orchestrators/index.md)** | Execution loop strategies | `orchestrator` |
-| **[Contexts](contexts/index.md)** | Memory management | `context` |
-| **[Hooks](hooks/index.md)** | Observability and control | (registered) |
+| **[Orchestrators](orchestrators/index.md)** | Agent loop execution strategy | `orchestrator` |
+| **[Contexts](contexts/index.md)** | Conversation memory management | `context` |
+| **[Hooks](hooks/index.md)** | Lifecycle observation and control | (registered) |
 
 ## Module Catalog
 

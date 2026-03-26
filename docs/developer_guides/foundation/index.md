@@ -181,7 +181,7 @@ All modules use Python `Protocol` (structural typing, no inheritance required):
 
 | Module Type | Purpose | Key Methods |
 |-------------|---------|-------------|
-| **Provider** | LLM backends | `complete()`, `list_models()`, `get_info()` |
+| **Provider** | LLM backends | `complete()`, `parse_tool_calls()`, `get_info()`, `list_models()` |
 | **Tool** | Agent capabilities | `execute()` |
 | **Orchestrator** | Execution loops | `execute()` |
 | **ContextManager** | Memory | `add_message()`, `get_messages()`, `compact()` |
@@ -235,6 +235,26 @@ Think LEGO blocks:
 - **If it's not observable → it didn't happen**
 - **One JSONL stream = single source of truth**
 - **Hooks observe without blocking**
+
+### Text-First, Inspectable
+
+- **Human-readable, diffable, versionable representations**
+- **JSON schemas for validation**
+- **No hidden state, no magic globals**
+- **Explicit > implicit**
+
+### Polyglot Module Loading
+
+Modules can be written in any language. Four transport types determine how a module integrates with its host:
+
+- **python**: Direct import into Python host. Dependencies managed via `uv pip install` at load time.
+- **rust**: Rust host links directly as a native library. Non-Rust host spawns the compiled binary as a gRPC sidecar.
+- **wasm**: Loaded in-process via a WASM runtime. Sandboxed execution with no host OS access unless explicitly granted.
+- **grpc**: Connects to an external gRPC service at the runtime endpoint declared in `amplifier.toml`.
+
+The `amplifier.toml` manifest declares the module's transport. The host runtime reads this declaration and selects the appropriate loading strategy. A Rust module written for direct linking works transparently as a sidecar in any non-Rust host without modification.
+
+gRPC bridges exist for all six module types (tool, hook, orchestrator, context, provider, and scaffold), so any module type can cross a language boundary without changing its external contract.
 
 ## Getting Started
 
@@ -294,9 +314,14 @@ cd amplifier-core
 pip install maturin
 maturin develop
 
+# Or with uv
+uv run maturin develop
+
 # Run tests
-cargo test           # Rust tests
-pytest              # Python tests
+cargo test -p amplifier-core                                   # Rust kernel tests
+uv run pytest tests/ bindings/python/tests/ -q --tb=short     # Python tests
+uv run pytest tests/ bindings/python/tests/ --cov             # Full coverage
+uv run python tests/validate_rust_kernel.py                   # Validate Rust kernel integration
 ```
 
 See `docs/RUST_CORE_TESTING.md` in amplifier-core for detailed testing guide.
@@ -334,12 +359,16 @@ amplifier-foundation/
 │   ├── registry.py            # Bundle loading
 │   ├── validator.py           # Bundle validation
 │   ├── mentions/              # @mention resolution
-│   └── utils/                 # Utilities
+│   ├── io/                    # File I/O utilities
+│   ├── dicts/                 # Dict utilities
+│   └── paths/                 # Path utilities
 ├── docs/
 │   ├── BUNDLE_GUIDE.md        # Bundle authoring
 │   ├── AGENT_AUTHORING.md     # Agent creation
 │   ├── CONCEPTS.md            # Mental model
-│   └── PATTERNS.md            # Common patterns
+│   ├── PATTERNS.md            # Common patterns
+│   ├── URI_FORMATS.md         # Source URI quick reference
+│   └── API_REFERENCE.md       # API index
 ├── agents/                    # Reference agents
 ├── behaviors/                 # Reference behaviors
 ├── providers/                 # Provider configs
@@ -360,6 +389,7 @@ amplifier-foundation/
 - [AGENT_AUTHORING.md](https://github.com/microsoft/amplifier-foundation/blob/main/docs/AGENT_AUTHORING.md) - Agent creation
 - [CONCEPTS.md](amplifier_foundation/concepts.md) - Mental model
 - [PATTERNS.md](https://github.com/microsoft/amplifier-foundation/blob/main/docs/PATTERNS.md) - Common patterns
+- [URI_FORMATS.md](https://github.com/microsoft/amplifier-foundation/blob/main/docs/URI_FORMATS.md) - Source URI quick reference
 
 ### Examples
 

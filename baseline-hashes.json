@@ -132,7 +132,7 @@
           "repo": "amplifier-app-cli",
           "path": "amplifier_app_cli/session_spawner.py",
           "exists": true,
-          "hash": "53832d3ca7f0c3a9"
+          "hash": "dfbcd6c181755ad0"
         }
       ]
     },
@@ -149,7 +149,7 @@
           "repo": "amplifier-core",
           "path": "docs/DESIGN_PHILOSOPHY.md",
           "exists": true,
-          "hash": "09f95174e27a37fc"
+          "hash": "dc8aad2f7a2e6e44"
         },
         {
           "repo": "amplifier-foundation",
@@ -228,8 +228,8 @@
         {
           "repo": "amplifier-foundation",
           "path": "amplifier_foundation/bundle.py",
-          "exists": true,
-          "hash": "dc6fed83c90fc4e8"
+          "exists": false,
+          "hash": null
         },
         {
           "repo": "amplifier-foundation",
@@ -480,19 +480,19 @@
           "repo": "amplifier-core",
           "path": "docs/contracts/TOOL_CONTRACT.md",
           "exists": true,
-          "hash": "6427f074050d6cbb"
+          "hash": "2424c7437780ac60"
         },
         {
           "repo": "amplifier-core",
           "path": "docs/contracts/PROVIDER_CONTRACT.md",
           "exists": true,
-          "hash": "18298f59c21023e5"
+          "hash": "dbf2a14f597e80f1"
         },
         {
           "repo": "amplifier-core",
           "path": "docs/contracts/HOOK_CONTRACT.md",
           "exists": true,
-          "hash": "dadff5a067eaa063"
+          "hash": "486411549b12904a"
         }
       ]
     },
@@ -627,7 +627,7 @@
           "repo": "amplifier-core",
           "path": "docs/DESIGN_PHILOSOPHY.md",
           "exists": true,
-          "hash": "09f95174e27a37fc"
+          "hash": "dc8aad2f7a2e6e44"
         },
         {
           "repo": "amplifier-core",
@@ -800,7 +800,7 @@
           "repo": "amplifier-core",
           "path": "docs/contracts/README.md",
           "exists": true,
-          "hash": "e3719194c6408d79"
+          "hash": "cc3413843d01bb8a"
         }
       ]
     },
@@ -1368,7 +1368,7 @@
           "repo": "amplifier",
           "path": "docs/MODULES.md",
           "exists": true,
-          "hash": "f89fa9c9b4bce22e"
+          "hash": "7ef1cd3fb3c9b077"
         },
         {
           "repo": "amplifier-core",

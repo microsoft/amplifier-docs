@@ -26,6 +26,9 @@ bundle = await load_bundle("./bundle.md")
 bundle = await load_bundle(
     "git+https://github.com/org/repo@main#subdirectory=providers/anthropic-opus.yaml"
 )
+
+# Strict mode: include failures raise exceptions instead of logging warnings (useful for CI)
+bundle = await load_bundle("git+https://github.com/org/my-bundle@main", strict=True)
 ```
 
 ### Source URI Formats
@@ -141,12 +144,35 @@ if not result.is_valid:
 
 ## Preparation
 
-Before mounting, bundles are prepared:
+`bundle.prepare()` downloads and installs all modules specified in the mount plan, making them importable. Returns a `PreparedBundle` containing `mount_plan` and a `BundleModuleResolver` for use with `AmplifierSession`.
 
-1. **Resolve includes** - Load and compose included bundles
-2. **Resolve @mentions** - Load referenced files into instruction
-3. **Validate structure** - Check all references resolve
-4. **Build mount plan** - Create final configuration for session
+```python
+# Standard preparation
+prepared = await bundle.prepare()
+
+# Skip package installation (use pre-installed modules)
+prepared = await bundle.prepare(install_deps=False)
+
+# With source override policy (app-layer module routing)
+def resolve_with_overrides(module_id: str, source: str) -> str:
+    return overrides.get(module_id) or source
+
+prepared = await bundle.prepare(source_resolver=resolve_with_overrides)
+```
+
+**Parameters:**
+
+- `install_deps` (`bool`, default `True`) — Whether to install Python dependencies for modules.
+- `source_resolver` (`Callable[[str, str], str] | None`) — Optional callback `(module_id, original_source) -> resolved_source`. Allows app-layer source override policy to be applied before activation.
+- `progress_callback` (`Callable[[str, str], None] | None`) — Optional callback `(action, detail)` for progress reporting. Actions include `"installing_package"`, `"activating"`, `"installing"`.
+
+Use `prepared.create_session()` to create an `AmplifierSession`:
+
+```python
+prepared = await bundle.prepare()
+async with prepared.create_session() as session:
+    response = await session.execute("Hello!")
+```
 
 ## Registry Management
 
@@ -158,6 +184,9 @@ from amplifier_foundation import BundleRegistry
 registry = BundleRegistry()
 registry.register({"foundation": "git+https://github.com/microsoft/amplifier-foundation@main"})
 bundle = await registry.load("foundation")
+
+# Strict mode: include failures raise exceptions instead of logging warnings
+registry = BundleRegistry(strict=True)
 ```
 
 ### Registry Features

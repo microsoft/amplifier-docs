@@ -83,7 +83,8 @@ Sessions are stored at:
 ~/.amplifier/projects/<project-slug>/sessions/<session-id>/
 ├── transcript.jsonl     # Conversation history
 ├── events.jsonl         # Complete event log
-└── metadata.json        # Session metadata
+├── metadata.json        # Session metadata
+└── config.md            # Configuration snapshot
 ```
 
 ### Project Slug
@@ -216,13 +217,12 @@ When agents delegate to other agents, child sessions (sub-sessions) are created:
 parent-session-id/
 ├── transcript.jsonl
 ├── metadata.json
-└── ...
+└── config.md
 
-child-session-id/  # Format: parent-id-agent-name-span
+{parent_id}-{child_span}_{agent_name}/  # Sub-session ID format
 ├── transcript.jsonl
 ├── metadata.json
-├── parent_id       # Links back to parent
-└── ...
+└── config.md
 ```
 
 ### Multi-Turn Sub-Sessions
@@ -248,11 +248,18 @@ response = await task_tool.execute({
 
 Sub-sessions include:
 
+- **session_id**: Unique identifier for this sub-session
 - **parent_id**: Parent session ID
 - **trace_id**: Root session ID (W3C Trace Context pattern)
 - **agent_name**: Agent that ran this session
+- **child_span**: 16-char hex span ID for short_id resolution
+- **created**: Creation timestamp (ISO 8601, UTC)
 - **config**: Merged configuration (parent + agent overlay)
 - **agent_overlay**: Original agent configuration
+- **turn_count**: Number of conversation turns
+- **bundle_context**: Bundle module resolution paths and mention mappings
+- **self_delegation_depth**: Recursion depth for self-delegation limit tracking
+- **working_dir**: Working directory at session creation time
 
 ## Session Context
 
@@ -293,3 +300,4 @@ Sessions maintain context through:
 
 - [CLI Reference](./cli.md) - Complete command reference
 - [Session Storage Specification](../developer/sessions/storage.md) - Technical details
+

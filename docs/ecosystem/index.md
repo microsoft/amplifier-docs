@@ -47,8 +47,12 @@ User-facing applications that compose libraries and modules.
 
 | Component | Description | Repository |
 |-----------|-------------|------------|
-| **amplifier** | Main project - installs amplifier-app-cli via `uv tool install` | [amplifier](https://github.com/microsoft/amplifier) |
-| **amplifier-app-cli** | Reference CLI application | [amplifier-app-cli](https://github.com/microsoft/amplifier-app-cli) |
+| **amplifier** | Main Amplifier project and entry point - installs amplifier-app-cli via `uv tool install` | [amplifier](https://github.com/microsoft/amplifier) |
+| **amplifier-app-cli** | Reference CLI application implementing the Amplifier platform | [amplifier-app-cli](https://github.com/microsoft/amplifier-app-cli) |
+| **amplifier-app-log-viewer** | Web-based log viewer for debugging sessions with real-time updates | [amplifier-app-log-viewer](https://github.com/microsoft/amplifier-app-log-viewer) |
+| **amplifier-app-benchmarks** | Benchmarking and evaluating Amplifier | [amplifier-app-benchmarks](https://github.com/DavidKoleczek/amplifier-app-benchmarks) |
+
+**Note**: When you install `amplifier`, you get the amplifier-app-cli as the executable application.
 
 ### Libraries
 
@@ -58,7 +62,7 @@ Foundational libraries used by applications (not used directly by runtime module
 |-----------|-------------|------------|
 | **amplifier-foundation** | Foundational library for bundles, module resolution, and shared utilities | [amplifier-foundation](https://github.com/microsoft/amplifier-foundation) |
 
-**Architectural Boundary**: Libraries are consumed by applications. Runtime modules only depend on amplifier-core.
+**Architectural Boundary**: Libraries are consumed by applications (like amplifier-app-cli). Runtime modules only depend on amplifier-core and never use these libraries directly.
 
 ## Runtime Modules
 
@@ -119,11 +123,11 @@ All modules implement standard protocols:
 
 | Module Type | Required Interface | Purpose |
 |-------------|-------------------|---------|
-| Provider | `complete()`, `parse_tool_calls()`, `get_info()` | LLM backends |
+| Provider | `complete()`, `parse_tool_calls()`, `get_info()`, `list_models()` | LLM backends |
 | Tool | `name`, `description`, `input_schema`, `execute()` | Agent actions |
 | Orchestrator | `execute()` | Execution loops |
 | Context | `add_message()`, `get_messages()`, `compact()` | Memory |
-| Hook | `__call__(event, data) -> HookResult` | Observability |
+| Hook | `__call__(event, data) -> HookResult` | Lifecycle observation and control |
 
 See [Module Contracts](../reference/contracts/) for detailed specifications.
 

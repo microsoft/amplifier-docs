@@ -66,6 +66,8 @@ async def mount(
 - **Data models**: `amplifier_core/models.py`
 - **Message models**: `amplifier_core/message_models.py` (Pydantic models for request/response envelopes)
 - **Content models**: `amplifier_core/content_models.py` (dataclass types for events and streaming)
+- **Rust traits**: `crates/amplifier-core/src/traits.rs` (Rust-side trait definitions)
+- **Rust/Python type mapping**: [CONTRACTS.md](https://github.com/microsoft/amplifier-core/blob/main/CONTRACTS.md) (authoritative cross-boundary reference)
 
 Always read the code docstrings first - they are authoritative.
 
@@ -75,7 +77,7 @@ Tools provide capabilities to agents.
 
 ### Tool Contract
 
-**Protocol definition**: `amplifier_core/interfaces.py` lines 121-146
+**Protocol definition**: `amplifier_core/interfaces.py` → `class Tool(Protocol)`
 
 ```python
 from amplifier_core.interfaces import Tool
@@ -86,18 +88,40 @@ from typing import runtime_checkable, Protocol, Any
 class Tool(Protocol):
     @property
     def name(self) -> str:
-        """Unique identifier."""
+        """Tool name for invocation."""
         ...
 
     @property
     def description(self) -> str:
-        """Human-readable description."""
+        """Human-readable tool description."""
         ...
 
+    @property
+    def input_schema(self) -> dict[str, Any]:
+        """JSON Schema describing the tool's input parameters.
+
+        Returns an empty dict by default for backward compatibility
+        with tools that predate this convention.
+        """
+        return {}
+
     async def execute(self, input: dict[str, Any]) -> ToolResult:
-        """Execute the tool with input data."""
+        """
+        Execute tool with given input.
+
+        Args:
+            input: Tool-specific input parameters
+
+        Returns:
+            Tool execution result
+        """
         ...
 ```
+
+> **Note:** `input_schema` has a concrete default (`return {}`) and is excluded from
+> `isinstance()` structural checks so that tools written before this field was introduced
+> continue to satisfy the protocol without modification.  Callers that need the schema
+> should always use `getattr(tool, "input_schema", {})` for maximum compatibility.
 
 **Data models**:
 - `ToolCall` - Input model from `amplifier_core/message_models.py`
@@ -125,7 +149,7 @@ class GreetTool:
         return "Greet a person by name"
 
     @property
-    def input_schema(self) -> dict:
+    def input_schema(self) -> dict[str, Any]:
         return {
             "type": "object",
             "properties": {
@@ -192,7 +216,7 @@ Providers integrate LLM APIs.
 
 ### Provider Contract
 
-**Protocol definition**: `amplifier_core/interfaces.py` lines 54-119
+**Protocol definition**: `amplifier_core/interfaces.py` → `class Provider(Protocol)`
 
 **Detailed specification**: See [PROVIDER_SPECIFICATION.md](https://github.com/microsoft/amplifier-core/blob/main/docs/specs/PROVIDER_SPECIFICATION.md) for complete implementation guidance including:
 - Content block preservation requirements
@@ -205,6 +229,7 @@ from amplifier_core.message_models import ChatRequest, ChatResponse
 from amplifier_core.models import ProviderInfo, ModelInfo
 from typing import Protocol
 
+@runtime_checkable
 class Provider(Protocol):
     @property
     def name(self) -> str:
@@ -326,7 +351,7 @@ Hooks intercept events for observability and modification.
 
 ### Hook Contract
 
-**Protocol definition**: `amplifier_core/interfaces.py` lines 205-220
+**Protocol definition**: `amplifier_core/interfaces.py` → `class HookHandler(Protocol)`
 
 **Detailed API reference**: See [HOOKS_API.md](https://github.com/microsoft/amplifier-core/blob/main/docs/HOOKS_API.md) for complete documentation including:
 - HookResult actions and fields
@@ -361,6 +386,19 @@ class HookHandler(Protocol):
 - `modify` - Transform data
 - `inject_context` - Add to agent's context
 - `ask_user` - Request approval
+
+**Common events**:
+
+| Event | Trigger | Data Includes |
+|-------|---------|---------------|
+| `execution:start` | Orchestrator execution begins | prompt |
+| `execution:end` | Orchestrator execution completes | response |
+| `prompt:submit` | User input | prompt text |
+| `tool:pre` | Before tool execution | tool_name, tool_input |
+| `tool:post` | After tool execution | tool_name, tool_result |
+| `tool:error` | Tool failed | tool_name, error |
+| `provider:request` | LLM call starting | provider, messages |
+| `provider:response` | LLM call complete | provider, response, usage |
 
 **Reference implementation**: [amplifier-module-hooks-logging](https://github.com/microsoft/amplifier-module-hooks-logging)
 
@@ -415,26 +453,27 @@ Orchestrators control the agent loop.
 ```python
 from typing import Protocol, Any
 
+@runtime_checkable
 class Orchestrator(Protocol):
     async def execute(
         self,
         prompt: str,
-        context: Any,
-        providers: dict[str, Any],
-        tools: dict[str, Any],
-        hooks: Any,
-        coordinator: Any | None = None
+        context: ContextManager,
+        providers: dict[str, Provider],
+        tools: dict[str, Tool],
+        hooks: HookRegistry,
+        **kwargs: Any,
     ) -> str:
         """
-        Execute agent loop.
+        Execute the agent loop with given prompt.
 
         Args:
-            prompt: User input
-            context: Context manager
-            providers: Available providers
-            tools: Available tools
-            hooks: Hook registry
-            coordinator: Module coordinator
+            prompt: User input prompt
+            context: Context manager for conversation state
+            providers: Available LLM providers (keyed by name)
+            tools: Available tools (keyed by name)
+            hooks: Hook registry for lifecycle events
+            **kwargs: Additional kernel-injected arguments (see note below)
 
         Returns:
             Final response string
@@ -442,9 +481,21 @@ class Orchestrator(Protocol):
         ...
 ```
 
+> **`coordinator` injection**: The kernel (`session.py`) passes
+> `coordinator=<ModuleCoordinator>` via kwargs at runtime so orchestrators can
+> process hook results and coordinate module interactions. Implementations may
+> accept `coordinator` as an explicit keyword argument or simply absorb it
+> through `**kwargs`.
+
+**Required events**: All orchestrators **MUST** emit:
+- `execution:start` with `{"prompt": prompt}` at the very beginning of `execute()`
+- `execution:end` with `{"response": ..., "status": ...}` on **all** exit paths (success, error, cancellation)
+- `orchestrator:complete` with `{"orchestrator": name, "turn_count": n, "status": "success"|"incomplete"|"cancelled"}` at the end of `execute()`
+
 **Reference implementations**:
-- [amplifier-module-loop-events](https://github.com/microsoft/amplifier-module-loop-events)
+- [amplifier-module-loop-basic](https://github.com/microsoft/amplifier-module-loop-basic)
 - [amplifier-module-loop-streaming](https://github.com/microsoft/amplifier-module-loop-streaming)
+- [amplifier-module-loop-events](https://github.com/microsoft/amplifier-module-loop-events)
 
 ## Creating a Context Manager
 
@@ -455,17 +506,43 @@ Context managers handle conversation history.
 ```python
 from typing import Protocol, Any
 
-class Context(Protocol):
+@runtime_checkable
+class ContextManager(Protocol):
     async def add_message(self, message: dict[str, Any]) -> None:
-        """Add message to context."""
+        """Add a message to the context."""
+        ...
+
+    async def get_messages_for_request(
+        self,
+        token_budget: int | None = None,
+        provider: Any | None = None,
+    ) -> list[dict[str, Any]]:
+        """
+        Get messages ready for an LLM request.
+
+        The context manager handles any compaction needed internally.
+        Returns messages that fit within the token budget.
+
+        Args:
+            token_budget: Optional explicit token limit (deprecated, prefer provider).
+            provider: Optional provider instance for dynamic budget calculation.
+                If provided, budget = context_window - max_output_tokens - safety_margin.
+
+        Returns:
+            Messages ready for LLM request, compacted if necessary.
+        """
         ...
 
     async def get_messages(self) -> list[dict[str, Any]]:
-        """Get all messages."""
+        """Get all messages (raw, uncompacted) for transcripts/debugging."""
         ...
 
-    async def get_messages_for_request(self) -> list[dict[str, Any]]:
-        """Get messages formatted for LLM request."""
+    async def set_messages(self, messages: list[dict[str, Any]]) -> None:
+        """Set messages directly (for session resume)."""
+        ...
+
+    async def clear(self) -> None:
+        """Clear all messages."""
         ...
 ```
 
