@@ -282,6 +282,9 @@ steps:
   - id: "regenerate-docs"
     agent: "foundation:zen-architect"
     mode: "ARCHITECT"
+    provider_preferences:
+      - provider: anthropic
+        model: claude-sonnet-4-6
     prompt: |
       Perform SURGICAL documentation updates. You MUST preserve existing content that doesn't need changes.
 
@@ -348,6 +351,9 @@ steps:
   - id: "evidence-validation"
     agent: "foundation:zen-architect"
     mode: "REVIEW"
+    provider_preferences:
+      - provider: anthropic
+        model: claude-sonnet-4-6
     prompt: |
       You are a SKEPTICAL EVIDENCE REVIEWER. Your job is to verify that every
       factual claim in the regenerated docs is grounded in actual source code.
