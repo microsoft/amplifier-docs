@@ -97,14 +97,21 @@ Bundles enable:
 ### Using Bundles
 
 ```bash
-# Add a bundle to the registry
+# Add a bundle to the registry (name auto-derived from bundle metadata)
 amplifier bundle add git+https://github.com/microsoft/amplifier-bundle-recipes@main
 
-# Use a bundle
+# Use a bundle by name
+amplifier bundle use foundation
 amplifier bundle use recipes
 
-# Check for updates
+# Show current bundle
+amplifier bundle current
+
+# Check for bundle updates
 amplifier bundle update --check
+
+# Update bundle to latest
+amplifier bundle update
 ```
 
 See the [Bundle Guide](https://github.com/microsoft/amplifier-foundation/blob/main/docs/BUNDLE_GUIDE.md) for creating your own bundles.
@@ -114,20 +121,18 @@ See the [Bundle Guide](https://github.com/microsoft/amplifier-foundation/blob/ma
 Modules are discovered via:
 
 1. **Python Entry Points** - Standard entry points in `pyproject.toml`
-2. **Environment Variables** - `AMPLIFIER_MODULES=/path/to/modules`
-3. **Explicit Search Paths** - `ModuleLoader(search_paths=[...])`
 
 ## Module Contracts
 
 All modules implement standard protocols:
 
-| Module Type | Required Interface | Purpose |
-|-------------|-------------------|---------|
-| Provider | `complete()`, `parse_tool_calls()`, `get_info()`, `list_models()` | LLM backends |
-| Tool | `name`, `description`, `input_schema`, `execute()` | Agent actions |
-| Orchestrator | `execute()` | Execution loops |
-| Context | `add_message()`, `get_messages()`, `compact()` | Memory |
-| Hook | `__call__(event, data) -> HookResult` | Lifecycle observation and control |
+| Module Type | Purpose |
+|-------------|---------|
+| Provider | LLM backend integration |
+| Tool | Agent capabilities |
+| Orchestrator | Agent loop execution strategy |
+| Context | Conversation memory management |
+| Hook | Lifecycle observation and control |
 
 See [Module Contracts](../reference/contracts/) for detailed specifications.
 
@@ -160,10 +165,6 @@ Amplifier can help you build Amplifier components! See:
 Modules can come from:
 
 - **Git repositories** - `git+https://github.com/org/repo@branch`
-- **Local paths** - `/path/to/module`
-- **Python packages** - `amplifier-module-tool-bash`
-
-The `ModuleSourceResolver` handles flexible module sourcing.
 
 ## Next Steps
 
