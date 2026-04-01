@@ -82,20 +82,8 @@ Sessions are stored at:
 ```
 ~/.amplifier/projects/<project-slug>/sessions/<session-id>/
 ├── transcript.jsonl     # Conversation history
-├── events.jsonl         # Complete event log
-├── metadata.json        # Session metadata
-└── config.md            # Configuration snapshot
+└── metadata.json        # Session metadata
 ```
-
-### Project Slug
-
-The project slug is derived from your working directory:
-
-```
-/home/user/projects/my-app → -home-user-projects-my-app
-```
-
-This ensures sessions are organized by project.
 
 ## Session Metadata
 
@@ -103,12 +91,8 @@ Session metadata includes:
 
 - **session_id**: Unique identifier
 - **created**: Creation timestamp
-- **bundle**: Bundle used for the session
-- **model**: Provider and model used
 - **turn_count**: Number of user turns
 - **working_dir**: Working directory for the session
-- **name**: Optional human-friendly name
-- **description**: Optional session description
 
 ## Session Lifecycle
 
@@ -131,7 +115,6 @@ Sessions are automatically saved after each turn, storing:
 Sessions can be resumed:
 - Automatically with `amplifier continue` (most recent)
 - By ID with `amplifier session resume <id>`
-- Interactively with `amplifier resume` (search/select)
 
 ## Session Management Commands
 
@@ -199,14 +182,6 @@ amplifier session cleanup --days 7
 amplifier session cleanup --dry-run
 ```
 
-## Session Naming
-
-Sessions can be named for easier identification:
-
-- Names can be set manually with `/rename` command in interactive mode
-- Some configurations auto-generate names based on conversation content
-- Names are stored in session metadata
-
 ## Sub-Sessions (Agent Delegation)
 
 When agents delegate to other agents, child sessions (sub-sessions) are created:
@@ -216,13 +191,11 @@ When agents delegate to other agents, child sessions (sub-sessions) are created:
 ```
 parent-session-id/
 ├── transcript.jsonl
-├── metadata.json
-└── config.md
+└── metadata.json
 
 {parent_id}-{child_span}_{agent_name}/  # Sub-session ID format
 ├── transcript.jsonl
-├── metadata.json
-└── config.md
+└── metadata.json
 ```
 
 ### Multi-Turn Sub-Sessions
@@ -268,7 +241,6 @@ Sessions maintain context through:
 - **Conversation history**: All user/assistant messages
 - **Tool results**: Outputs from tool executions
 - **System messages**: Agent instructions and guidance
-- **Ephemeral context**: Temporary context for single iterations
 
 ## Best Practices
 
@@ -276,7 +248,6 @@ Sessions maintain context through:
 
 - Use descriptive names for important work sessions
 - Names help when searching/resuming later
-- Keep names concise (50 chars max)
 
 ### Session Cleanup
 

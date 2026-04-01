@@ -127,6 +127,12 @@ Utilities for spawning sub-sessions with provider/model preferences.
 | `resolve_model_pattern` | `spawn_utils.py` | Resolve glob patterns (e.g., `claude-haiku-*`) to concrete model names |
 | `is_glob_pattern` | `spawn_utils.py` | Check if model string contains glob characters |
 
+## Subprocess Runner
+
+| Export | Source | Purpose |
+|--------|--------|---------| 
+| `run_session_in_subprocess` | `subprocess_runner.py` | Run a session as an isolated subprocess |
+
 ## Serialization Utilities
 
 | Export | Source | Purpose |
