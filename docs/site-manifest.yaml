@@ -1,0 +1,1750 @@
+# Site Manifest - Amplifier Documentation
+# This file declares the scope and acceptance criteria for each documentation page.
+# Used by the source-discovery pipeline to automatically place new source files.
+#
+# Fields:
+#   path         - Doc-relative path to the rendered page
+#   scope        - 1-2 sentence description of what this page covers and who it is for
+#   accepts      - Semantic categories of source content that belong on this page.
+#                  An LLM placement pass uses this list to decide whether a newly
+#                  discovered source file is relevant.  Use noun phrases, not globs.
+#   relationship - How source content maps to the page:
+#                    DIRECT  = content is published verbatim / with minimal wrapping
+#                    DERIVED = content is synthesised from sources into new prose
+#                    REFERENCE = sources are cited/linked but not reproduced
+#   priority     - Regeneration priority: high | medium | low
+#   sources      - Current tracked source files, structured as {repo, path} pairs.
+#                  Empty list means the page is manually maintained (no auto-sources).
+
+# ---------------------------------------------------------------------------
+# Acceptance protocols
+# Rule-based pre-filters applied before the LLM placement step.
+# A source must satisfy at least one matching protocol to be a candidate.
+# ---------------------------------------------------------------------------
+acceptance_protocols:
+
+  public_python_api:
+    description: "Public Python API surface"
+    include:
+      - "python/**/*.py"
+      - "amplifier_foundation/**/*.py"
+      - "amplifier_app_cli/**/*.py"
+      - "amplifier_module_*/**/*.py"
+    exclude:
+      - "_*.py"
+      - "test_*.py"
+      - "**/__pycache__/**"
+      - "**/_grpc_gen/**"
+      - "**/conftest.py"
+    min_lines: 20
+    bonus_signals:
+      - "exported in __init__.py"
+      - "has module-level docstring"
+      - "defines a public class or function"
+
+  documentation:
+    description: "Narrative documentation files"
+    include:
+      - "docs/**/*.md"
+      - "*.md"
+    exclude:
+      - "docs/plans/**"
+      - "CHANGELOG.md"
+    min_lines: 30
+    bonus_signals:
+      - "referenced from README"
+      - "contains code examples"
+
+  contracts_and_specs:
+    description: "Contract and specification documents"
+    include:
+      - "docs/contracts/*.md"
+      - "docs/specs/*.md"
+    always_accept: true
+
+  examples:
+    description: "Numbered example scripts"
+    include:
+      - "examples/*.py"
+      - "examples/**/*.py"
+    min_lines: 20
+    bonus_signals:
+      - "has top-level docstring explaining the example"
+      - "runnable as __main__"
+
+  rust_crates:
+    description: "Rust crate source modules"
+    include:
+      - "crates/*/src/*.rs"
+    exclude:
+      - "**/generated/**"
+      - "**/bridges/**"
+    min_lines: 50
+    bonus_signals:
+      - "has corresponding Python shim"
+      - "exported via pyo3"
+
+  config_files:
+    description: "Package manifests and configuration files"
+    include:
+      - "pyproject.toml"
+      - "Cargo.toml"
+      - "setup.cfg"
+    always_accept: true
+
+  agent_definitions:
+    description: "Built-in agent persona and capability definition files"
+    include:
+      - "agents/*.md"
+      - "agents/*.yaml"
+    always_accept: true
+
+# ---------------------------------------------------------------------------
+# Tracked repositories
+# ---------------------------------------------------------------------------
+repos:
+  # Core platform
+  - name: amplifier
+    github: microsoft/amplifier
+  - name: amplifier-core
+    github: microsoft/amplifier-core
+  - name: amplifier-foundation
+    github: microsoft/amplifier-foundation
+  - name: amplifier-app-cli
+    github: microsoft/amplifier-app-cli
+
+  # Provider modules
+  - name: amplifier-module-provider-anthropic
+    github: microsoft/amplifier-module-provider-anthropic
+  - name: amplifier-module-provider-openai
+    github: microsoft/amplifier-module-provider-openai
+  - name: amplifier-module-provider-azure-openai
+    github: microsoft/amplifier-module-provider-azure-openai
+  - name: amplifier-module-provider-ollama
+    github: microsoft/amplifier-module-provider-ollama
+  - name: amplifier-module-provider-vllm
+    github: microsoft/amplifier-module-provider-vllm
+  - name: amplifier-module-provider-mock
+    github: microsoft/amplifier-module-provider-mock
+
+  # Tool modules
+  - name: amplifier-module-tool-bash
+    github: microsoft/amplifier-module-tool-bash
+  - name: amplifier-module-tool-filesystem
+    github: microsoft/amplifier-module-tool-filesystem
+  - name: amplifier-module-tool-web
+    github: microsoft/amplifier-module-tool-web
+  - name: amplifier-module-tool-search
+    github: microsoft/amplifier-module-tool-search
+  - name: amplifier-module-tool-task
+    github: microsoft/amplifier-module-tool-task
+  - name: amplifier-module-tool-todo
+    github: microsoft/amplifier-module-tool-todo
+
+  # Orchestrator modules (loop variants)
+  - name: amplifier-module-loop-basic
+    github: microsoft/amplifier-module-loop-basic
+  - name: amplifier-module-loop-streaming
+    github: microsoft/amplifier-module-loop-streaming
+  - name: amplifier-module-loop-events
+    github: microsoft/amplifier-module-loop-events
+
+  # Context modules
+  - name: amplifier-module-context-simple
+    github: microsoft/amplifier-module-context-simple
+  - name: amplifier-module-context-persistent
+    github: microsoft/amplifier-module-context-persistent
+
+  # Hook modules
+  - name: amplifier-module-hooks-logging
+    github: microsoft/amplifier-module-hooks-logging
+  - name: amplifier-module-hooks-approval
+    github: microsoft/amplifier-module-hooks-approval
+  - name: amplifier-module-hooks-redaction
+    github: microsoft/amplifier-module-hooks-redaction
+  - name: amplifier-module-hooks-backup
+    github: microsoft/amplifier-module-hooks-backup
+  - name: amplifier-module-hooks-scheduler-cost-aware
+    github: microsoft/amplifier-module-hooks-scheduler-cost-aware
+  - name: amplifier-module-hooks-scheduler-heuristic
+    github: microsoft/amplifier-module-hooks-scheduler-heuristic
+  - name: amplifier-module-hooks-status-context
+    github: microsoft/amplifier-module-hooks-status-context
+  - name: amplifier-module-hooks-streaming-ui
+    github: microsoft/amplifier-module-hooks-streaming-ui
+  - name: amplifier-module-hooks-todo-reminder
+    github: microsoft/amplifier-module-hooks-todo-reminder
+
+# ---------------------------------------------------------------------------
+# Page definitions  (83 total)
+# ---------------------------------------------------------------------------
+pages:
+
+  # ── Landing & top-level ──────────────────────────────────────────────────
+
+  - path: docs/index.md
+    scope: >
+      Landing page for the Amplifier documentation site. Covers the project overview,
+      value proposition, key features, and provides navigational entry points to all
+      major documentation sections.
+    accepts: []  # Manually maintained — no auto-placement
+    relationship: DERIVED
+    priority: low
+    sources: []
+
+  # ── Getting Started ──────────────────────────────────────────────────────
+
+  - path: docs/getting_started/index.md
+    scope: >
+      Quick-start entry point for new users. Covers the fastest path to a working
+      Amplifier session via the CLI: what Amplifier is, what the CLI provides, and
+      pointers to installation and first-run instructions.
+    accepts:
+      - "CLI quick start overview"
+      - "getting started guide"
+      - "project README"
+      - "first-run walkthrough"
+      - "CLI feature summary"
+    relationship: DERIVED
+    priority: high
+    sources:
+      - repo: amplifier-app-cli
+        path: README.md
+
+  - path: docs/getting_started/installation.md
+    scope: >
+      Detailed installation reference for the Amplifier CLI. Covers all supported
+      installation methods (pip, pipx, source), Python version requirements, OS
+      compatibility, optional dependencies, and dependency declarations from the
+      package manifest.
+    accepts:
+      - "installation instructions"
+      - "package dependency declarations"
+      - "Python version requirements"
+      - "environment setup"
+      - "pyproject.toml configuration"
+      - "package metadata"
+    relationship: DERIVED
+    priority: high
+    sources:
+      - repo: amplifier-app-cli
+        path: README.md
+      - repo: amplifier-app-cli
+        path: pyproject.toml
+
+  - path: docs/getting_started/providers.md
+    scope: >
+      Getting-started guide for configuring LLM providers. Covers first-time setup
+      of Anthropic, OpenAI, Azure OpenAI, and Ollama providers including API key
+      configuration, required environment variables, and provider-specific bundle
+      configuration snippets.
+    accepts:
+      - "provider setup guide"
+      - "API key configuration"
+      - "LLM provider README"
+      - "environment variable documentation"
+      - "provider bundle configuration"
+      - "provider quick-start"
+    relationship: REFERENCE
+    priority: high
+    sources:
+      - repo: amplifier-module-provider-anthropic
+        path: README.md
+      - repo: amplifier-module-provider-openai
+        path: README.md
+      - repo: amplifier-module-provider-azure-openai
+        path: README.md
+      - repo: amplifier-module-provider-ollama
+        path: README.md
+
+  # ── User Guide ───────────────────────────────────────────────────────────
+
+  - path: docs/user_guide/index.md
+    scope: >
+      Overview and navigation hub for the CLI user guide. Summarises available
+      commands, key user workflows, and links to detailed sub-pages covering the
+      CLI command reference, agents, and sessions.
+    accepts:
+      - "CLI overview documentation"
+      - "user guide navigation"
+      - "CLI feature summary"
+      - "CLI README"
+    relationship: DERIVED
+    priority: medium
+    sources:
+      - repo: amplifier-app-cli
+        path: README.md
+
+  - path: docs/user_guide/cli.md
+    scope: >
+      Complete reference for every CLI command and flag. Derives command names,
+      argument signatures, option descriptions, and usage examples directly from
+      the CLI entry-point and command handler source code.
+    accepts:
+      - "CLI commands implementation"
+      - "command-line argument parsing"
+      - "CLI entry point"
+      - "command group definitions"
+      - "click command handlers"
+      - "CLI subcommands"
+    relationship: DERIVED
+    priority: high
+    sources:
+      - repo: amplifier-app-cli
+        path: amplifier_app_cli/main.py
+      - repo: amplifier-app-cli
+        path: amplifier_app_cli/commands/__init__.py
+
+  - path: docs/user_guide/agents.md
+    scope: >
+      User-facing guide to built-in agents and the agent delegation system. Covers
+      the Explorer, Foundation Expert, and Zen Architect personas, how to invoke
+      them from the CLI, how delegation chains work, and how to configure agent
+      switching behaviour.
+    accepts:
+      - "built-in agent persona definitions"
+      - "agent capability specification files"
+      - "agent delegation implementation"
+      - "agent markdown specs"
+      - "agent configuration documentation"
+    relationship: DERIVED
+    priority: high
+    sources:
+      - repo: amplifier-foundation
+        path: agents/explorer.md
+      - repo: amplifier-foundation
+        path: agents/foundation-expert.md
+      - repo: amplifier-foundation
+        path: agents/zen-architect.md
+      - repo: amplifier-app-cli
+        path: docs/AGENT_DELEGATION_IMPLEMENTATION.md
+
+  - path: docs/user_guide/sessions.md
+    scope: >
+      User guide covering session lifecycle management from the CLI perspective.
+      Covers creating new sessions, resuming existing sessions, listing active
+      sessions, terminating sessions, persistence behaviour, and the session
+      spawner pattern used internally by the CLI.
+    accepts:
+      - "session management implementation"
+      - "session lifecycle API"
+      - "session persistence"
+      - "session spawning logic"
+      - "session state handling"
+      - "session resumption"
+    relationship: DERIVED
+    priority: high
+    sources:
+      - repo: amplifier-core
+        path: python/amplifier_core/session.py
+      - repo: amplifier-app-cli
+        path: amplifier_app_cli/session_spawner.py
+
+  # ── Developer Guides — Foundation ────────────────────────────────────────
+
+  - path: docs/developer_guides/foundation/index.md
+    scope: >
+      Entry point for foundation-layer developer documentation. Introduces the
+      kernel (amplifier-core) and the amplifier-foundation library, explains their
+      relationship, and orients developers to the design philosophy guiding both layers.
+    accepts:
+      - "kernel overview documentation"
+      - "foundation library overview"
+      - "design philosophy document"
+      - "developer guide navigation"
+      - "core README"
+      - "foundation README"
+    relationship: DERIVED
+    priority: medium
+    sources:
+      - repo: amplifier-core
+        path: README.md
+      - repo: amplifier-core
+        path: docs/DESIGN_PHILOSOPHY.md
+      - repo: amplifier-foundation
+        path: README.md
+
+  - path: docs/developer_guides/foundation/amplifier_foundation/index.md
+    scope: >
+      Overview of the amplifier-foundation library for developers who want to build
+      on it. Covers its purpose, core abstractions (bundles, mount plans, registry),
+      available utilities, and links to detailed sub-pages.
+    accepts:
+      - "amplifier-foundation library overview"
+      - "bundle system overview"
+      - "foundation concepts documentation"
+      - "foundation API reference overview"
+      - "foundation README"
+    relationship: DERIVED
+    priority: medium
+    sources:
+      - repo: amplifier-foundation
+        path: README.md
+      - repo: amplifier-foundation
+        path: docs/CONCEPTS.md
+      - repo: amplifier-foundation
+        path: docs/API_REFERENCE.md
+
+  - path: docs/developer_guides/foundation/amplifier_foundation/getting_started.md
+    scope: >
+      First-steps guide for developers new to amplifier-foundation. Covers package
+      installation, creating a minimal bundle, running the hello-world example, and
+      understanding the basic execution flow.
+    accepts:
+      - "amplifier-foundation installation guide"
+      - "hello world example script"
+      - "basic bundle workflow"
+      - "getting started with foundation"
+      - "foundation quick start"
+    relationship: DERIVED
+    priority: medium
+    sources:
+      - repo: amplifier-foundation
+        path: README.md
+      - repo: amplifier-foundation
+        path: examples/01_hello_world.py
+      - repo: amplifier-foundation
+        path: docs/CONCEPTS.md
+
+  - path: docs/developer_guides/foundation/amplifier_foundation/concepts.md
+    scope: >
+      Deep explanation of amplifier-foundation's core concepts: what bundles are,
+      how bundle composition works, the role of mount plans, the registry, and the
+      lifecycle from bundle definition through prepared execution.
+    accepts:
+      - "core concepts documentation"
+      - "bundle concept explanation"
+      - "mount plan conceptual overview"
+      - "registry conceptual overview"
+      - "foundation concepts document"
+    relationship: DIRECT
+    priority: medium
+    sources:
+      - repo: amplifier-foundation
+        path: docs/CONCEPTS.md
+
+  - path: docs/developer_guides/foundation/amplifier_foundation/bundle_system.md
+    scope: >
+      Deep-dive reference for the bundle system targeting developers who build or
+      compose bundles. Covers bundle loading, composition patterns, validation rules,
+      the preparation lifecycle, and the registry's role in managing bundles at runtime.
+    accepts:
+      - "bundle loading implementation"
+      - "bundle composition logic"
+      - "bundle validation"
+      - "bundle preparation lifecycle"
+      - "bundle dataclass definition"
+      - "prepared bundle implementation"
+      - "bundle registry implementation"
+      - "bundle guide documentation"
+    relationship: DERIVED
+    priority: medium
+    sources:
+      - repo: amplifier-foundation
+        path: docs/BUNDLE_GUIDE.md
+      - repo: amplifier-foundation
+        path: amplifier_foundation/bundle/__init__.py
+      - repo: amplifier-foundation
+        path: amplifier_foundation/bundle/_dataclass.py
+      - repo: amplifier-foundation
+        path: amplifier_foundation/bundle/_prepared.py
+      - repo: amplifier-foundation
+        path: amplifier_foundation/registry.py
+
+  - path: docs/developer_guides/foundation/amplifier_foundation/utilities.md
+    scope: >
+      Reference for amplifier-foundation's utility modules aimed at developers using
+      the library. Covers I/O helpers, dictionary utilities, path resolution, mention
+      parsing, and caching—with API signatures and usage examples for each.
+    accepts:
+      - "I/O utility module"
+      - "dictionary helper utilities"
+      - "path resolution utilities"
+      - "mention parsing implementation"
+      - "caching utilities"
+      - "foundation utility API"
+    relationship: DERIVED
+    priority: medium
+    sources:
+      - repo: amplifier-foundation
+        path: docs/API_REFERENCE.md
+      - repo: amplifier-foundation
+        path: amplifier_foundation/io/__init__.py
+      - repo: amplifier-foundation
+        path: amplifier_foundation/dicts/__init__.py
+      - repo: amplifier-foundation
+        path: amplifier_foundation/paths/__init__.py
+      - repo: amplifier-foundation
+        path: amplifier_foundation/cache/__init__.py
+      - repo: amplifier-foundation
+        path: amplifier_foundation/mentions/__init__.py
+
+  - path: docs/developer_guides/foundation/amplifier_foundation/patterns.md
+    scope: >
+      Catalog of recommended patterns and best practices for amplifier-foundation
+      developers. Covers composition idioms, extension point usage, testing patterns,
+      and anti-patterns to avoid when building bundles and integrations.
+    accepts:
+      - "patterns and best practices documentation"
+      - "design patterns guide"
+      - "idiomatic usage examples"
+      - "anti-patterns documentation"
+      - "foundation patterns document"
+    relationship: DIRECT
+    priority: medium
+    sources:
+      - repo: amplifier-foundation
+        path: docs/PATTERNS.md
+
+  - path: docs/developer_guides/foundation/amplifier_foundation/api_reference.md
+    scope: >
+      Complete API reference for the amplifier-foundation public surface. Covers
+      exported classes and functions from the main package, the bundle subsystem,
+      and the registry—targeted at developers integrating with the library.
+    accepts:
+      - "public API exports"
+      - "package __init__ public surface"
+      - "bundle subsystem public API"
+      - "registry public API"
+      - "foundation API reference documentation"
+    relationship: DERIVED
+    priority: medium
+    sources:
+      - repo: amplifier-foundation
+        path: docs/API_REFERENCE.md
+      - repo: amplifier-foundation
+        path: amplifier_foundation/__init__.py
+      - repo: amplifier-foundation
+        path: amplifier_foundation/bundle/__init__.py
+      - repo: amplifier-foundation
+        path: amplifier_foundation/registry.py
+
+  # ── Developer Guides — Foundation Examples ───────────────────────────────
+
+  - path: docs/developer_guides/foundation/amplifier_foundation/examples/index.md
+    scope: >
+      Gallery and catalog of all amplifier-foundation example scripts. Covers the
+      numbered learning path, running instructions, prerequisites, and a brief
+      description of each example's focus to help developers choose where to start.
+    accepts:
+      - "examples catalog README"
+      - "example index documentation"
+      - "learning path description"
+      - "example gallery overview"
+    relationship: DERIVED
+    priority: low
+    sources:
+      - repo: amplifier-foundation
+        path: examples/README.md
+      - repo: amplifier-foundation
+        path: examples/01_hello_world.py
+      - repo: amplifier-foundation
+        path: examples/09_multi_agent_system.py
+
+  - path: docs/developer_guides/foundation/amplifier_foundation/examples/hello_world.md
+    scope: >
+      Step-by-step annotated walkthrough of the Hello World example. Explains
+      the minimal bundle creation workflow, what each line does, and what output
+      to expect—designed for developers seeing amplifier-foundation for the first time.
+    accepts:
+      - "hello world example script"
+      - "minimal bundle workflow example"
+      - "introductory example annotation"
+    relationship: DERIVED
+    priority: low
+    sources:
+      - repo: amplifier-foundation
+        path: examples/01_hello_world.py
+      - repo: amplifier-foundation
+        path: docs/CONCEPTS.md
+
+  - path: docs/developer_guides/foundation/amplifier_foundation/examples/custom_configuration.md
+    scope: >
+      Annotated walkthrough of the Custom Configuration example. Shows how to
+      override default bundle settings, layer additional tools onto a base bundle,
+      and apply composition patterns to adapt existing bundles.
+    accepts:
+      - "custom configuration example script"
+      - "bundle composition pattern example"
+      - "tool configuration override example"
+    relationship: DERIVED
+    priority: low
+    sources:
+      - repo: amplifier-foundation
+        path: examples/02_custom_configuration.py
+      - repo: amplifier-foundation
+        path: docs/PATTERNS.md
+
+  - path: docs/developer_guides/foundation/amplifier_foundation/examples/custom_tool.md
+    scope: >
+      Annotated walkthrough of the Custom Tool example. Demonstrates how to
+      implement the tool contract, expose domain-specific capabilities within a bundle,
+      and satisfy tool validation requirements.
+    accepts:
+      - "custom tool example script"
+      - "tool implementation example"
+      - "tool contract usage example"
+      - "domain-specific tool example"
+    relationship: DERIVED
+    priority: low
+    sources:
+      - repo: amplifier-foundation
+        path: examples/03_custom_tool.py
+      - repo: amplifier-core
+        path: docs/contracts/TOOL_CONTRACT.md
+
+  - path: docs/developer_guides/foundation/amplifier_foundation/examples/cli_application.md
+    scope: >
+      Annotated walkthrough of the CLI Application example. Shows production patterns
+      for wrapping amplifier-foundation in a command-line application including
+      argument handling, output formatting, and error management.
+    accepts:
+      - "CLI application example script"
+      - "production CLI pattern example"
+      - "application wrapper example"
+    relationship: DERIVED
+    priority: low
+    sources:
+      - repo: amplifier-foundation
+        path: examples/08_cli_application.py
+
+  - path: docs/developer_guides/foundation/amplifier_foundation/examples/multi_agent_system.md
+    scope: >
+      Annotated walkthrough of the Multi-Agent System example. Demonstrates how to
+      coordinate multiple specialised agents in a single workflow, including task
+      routing, result aggregation, and inter-agent communication patterns.
+    accepts:
+      - "multi-agent system example script"
+      - "agent coordination example"
+      - "multi-agent workflow example"
+      - "agent orchestration pattern example"
+    relationship: DERIVED
+    priority: low
+    sources:
+      - repo: amplifier-foundation
+        path: examples/09_multi_agent_system.py
+      - repo: amplifier-foundation
+        path: docs/PATTERNS.md
+
+  # ── Developer Guides — Applications ──────────────────────────────────────
+
+  - path: docs/developer_guides/applications/index.md
+    scope: >
+      Guide for developers building applications directly on top of amplifier-core.
+      Covers session management APIs, application initialisation patterns, and the
+      overall application development model when not using the amplifier-foundation layer.
+    accepts:
+      - "session management API usage"
+      - "application initialisation patterns"
+      - "core integration guide"
+      - "application package __init__"
+      - "application development guide"
+    relationship: DERIVED
+    priority: medium
+    sources:
+      - repo: amplifier-core
+        path: python/amplifier_core/session.py
+      - repo: amplifier-app-cli
+        path: amplifier_app_cli/__init__.py
+
+  - path: docs/developer_guides/applications/cli_case_study.md
+    scope: >
+      Architecture case study of the amplifier-app-cli application. Covers the main
+      entry-point structure, command routing, the agent delegation implementation, and
+      lessons that application developers can apply to their own projects.
+    accepts:
+      - "CLI main module implementation"
+      - "agent delegation implementation document"
+      - "CLI application architecture documentation"
+      - "application architecture case study"
+    relationship: DERIVED
+    priority: medium
+    sources:
+      - repo: amplifier-app-cli
+        path: amplifier_app_cli/main.py
+      - repo: amplifier-app-cli
+        path: docs/AGENT_DELEGATION_IMPLEMENTATION.md
+
+  # ── Developer Guide — Module Development ─────────────────────────────────
+
+  - path: docs/developer/index.md
+    scope: >
+      Entry point for module-developer documentation. Introduces the contract system,
+      explains the five contract types (provider, tool, hook, orchestrator, context),
+      and navigates developers to the right guide for their module type.
+    accepts:
+      - "module development overview"
+      - "contracts system overview"
+      - "developer guide navigation"
+      - "contracts README"
+    relationship: DERIVED
+    priority: medium
+    sources:
+      - repo: amplifier-core
+        path: docs/contracts/README.md
+
+  - path: docs/developer/module_development.md
+    scope: >
+      Comprehensive guide to creating custom Amplifier modules. Covers contract
+      compliance requirements, canonical module directory structure, the registration
+      mechanism, and testing across tool, provider, and hook module types.
+    accepts:
+      - "module creation guide"
+      - "custom module development"
+      - "contract compliance requirements"
+      - "module structure documentation"
+      - "module registration patterns"
+      - "contracts overview documentation"
+    relationship: DERIVED
+    priority: medium
+    sources:
+      - repo: amplifier-core
+        path: docs/contracts/README.md
+      - repo: amplifier-core
+        path: docs/contracts/TOOL_CONTRACT.md
+      - repo: amplifier-core
+        path: docs/contracts/PROVIDER_CONTRACT.md
+      - repo: amplifier-core
+        path: docs/contracts/HOOK_CONTRACT.md
+
+  - path: docs/developer/contracts/index.md
+    scope: >
+      Overview of the Amplifier module contract system. Explains what contracts are,
+      why they exist to guarantee interoperability, the five contract types, and how
+      contract compliance is validated at load time.
+    accepts:
+      - "contracts system overview documentation"
+      - "contract type summary"
+      - "protocol compliance overview"
+      - "contracts README"
+    relationship: DERIVED
+    priority: medium
+    sources:
+      - repo: amplifier-core
+        path: docs/contracts/README.md
+
+  - path: docs/developer/contracts/provider.md
+    scope: >
+      Full specification of the provider contract for LLM provider module authors.
+      Covers the required interface methods, initialisation protocol, streaming
+      support requirements, error-handling obligations, and a compliance checklist.
+    accepts:
+      - "provider contract specification"
+      - "provider interface definition"
+      - "LLM provider protocol"
+      - "interfaces module provider section"
+      - "provider compliance requirements"
+    relationship: DERIVED
+    priority: medium
+    sources:
+      - repo: amplifier-core
+        path: docs/contracts/PROVIDER_CONTRACT.md
+      - repo: amplifier-core
+        path: python/amplifier_core/interfaces.py
+
+  - path: docs/developer/contracts/tool.md
+    scope: >
+      Full specification of the tool contract for tool module authors. Covers required
+      interface methods, input/output schema requirements, error handling obligations,
+      tool description standards, and a compliance checklist.
+    accepts:
+      - "tool contract specification"
+      - "tool interface definition"
+      - "tool protocol requirements"
+      - "interfaces module tool section"
+      - "tool compliance requirements"
+    relationship: DERIVED
+    priority: medium
+    sources:
+      - repo: amplifier-core
+        path: docs/contracts/TOOL_CONTRACT.md
+      - repo: amplifier-core
+        path: python/amplifier_core/interfaces.py
+
+  - path: docs/developer/contracts/hook.md
+    scope: >
+      Full specification of the hook contract for hook module authors. Covers hook
+      lifecycle events, registration protocol, pre/post-action handler signatures,
+      error handling obligations, and a compliance checklist.
+    accepts:
+      - "hook contract specification"
+      - "hook interface definition"
+      - "hook lifecycle protocol"
+      - "hooks implementation module"
+      - "hook compliance requirements"
+    relationship: DERIVED
+    priority: medium
+    sources:
+      - repo: amplifier-core
+        path: docs/contracts/HOOK_CONTRACT.md
+      - repo: amplifier-core
+        path: python/amplifier_core/hooks.py
+
+  - path: docs/developer/contracts/orchestrator.md
+    scope: >
+      Full specification of the orchestrator contract for orchestrator module authors.
+      Covers the run-loop interface, streaming requirements, event emission obligations,
+      termination condition handling, and a compliance checklist.
+    accepts:
+      - "orchestrator contract specification"
+      - "orchestrator interface definition"
+      - "run loop protocol"
+      - "interfaces module orchestrator section"
+      - "orchestrator compliance requirements"
+    relationship: DERIVED
+    priority: medium
+    sources:
+      - repo: amplifier-core
+        path: docs/contracts/ORCHESTRATOR_CONTRACT.md
+      - repo: amplifier-core
+        path: python/amplifier_core/interfaces.py
+
+  - path: docs/developer/contracts/context.md
+    scope: >
+      Full specification of the context contract for context module authors. Covers
+      the message-storage interface, retrieval methods, persistence requirements,
+      window management, and a compliance checklist.
+    accepts:
+      - "context contract specification"
+      - "context interface definition"
+      - "message storage protocol"
+      - "interfaces module context section"
+      - "context compliance requirements"
+    relationship: DERIVED
+    priority: medium
+    sources:
+      - repo: amplifier-core
+        path: docs/contracts/CONTEXT_CONTRACT.md
+      - repo: amplifier-core
+        path: python/amplifier_core/interfaces.py
+
+  # ── Architecture ──────────────────────────────────────────────────────────
+
+  - path: docs/architecture/index.md
+    scope: >
+      Navigation hub for architecture documentation. Briefly introduces the major
+      architectural subsystems and links to detailed coverage of the kernel, module
+      system, mount plans, and event system.
+    accepts:
+      - "architecture overview documentation"
+      - "design philosophy document"
+      - "architecture navigation page"
+    relationship: DERIVED
+    priority: medium
+    sources:
+      - repo: amplifier-core
+        path: docs/DESIGN_PHILOSOPHY.md
+
+  - path: docs/architecture/overview.md
+    scope: >
+      High-level overview of the Amplifier architecture for architects and senior
+      developers. Covers the layered design (kernel → foundation → modules →
+      applications), key design decisions, and the philosophy behind the separation
+      of concerns across layers.
+    accepts:
+      - "design philosophy documentation"
+      - "high-level architecture documentation"
+      - "system overview documentation"
+      - "architectural decision rationale"
+      - "core README architecture section"
+    relationship: DERIVED
+    priority: medium
+    sources:
+      - repo: amplifier-core
+        path: docs/DESIGN_PHILOSOPHY.md
+      - repo: amplifier-core
+        path: README.md
+
+  - path: docs/architecture/kernel.md
+    scope: >
+      Deep-dive into the kernel (amplifier-core): its philosophy as a minimal runtime,
+      the coordinator pattern, session architecture, and the public surface the kernel
+      exposes to the foundation and application layers above it.
+    accepts:
+      - "kernel design philosophy documentation"
+      - "coordinator implementation"
+      - "session implementation"
+      - "core package public surface"
+      - "amplifier-core internals documentation"
+    relationship: DERIVED
+    priority: medium
+    sources:
+      - repo: amplifier-core
+        path: docs/DESIGN_PHILOSOPHY.md
+      - repo: amplifier-core
+        path: python/amplifier_core/__init__.py
+      - repo: amplifier-core
+        path: python/amplifier_core/session.py
+      - repo: amplifier-core
+        path: python/amplifier_core/coordinator.py
+
+  - path: docs/architecture/modules.md
+    scope: >
+      Architecture of the module system. Covers how modules are discovered, loaded,
+      validated against contracts, and registered at runtime—including the loader
+      implementation and contract-enforcement mechanics.
+    accepts:
+      - "module loader implementation"
+      - "module discovery mechanism"
+      - "module loading architecture"
+      - "contract enforcement implementation"
+      - "module registration system"
+      - "contracts README architecture section"
+    relationship: DERIVED
+    priority: medium
+    sources:
+      - repo: amplifier-core
+        path: docs/contracts/README.md
+      - repo: amplifier-core
+        path: python/amplifier_core/loader.py
+
+  - path: docs/architecture/mount_plans.md
+    scope: >
+      Specification and internals of the mount plan system. Covers the data model
+      and all fields, validation rules, how mount plans drive module composition
+      at runtime, and the relationship between mount plans and the bundle system.
+    accepts:
+      - "mount plan specification document"
+      - "mount plan data model"
+      - "mount plan schema definition"
+      - "mount plan models implementation"
+      - "bundle composition specification"
+    relationship: DERIVED
+    priority: medium
+    sources:
+      - repo: amplifier-core
+        path: docs/specs/MOUNT_PLAN_SPECIFICATION.md
+      - repo: amplifier-core
+        path: python/amplifier_core/models.py
+
+  - path: docs/architecture/events.md
+    scope: >
+      Architecture of the Amplifier event system. Covers contribution channels,
+      event types, emission points throughout the kernel and modules, subscription
+      patterns, and how the events API is used by hooks and external observers.
+    accepts:
+      - "event system implementation"
+      - "contribution channels specification"
+      - "event types and emission API"
+      - "event subscription patterns"
+      - "events module implementation"
+    relationship: DERIVED
+    priority: medium
+    sources:
+      - repo: amplifier-core
+        path: docs/specs/CONTRIBUTION_CHANNELS.md
+      - repo: amplifier-core
+        path: python/amplifier_core/events.py
+
+  # ── API Reference ─────────────────────────────────────────────────────────
+
+  - path: docs/api/index.md
+    scope: >
+      Navigation hub for all API reference pages. Provides an overview of the
+      available APIs (core, CLI) and links to specific module and sub-package
+      reference pages.
+    accepts: []  # Manually maintained — no auto-placement
+    relationship: DERIVED
+    priority: low
+    sources: []
+
+  - path: docs/api/core/index.md
+    scope: >
+      Overview of the amplifier-core public API surface. Covers top-level exports,
+      package versioning, and serves as navigation to session, coordinator, hooks,
+      models, and events API reference sub-pages.
+    accepts:
+      - "core package __init__ exports"
+      - "public API top-level surface"
+      - "core package overview"
+    relationship: DERIVED
+    priority: medium
+    sources:
+      - repo: amplifier-core
+        path: python/amplifier_core/__init__.py
+
+  - path: docs/api/core/session.md
+    scope: >
+      Complete API reference for the Session class and related helpers. Covers
+      the constructor, lifecycle methods (start, stop, resume), configuration
+      options, return types, and exception behaviour.
+    accepts:
+      - "Session class implementation"
+      - "session lifecycle methods"
+      - "session API module"
+      - "session configuration options"
+    relationship: DERIVED
+    priority: high
+    sources:
+      - repo: amplifier-core
+        path: python/amplifier_core/session.py
+
+  - path: docs/api/core/coordinator.md
+    scope: >
+      Complete API reference for the Coordinator class. Covers initialisation,
+      module wiring, run-loop delegation, and the coordinator's role in connecting
+      the kernel to the active orchestrator module.
+    accepts:
+      - "Coordinator class implementation"
+      - "coordinator API module"
+      - "run loop coordination logic"
+      - "module wiring implementation"
+    relationship: DERIVED
+    priority: high
+    sources:
+      - repo: amplifier-core
+        path: python/amplifier_core/coordinator.py
+
+  - path: docs/api/core/hooks.md
+    scope: >
+      Complete API reference for the hooks system. Covers hook registration,
+      lifecycle event signatures, the hook manager internals, invocation ordering,
+      and the HOOKS_API documentation.
+    accepts:
+      - "hooks implementation module"
+      - "hook registration API"
+      - "hook manager implementation"
+      - "hook lifecycle signatures"
+      - "hooks API documentation"
+    relationship: DERIVED
+    priority: high
+    sources:
+      - repo: amplifier-core
+        path: python/amplifier_core/hooks.py
+      - repo: amplifier-core
+        path: docs/HOOKS_API.md
+
+  - path: docs/api/core/models.md
+    scope: >
+      Complete reference for all data models in amplifier-core. Covers mount plan
+      models, message models, configuration dataclasses, and shared types used
+      across the kernel API surface.
+    accepts:
+      - "core data models implementation"
+      - "message models implementation"
+      - "mount plan model classes"
+      - "configuration dataclasses"
+      - "shared type definitions"
+      - "Pydantic model definitions"
+    relationship: DERIVED
+    priority: high
+    sources:
+      - repo: amplifier-core
+        path: python/amplifier_core/models.py
+      - repo: amplifier-core
+        path: python/amplifier_core/message_models.py
+
+  - path: docs/api/core/events.md
+    scope: >
+      Complete API reference for the events module. Covers event classes, emission
+      helper functions, the subscription interface, and a catalog of all event types
+      emitted by the kernel and official modules.
+    accepts:
+      - "events module implementation"
+      - "event class definitions"
+      - "event emission API"
+      - "event subscription interface"
+    relationship: DERIVED
+    priority: high
+    sources:
+      - repo: amplifier-core
+        path: python/amplifier_core/events.py
+
+  - path: docs/api/cli/index.md
+    scope: >
+      Reference for the amplifier-app-cli programmatic API surface. Covers the
+      main module's public exports, programmatic invocation patterns, and integration
+      points for embedding the CLI in other Python applications.
+    accepts:
+      - "CLI main module implementation"
+      - "CLI programmatic API"
+      - "CLI library interface"
+    relationship: REFERENCE
+    priority: medium
+    sources:
+      - repo: amplifier-app-cli
+        path: amplifier_app_cli/main.py
+
+  # ── Modules Catalog ───────────────────────────────────────────────────────
+
+  - path: docs/modules/index.md
+    scope: >
+      Top-level catalog overview of all official Amplifier modules organised by
+      type (providers, tools, orchestrators, contexts, hooks). Provides short
+      descriptions, status, and links to individual module pages.
+    accepts:
+      - "modules catalog documentation"
+      - "module registry overview"
+      - "contracts README catalog section"
+    relationship: DERIVED
+    priority: medium
+    sources:
+      - repo: amplifier-core
+        path: docs/contracts/README.md
+
+  # Providers
+
+  - path: docs/modules/providers/index.md
+    scope: >
+      Catalog of all official LLM provider modules. Covers capability summaries,
+      supported model families, required credentials, and links to each provider's
+      dedicated page. Includes Anthropic, OpenAI, Azure OpenAI, Ollama, vLLM, and Mock.
+    accepts:
+      - "provider module README"
+      - "LLM provider catalog"
+      - "provider capability summary"
+    relationship: DERIVED
+    priority: medium
+    sources:
+      - repo: amplifier-module-provider-anthropic
+        path: README.md
+      - repo: amplifier-module-provider-openai
+        path: README.md
+      - repo: amplifier-module-provider-azure-openai
+        path: README.md
+      - repo: amplifier-module-provider-ollama
+        path: README.md
+
+  - path: docs/modules/providers/anthropic.md
+    scope: >
+      Documentation for the Anthropic provider module. Covers supported Claude
+      model families, API key configuration, streaming support, rate-limit handling,
+      and provider-specific bundle configuration options.
+    accepts:
+      - "Anthropic provider implementation"
+      - "Anthropic module README"
+      - "Claude model configuration"
+      - "Anthropic provider bundle configuration"
+    relationship: DERIVED
+    priority: medium
+    sources:
+      - repo: amplifier-module-provider-anthropic
+        path: amplifier_module_provider_anthropic/__init__.py
+      - repo: amplifier-module-provider-anthropic
+        path: README.md
+
+  - path: docs/modules/providers/openai.md
+    scope: >
+      Documentation for the OpenAI provider module. Covers supported GPT model
+      families, API key configuration, streaming support, function-calling behaviour,
+      and provider-specific bundle configuration options.
+    accepts:
+      - "OpenAI provider implementation"
+      - "OpenAI module README"
+      - "GPT model configuration"
+      - "OpenAI provider bundle configuration"
+    relationship: DERIVED
+    priority: medium
+    sources:
+      - repo: amplifier-module-provider-openai
+        path: amplifier_module_provider_openai/__init__.py
+      - repo: amplifier-module-provider-openai
+        path: README.md
+
+  - path: docs/modules/providers/azure.md
+    scope: >
+      Documentation for the Azure OpenAI provider module. Covers endpoint and
+      deployment-name configuration, managed identity support, API version settings,
+      and differences from the base OpenAI provider.
+    accepts:
+      - "Azure OpenAI provider implementation"
+      - "Azure OpenAI module README"
+      - "Azure endpoint configuration"
+      - "Azure deployment configuration"
+      - "managed identity authentication"
+    relationship: DERIVED
+    priority: medium
+    sources:
+      - repo: amplifier-module-provider-azure-openai
+        path: amplifier_module_provider_azure_openai/__init__.py
+      - repo: amplifier-module-provider-azure-openai
+        path: README.md
+
+  - path: docs/modules/providers/ollama.md
+    scope: >
+      Documentation for the Ollama provider module. Covers local Ollama server
+      setup, host and port configuration, model selection, and integration with
+      a running Ollama instance for local LLM inference.
+    accepts:
+      - "Ollama provider implementation"
+      - "Ollama module README"
+      - "local LLM configuration"
+      - "Ollama host configuration"
+    relationship: DERIVED
+    priority: medium
+    sources:
+      - repo: amplifier-module-provider-ollama
+        path: amplifier_module_provider_ollama/__init__.py
+      - repo: amplifier-module-provider-ollama
+        path: README.md
+
+  - path: docs/modules/providers/vllm.md
+    scope: >
+      Documentation for the vLLM provider module. Covers vLLM server configuration,
+      the OpenAI-compatible endpoint setup, model selection, and high-throughput
+      inference options specific to the vLLM backend.
+    accepts:
+      - "vLLM provider implementation"
+      - "vLLM module README"
+      - "vLLM server configuration"
+      - "high-throughput inference configuration"
+    relationship: DERIVED
+    priority: medium
+    sources:
+      - repo: amplifier-module-provider-vllm
+        path: amplifier_module_provider_vllm/__init__.py
+      - repo: amplifier-module-provider-vllm
+        path: README.md
+
+  - path: docs/modules/providers/mock.md
+    scope: >
+      Documentation for the Mock provider module used in testing. Covers deterministic
+      response configuration, test-fixture patterns, scripted response sequences,
+      and how to use the mock provider in unit and integration tests.
+    accepts:
+      - "mock provider implementation"
+      - "mock provider module README"
+      - "test provider configuration"
+      - "deterministic response fixture"
+      - "testing utilities for providers"
+    relationship: DERIVED
+    priority: low
+    sources:
+      - repo: amplifier-module-provider-mock
+        path: amplifier_module_provider_mock/__init__.py
+      - repo: amplifier-module-provider-mock
+        path: README.md
+
+  # Tools
+
+  - path: docs/modules/tools/index.md
+    scope: >
+      Catalog of all official tool modules. Covers capability summaries, security
+      considerations, and links to Bash, Filesystem, Web, Search, Task, and Todo
+      tool documentation pages.
+    accepts:
+      - "tool module README"
+      - "tool catalog overview"
+      - "tool capability summary"
+    relationship: DERIVED
+    priority: medium
+    sources:
+      - repo: amplifier-module-tool-bash
+        path: README.md
+      - repo: amplifier-module-tool-filesystem
+        path: README.md
+      - repo: amplifier-module-tool-task
+        path: README.md
+
+  - path: docs/modules/tools/filesystem.md
+    scope: >
+      Documentation for the Filesystem tool module. Covers available operations
+      (read, write, list, delete, move), path handling and sandboxing, permission
+      model, and configuration options.
+    accepts:
+      - "filesystem tool implementation"
+      - "filesystem tool module README"
+      - "file read/write operations"
+      - "directory listing operations"
+      - "filesystem access configuration"
+    relationship: DERIVED
+    priority: medium
+    sources:
+      - repo: amplifier-module-tool-filesystem
+        path: amplifier_module_tool_filesystem/__init__.py
+      - repo: amplifier-module-tool-filesystem
+        path: README.md
+
+  - path: docs/modules/tools/bash.md
+    scope: >
+      Documentation for the Bash tool module. Covers shell command execution,
+      working directory handling, timeout configuration, stdout/stderr capture,
+      environment variable injection, and security considerations.
+    accepts:
+      - "bash tool implementation"
+      - "bash tool module README"
+      - "shell command execution"
+      - "bash tool configuration"
+      - "command timeout handling"
+    relationship: DERIVED
+    priority: medium
+    sources:
+      - repo: amplifier-module-tool-bash
+        path: amplifier_module_tool_bash/__init__.py
+      - repo: amplifier-module-tool-bash
+        path: README.md
+
+  - path: docs/modules/tools/web.md
+    scope: >
+      Documentation for the Web tool module. Covers HTTP fetch operations, content
+      extraction and parsing, rate limiting, proxy and header configuration, and
+      usage patterns for web-content retrieval.
+    accepts:
+      - "web tool implementation"
+      - "web tool module README"
+      - "HTTP fetch operations"
+      - "web content extraction"
+      - "web tool configuration"
+    relationship: DERIVED
+    priority: medium
+    sources:
+      - repo: amplifier-module-tool-web
+        path: amplifier_module_tool_web/__init__.py
+      - repo: amplifier-module-tool-web
+        path: README.md
+
+  - path: docs/modules/tools/search.md
+    scope: >
+      Documentation for the Search tool module. Covers search backend options,
+      query handling and result formatting, API key setup for external search
+      providers, and result filtering.
+    accepts:
+      - "search tool implementation"
+      - "search tool module README"
+      - "web search integration"
+      - "search backend configuration"
+      - "search result handling"
+    relationship: DERIVED
+    priority: medium
+    sources:
+      - repo: amplifier-module-tool-search
+        path: amplifier_module_tool_search/__init__.py
+      - repo: amplifier-module-tool-search
+        path: README.md
+
+  - path: docs/modules/tools/task.md
+    scope: >
+      Documentation for the Task tool module. Covers sub-agent task delegation,
+      task context passing, result aggregation, and patterns for decomposing complex
+      work across multiple specialised agents.
+    accepts:
+      - "task tool implementation"
+      - "task tool module README"
+      - "sub-agent task delegation"
+      - "task decomposition patterns"
+      - "task result handling"
+    relationship: DERIVED
+    priority: medium
+    sources:
+      - repo: amplifier-module-tool-task
+        path: amplifier_module_tool_task/__init__.py
+      - repo: amplifier-module-tool-task
+        path: README.md
+
+  - path: docs/modules/tools/todo.md
+    scope: >
+      Documentation for the Todo tool module. Covers todo list management operations
+      (create, update, complete, list), state persistence behaviour, and usage
+      patterns for agent task tracking within a session.
+    accepts:
+      - "todo tool implementation"
+      - "todo tool module README"
+      - "todo list management"
+      - "task tracking tool"
+      - "todo state persistence"
+    relationship: DERIVED
+    priority: medium
+    sources:
+      - repo: amplifier-module-tool-todo
+        path: amplifier_module_tool_todo/__init__.py
+      - repo: amplifier-module-tool-todo
+        path: README.md
+
+  # Orchestrators
+
+  - path: docs/modules/orchestrators/index.md
+    scope: >
+      Catalog of all official orchestrator modules. Compares the Basic, Streaming,
+      and Events loop variants—their trade-offs, use cases, and guidance on choosing
+      the right orchestrator for a given workload.
+    accepts:
+      - "orchestrator module README"
+      - "orchestrator catalog overview"
+      - "run loop comparison documentation"
+    relationship: DERIVED
+    priority: medium
+    sources:
+      - repo: amplifier-module-loop-basic
+        path: README.md
+      - repo: amplifier-module-loop-streaming
+        path: README.md
+      - repo: amplifier-module-loop-events
+        path: README.md
+
+  - path: docs/modules/orchestrators/loop_basic.md
+    scope: >
+      Documentation for the Basic loop orchestrator module. Covers the synchronous
+      request-response loop, configuration options, termination condition handling,
+      and guidance on when to prefer this orchestrator over streaming or events variants.
+    accepts:
+      - "basic loop orchestrator implementation"
+      - "loop basic module README"
+      - "synchronous orchestration loop"
+      - "basic loop configuration"
+    relationship: DERIVED
+    priority: medium
+    sources:
+      - repo: amplifier-module-loop-basic
+        path: amplifier_module_loop_basic/__init__.py
+      - repo: amplifier-module-loop-basic
+        path: README.md
+
+  - path: docs/modules/orchestrators/loop_streaming.md
+    scope: >
+      Documentation for the Streaming loop orchestrator module. Covers streaming
+      token output, progressive rendering integration, backpressure handling,
+      configuration options, and streaming-specific usage patterns.
+    accepts:
+      - "streaming loop orchestrator implementation"
+      - "loop streaming module README"
+      - "token streaming orchestration"
+      - "streaming loop configuration"
+    relationship: DERIVED
+    priority: medium
+    sources:
+      - repo: amplifier-module-loop-streaming
+        path: amplifier_module_loop_streaming/__init__.py
+      - repo: amplifier-module-loop-streaming
+        path: README.md
+
+  - path: docs/modules/orchestrators/loop_events.md
+    scope: >
+      Documentation for the Events loop orchestrator module. Covers event-driven
+      execution, event emission points, subscription patterns for external consumers,
+      and configuration for event-rich or observable workflows.
+    accepts:
+      - "events loop orchestrator implementation"
+      - "loop events module README"
+      - "event-driven orchestration"
+      - "events loop configuration"
+    relationship: DERIVED
+    priority: medium
+    sources:
+      - repo: amplifier-module-loop-events
+        path: amplifier_module_loop_events/__init__.py
+      - repo: amplifier-module-loop-events
+        path: README.md
+
+  # Contexts
+
+  - path: docs/modules/contexts/index.md
+    scope: >
+      Catalog of all official context modules. Compares the Simple (in-memory) and
+      Persistent (disk-backed) variants, their trade-offs, and guidance on selecting
+      the appropriate context module for a session's durability requirements.
+    accepts:
+      - "context module README"
+      - "context catalog overview"
+      - "context module comparison documentation"
+    relationship: DERIVED
+    priority: medium
+    sources:
+      - repo: amplifier-module-context-simple
+        path: README.md
+      - repo: amplifier-module-context-persistent
+        path: README.md
+
+  - path: docs/modules/contexts/simple.md
+    scope: >
+      Documentation for the Simple context module. Covers in-memory message storage,
+      message window size configuration, and usage patterns for short-lived or
+      stateless sessions where persistence is not required.
+    accepts:
+      - "simple context implementation"
+      - "simple context module README"
+      - "in-memory message storage"
+      - "message window configuration"
+    relationship: DERIVED
+    priority: medium
+    sources:
+      - repo: amplifier-module-context-simple
+        path: amplifier_module_context_simple/__init__.py
+      - repo: amplifier-module-context-simple
+        path: README.md
+
+  - path: docs/modules/contexts/persistent.md
+    scope: >
+      Documentation for the Persistent context module. Covers disk-backed message
+      storage, storage path configuration, session-replay behaviour, and patterns
+      for durable long-running or resumable sessions.
+    accepts:
+      - "persistent context implementation"
+      - "persistent context module README"
+      - "disk-backed message storage"
+      - "session persistence implementation"
+      - "context storage configuration"
+    relationship: DERIVED
+    priority: medium
+    sources:
+      - repo: amplifier-module-context-persistent
+        path: amplifier_module_context_persistent/__init__.py
+      - repo: amplifier-module-context-persistent
+        path: README.md
+
+  # Hooks
+
+  - path: docs/modules/hooks/index.md
+    scope: >
+      Catalog of all official hook modules: Logging, Approval, Redaction, Backup,
+      Cost-Aware Scheduler, Heuristic Scheduler, Status Context, Streaming UI, and
+      Todo Reminder. Provides capability summaries and links to each hook's page.
+    accepts:
+      - "hook module README"
+      - "hook catalog overview"
+      - "hook capability summary"
+    relationship: DERIVED
+    priority: medium
+    sources:
+      - repo: amplifier-module-hooks-logging
+        path: README.md
+      - repo: amplifier-module-hooks-approval
+        path: README.md
+      - repo: amplifier-module-hooks-redaction
+        path: README.md
+
+  - path: docs/modules/hooks/logging.md
+    scope: >
+      Documentation for the Logging hook module. Covers log level configuration,
+      output format options (structured/plain), destination configuration, and usage
+      patterns for session observability and debugging.
+    accepts:
+      - "logging hook implementation"
+      - "logging hook module README"
+      - "session logging configuration"
+      - "structured logging hook"
+      - "log output formatting"
+    relationship: DERIVED
+    priority: medium
+    sources:
+      - repo: amplifier-module-hooks-logging
+        path: amplifier_module_hooks_logging/__init__.py
+      - repo: amplifier-module-hooks-logging
+        path: README.md
+
+  - path: docs/modules/hooks/approval.md
+    scope: >
+      Documentation for the Approval hook module. Covers human-in-the-loop approval
+      gate configuration, approval flow callbacks, blocking behaviour, and patterns
+      for requiring user confirmation before sensitive tool executions.
+    accepts:
+      - "approval hook implementation"
+      - "approval hook module README"
+      - "human-in-the-loop approval gates"
+      - "user confirmation workflow"
+      - "approval callback configuration"
+    relationship: DERIVED
+    priority: medium
+    sources:
+      - repo: amplifier-module-hooks-approval
+        path: amplifier_module_hooks_approval/__init__.py
+      - repo: amplifier-module-hooks-approval
+        path: README.md
+
+  - path: docs/modules/hooks/redaction.md
+    scope: >
+      Documentation for the Redaction hook module. Covers PII and sensitive-data
+      redaction patterns, regex-based redaction rule configuration, redaction scope
+      (inputs, outputs, or both), and compliance-driven use cases.
+    accepts:
+      - "redaction hook implementation"
+      - "redaction hook module README"
+      - "PII redaction configuration"
+      - "sensitive data redaction rules"
+      - "data compliance hook"
+    relationship: DERIVED
+    priority: medium
+    sources:
+      - repo: amplifier-module-hooks-redaction
+        path: amplifier_module_hooks_redaction/__init__.py
+      - repo: amplifier-module-hooks-redaction
+        path: README.md
+
+  - path: docs/modules/hooks/backup.md
+    scope: >
+      Documentation for the Backup hook module. Covers session-state backup
+      configuration, supported backup destinations, trigger condition options
+      (periodic, on-event), and recovery patterns.
+    accepts:
+      - "backup hook implementation"
+      - "backup hook module README"
+      - "session state backup configuration"
+      - "backup destination options"
+      - "backup trigger configuration"
+    relationship: DERIVED
+    priority: medium
+    sources:
+      - repo: amplifier-module-hooks-backup
+        path: amplifier_module_hooks_backup/__init__.py
+      - repo: amplifier-module-hooks-backup
+        path: README.md
+
+  - path: docs/modules/hooks/scheduler_cost_aware.md
+    scope: >
+      Documentation for the Cost-Aware Scheduler hook module. Covers token-cost
+      tracking, per-session budget limits, provider cost-model configuration, and
+      patterns for running cost-controlled agent sessions.
+    accepts:
+      - "cost-aware scheduler hook implementation"
+      - "scheduler cost aware module README"
+      - "token cost tracking"
+      - "session budget management"
+      - "cost limit configuration"
+    relationship: DERIVED
+    priority: medium
+    sources:
+      - repo: amplifier-module-hooks-scheduler-cost-aware
+        path: amplifier_module_hooks_scheduler_cost_aware/__init__.py
+      - repo: amplifier-module-hooks-scheduler-cost-aware
+        path: README.md
+
+  - path: docs/modules/hooks/scheduler_heuristic.md
+    scope: >
+      Documentation for the Heuristic Scheduler hook module. Covers heuristic-based
+      scheduling rules, maximum iteration limits, session timeout configuration, and
+      patterns for controlling how long a session is permitted to run.
+    accepts:
+      - "heuristic scheduler hook implementation"
+      - "scheduler heuristic module README"
+      - "iteration limit configuration"
+      - "session timeout management"
+      - "heuristic scheduling rules"
+    relationship: DERIVED
+    priority: medium
+    sources:
+      - repo: amplifier-module-hooks-scheduler-heuristic
+        path: amplifier_module_hooks_scheduler_heuristic/__init__.py
+      - repo: amplifier-module-hooks-scheduler-heuristic
+        path: README.md
+
+  - path: docs/modules/hooks/status_context.md
+    scope: >
+      Documentation for the Status Context hook module. Covers injection of dynamic
+      runtime status into agent context, configuration of status data sources, update
+      frequency, and patterns for building environment-aware agents.
+    accepts:
+      - "status context hook implementation"
+      - "status context module README"
+      - "runtime status injection"
+      - "dynamic context injection"
+      - "environment-aware agent configuration"
+    relationship: DERIVED
+    priority: medium
+    sources:
+      - repo: amplifier-module-hooks-status-context
+        path: amplifier_module_hooks_status_context/__init__.py
+      - repo: amplifier-module-hooks-status-context
+        path: README.md
+
+  - path: docs/modules/hooks/streaming_ui.md
+    scope: >
+      Documentation for the Streaming UI hook module. Covers progressive token
+      output rendering in terminal UIs, display configuration, integration with the
+      streaming loop orchestrator, and patterns for rich real-time agent output.
+    accepts:
+      - "streaming UI hook implementation"
+      - "streaming UI module README"
+      - "terminal UI rendering"
+      - "progressive streaming output"
+      - "streaming token display configuration"
+    relationship: DERIVED
+    priority: medium
+    sources:
+      - repo: amplifier-module-hooks-streaming-ui
+        path: amplifier_module_hooks_streaming_ui/__init__.py
+      - repo: amplifier-module-hooks-streaming-ui
+        path: README.md
+
+  - path: docs/modules/hooks/todo_reminder.md
+    scope: >
+      Documentation for the Todo Reminder hook module. Covers injection of current
+      todo-list state into agent context, reminder frequency configuration, and
+      patterns for keeping agents focused on their tracked tasks across a session.
+    accepts:
+      - "todo reminder hook implementation"
+      - "todo reminder module README"
+      - "todo context injection"
+      - "task tracking hook"
+      - "todo reminder configuration"
+    relationship: DERIVED
+    priority: medium
+    sources:
+      - repo: amplifier-module-hooks-todo-reminder
+        path: amplifier_module_hooks_todo_reminder/__init__.py
+      - repo: amplifier-module-hooks-todo-reminder
+        path: README.md
+
+  # ── Ecosystem ─────────────────────────────────────────────────────────────
+
+  - path: docs/ecosystem/index.md
+    scope: >
+      Ecosystem overview presenting the full catalog of official Amplifier modules,
+      the contract-based extension model that enables community contributions, and
+      pointers to third-party integrations and the module registry.
+    accepts:
+      - "ecosystem modules catalog document"
+      - "MODULES.md catalog"
+      - "module ecosystem overview"
+      - "third-party integration documentation"
+      - "extension model overview"
+    relationship: DERIVED
+    priority: medium
+    sources:
+      - repo: amplifier
+        path: docs/MODULES.md
+      - repo: amplifier-core
+        path: docs/contracts/README.md
+
+  # ── Showcase ──────────────────────────────────────────────────────────────
+
+  - path: docs/showcase/index.md
+    scope: >
+      Manually curated showcase of real-world Amplifier deployments, community
+      projects, and use-case spotlights. Content is hand-picked by maintainers
+      and not auto-generated from source repositories.
+    accepts: []  # Manually maintained — no auto-placement
+    relationship: DERIVED
+    priority: low
+    sources: []
+
+  # ── Community ─────────────────────────────────────────────────────────────
+
+  - path: docs/community/index.md
+    scope: >
+      Community hub with links to discussion forums, support channels, contribution
+      guides, and community resources. Content is manually maintained by project
+      maintainers.
+    accepts: []  # Manually maintained — no auto-placement
+    relationship: DERIVED
+    priority: low
+    sources: []
+
+  - path: docs/community/contributing.md
+    scope: >
+      Contributing guidelines for the Amplifier project. Covers development
+      environment setup, code style expectations, the pull-request workflow,
+      commit message conventions, and community conduct standards.
+    accepts:
+      - "contributing guide documentation"
+      - "development setup instructions"
+      - "code style guidelines"
+      - "pull request workflow documentation"
+      - "project README contributing section"
+    relationship: REFERENCE
+    priority: low
+    sources:
+      - repo: amplifier-core
+        path: README.md
+
+  - path: docs/community/roadmap.md
+    scope: >
+      Project roadmap presenting planned features, work currently in progress,
+      completed milestones, and the long-term vision for the Amplifier platform.
+    accepts:
+      - "project roadmap document"
+      - "feature planning documentation"
+      - "release planning documentation"
+    relationship: DIRECT
+    priority: low
+    sources:
+      - repo: amplifier
+        path: ROADMAP.md

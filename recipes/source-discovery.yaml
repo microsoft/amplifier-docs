@@ -1,0 +1,348 @@
+# =============================================================================
+# Source Discovery Pipeline
+# =============================================================================
+# Automates the discovery of new source files in Amplifier repos and determines
+# where they should appear in the documentation site.
+#
+# Pipeline:
+#   sync-repos → discover-candidates → placement (LLM) → judge (LLM) → apply → summary
+#
+# The placement and judge steps intentionally use DIFFERENT LLM providers
+# (Anthropic and OpenAI respectively) so we get independent evaluation of
+# where each candidate should land in the documentation hierarchy.
+#
+# Data flows between steps via files in {{output_dir}}, not inline context.
+# This keeps context lean and allows inspection of intermediate results.
+#
+# Requirements:
+#   - foundation bundle (provides git-ops, file-ops agents)
+#   - scripts/discover_sources.py (candidate scanner)
+#   - scripts/apply_placements.py (auto-apply agreed placements)
+#   - docs/site-manifest.yaml (page scopes and accepts fields)
+#   - docs/DOC_SOURCE_MAPPING.csv (current source-to-page mappings)
+#   - GitHub CLI (gh) for filing issues on disagreements
+#
+# Typical runtime: 10-20 minutes depending on repo count and candidate count
+#
+# Usage:
+#   amplifier run "execute recipes/source-discovery.yaml"
+#   amplifier run "execute recipes/source-discovery.yaml with repos_dir=~/my-sources"
+#
+# =============================================================================
+# CHANGELOG
+# =============================================================================
+#
+# v1.0.0 (2026-04-01):
+#   - Initial recipe implementation
+#   - Multi-provider placement + judge pipeline with independent evaluation
+#   - Early exit when zero candidates discovered
+#   - File-based inter-step communication via output_dir
+#
+# =============================================================================
+
+name: "source-discovery"
+description: "Discover new source files in Amplifier repos and determine their documentation site placement via multi-provider LLM evaluation"
+version: "1.0.0"
+tags: ["documentation", "discovery", "placement", "multi-provider"]
+
+context:
+  repos_dir: "~/repo/amplifier-sources"
+  output_dir: "./sync-output/discovery"
+  target_repo: "microsoft/amplifier-docs"
+
+steps:
+  # -------------------------------------------------------------------------
+  # Step 1: Create output directories
+  # -------------------------------------------------------------------------
+  - id: "setup"
+    type: "bash"
+    command: |
+      set -euo pipefail
+      mkdir -p "{{output_dir}}"
+      echo "Output directory ready: {{output_dir}}"
+    output: "setup_result"
+    timeout: 30
+
+  # -------------------------------------------------------------------------
+  # Step 2: Clone or update source repositories
+  # -------------------------------------------------------------------------
+  - id: "sync-repos"
+    agent: "foundation:git-ops"
+    prompt: |
+      Clone or update the following Amplifier repositories to: {{repos_dir}}
+
+      Core repositories (always sync):
+        - amplifier
+        - amplifier-core
+        - amplifier-foundation
+        - amplifier-app-cli
+
+      For each repository:
+      1. If it already exists in {{repos_dir}}, run git pull to update it
+      2. If it doesn't exist, clone it with: git clone --depth 1 https://github.com/microsoft/{repo_name}
+
+      Additionally, check {{repos_dir}} for any amplifier-module-* directories
+      that already exist. If found, update them with git pull. Do NOT clone
+      modules that aren't already present — modules are less likely to have
+      new discoverable sources.
+
+      Report how many repos succeeded, failed, or were skipped.
+    output: "sync_result"
+    timeout: 600
+
+  # -------------------------------------------------------------------------
+  # Step 3: Run discovery script to find untracked source files
+  # -------------------------------------------------------------------------
+  # Produces candidates.json with new files that match acceptance protocols
+  # but aren't yet tracked in the site manifest.
+  # Outputs candidate_count for conditional execution of later steps.
+  # -------------------------------------------------------------------------
+  - id: "discover-candidates"
+    type: "bash"
+    command: |
+      set -euo pipefail
+
+      python3 scripts/discover_sources.py \
+        --repos-dir "{{repos_dir}}" \
+        --manifest docs/site-manifest.yaml \
+        --output "{{output_dir}}/candidates.json"
+
+      # Parse candidate count from the output file
+      count=$(python3 -c "import json; d=json.load(open('{{output_dir}}/candidates.json')); print(len(d.get('candidates', [])))")
+
+      if [ "$count" -eq 0 ]; then
+        echo "No new sources found. Pipeline complete."
+        echo '{"candidate_count": "0", "has_candidates": "false"}'
+      else
+        echo "Found $count candidate source file(s) for placement."
+        echo "{\"candidate_count\": \"$count\", \"has_candidates\": \"true\"}"
+      fi
+    output: "discovery_result"
+    parse_json: true
+    timeout: 120
+
+  # -------------------------------------------------------------------------
+  # Step 4: LLM placement — determine where each candidate belongs
+  # -------------------------------------------------------------------------
+  # Uses Anthropic (Claude) for the initial placement decision.
+  # Reads candidates.json and site-manifest.yaml, writes placements.json.
+  # -------------------------------------------------------------------------
+  - id: "placement"
+    condition: "{{discovery_result.has_candidates}} == 'true'"
+    agent: "foundation:file-ops"
+    provider: "anthropic"
+    model: "claude-sonnet-*"
+    prompt: |
+      You are determining where newly discovered source files should appear
+      in the Amplifier documentation site.
+
+      INPUT FILES:
+      1. Candidates: {{output_dir}}/candidates.json
+         — Each candidate has: repo, path, summary, exports, matched_protocol
+      2. Site manifest: docs/site-manifest.yaml
+         — Each page has: path, scope, accepts, sources
+
+      TASK:
+      For each candidate in candidates.json:
+
+      1. Read the candidate's summary, exports, and matched_protocol
+      2. Read each page's `scope` and `accepts` fields in the manifest
+      3. Determine the best placement:
+         - `add_to_existing`: the candidate belongs on an existing page
+           (specify which page via target_page)
+         - `new_page`: the candidate needs a new page
+           (specify path, scope, and accepts for the new page)
+      4. Provide clear reasoning for each placement decision
+
+      DECISION CRITERIA:
+      - A candidate belongs on a page if its content matches the page's scope
+        AND at least one of the page's accepts categories
+      - Prefer add_to_existing over new_page when there's a reasonable fit
+      - Only propose new_page when no existing page's scope covers the content
+      - For new_page, ensure the proposed scope doesn't overlap with existing pages
+
+      OUTPUT:
+      Write the placements to {{output_dir}}/placements.json in this exact format:
+
+      {
+        "placements": [
+          {
+            "candidate": {
+              "repo": "amplifier-core",
+              "path": "python/amplifier/core/new_module.py",
+              "summary": "..."
+            },
+            "placement": {
+              "action": "add_to_existing",
+              "target_page": "docs/core/modules.md",
+              "reasoning": "The module's exports align with the page's scope..."
+            }
+          },
+          {
+            "candidate": { "..." : "..." },
+            "placement": {
+              "action": "new_page",
+              "target_page": "docs/core/new-feature.md",
+              "scope": "Documents the new feature API and usage patterns",
+              "accepts": ["new feature API", "feature configuration", "feature examples"],
+              "reasoning": "No existing page covers this feature domain..."
+            }
+          }
+        ]
+      }
+
+      DO NOT write any other files. Only write {{output_dir}}/placements.json.
+    output: "placement_result"
+    timeout: 600
+
+  # -------------------------------------------------------------------------
+  # Step 5: LLM judge — independent review of placements
+  # -------------------------------------------------------------------------
+  # Uses OpenAI (GPT) to validate placements from a different perspective.
+  # MUST be a different provider than placement for independent evaluation.
+  # -------------------------------------------------------------------------
+  - id: "judge"
+    condition: "{{discovery_result.has_candidates}} == 'true'"
+    agent: "foundation:file-ops"
+    provider: "openai"
+    model: "gpt-4o*"
+    prompt: |
+      You are an independent judge reviewing documentation placement decisions.
+      A different LLM made these placements — your job is to validate them.
+
+      INPUT FILES:
+      1. Placements: {{output_dir}}/placements.json
+         — Contains candidate info and proposed placements with reasoning
+      2. Site manifest: docs/site-manifest.yaml
+         — Authoritative source for page scopes and accepts fields
+
+      TASK:
+      For each placement in placements.json, evaluate:
+
+      1. SCOPE MATCH: Does the source content genuinely match the target
+         page's scope? Read the scope carefully — a partial keyword overlap
+         is not enough.
+      2. OVERLAP CHECK (for new_page only): Does the proposed scope overlap
+         with any existing page? If so, the candidate probably belongs on
+         the existing page instead.
+      3. CONSISTENCY: Is this placement consistent with how similar sources
+         are already placed? Check the manifest's existing sources for patterns.
+      4. VERDICT: AGREE or DISAGREE with clear reasoning.
+
+      GUIDELINES:
+      - Be skeptical of new_page proposals — most candidates fit existing pages
+      - If you DISAGREE, explain what you think the correct placement should be
+      - If you AGREE, briefly confirm why the placement is sound
+
+      OUTPUT:
+      Write verdicts to {{output_dir}}/verdicts.json in this exact format:
+
+      {
+        "placements": [
+          {
+            "candidate": { "repo": "...", "path": "...", "summary": "..." },
+            "placement": {
+              "action": "add_to_existing",
+              "target_page": "docs/...",
+              "reasoning": "..."
+            },
+            "verdict": "AGREE",
+            "judge_reasoning": "The placement is correct because..."
+          },
+          {
+            "candidate": { "..." : "..." },
+            "placement": { "..." : "..." },
+            "verdict": "DISAGREE",
+            "judge_reasoning": "The candidate should instead go on docs/other-page.md because..."
+          }
+        ]
+      }
+
+      DO NOT write any other files. Only write {{output_dir}}/verdicts.json.
+    output: "judge_result"
+    timeout: 600
+
+  # -------------------------------------------------------------------------
+  # Step 6: Apply agreed placements, file issues for disagreements
+  # -------------------------------------------------------------------------
+  - id: "apply"
+    condition: "{{discovery_result.has_candidates}} == 'true'"
+    type: "bash"
+    command: |
+      set -euo pipefail
+
+      python3 scripts/apply_placements.py \
+        --verdicts "{{output_dir}}/verdicts.json" \
+        --csv docs/DOC_SOURCE_MAPPING.csv \
+        --manifest docs/site-manifest.yaml
+    output: "apply_result"
+    timeout: 300
+
+  # -------------------------------------------------------------------------
+  # Step 7: Print final summary
+  # -------------------------------------------------------------------------
+  - id: "summary"
+    type: "bash"
+    command: |
+      set -euo pipefail
+
+      echo "========================================"
+      echo "  Source Discovery Pipeline — Summary"
+      echo "========================================"
+      echo ""
+
+      # Candidate count
+      if [ -f "{{output_dir}}/candidates.json" ]; then
+        count=$(python3 -c "import json; d=json.load(open('{{output_dir}}/candidates.json')); print(len(d.get('candidates', [])))")
+        echo "Candidates discovered: $count"
+      else
+        echo "Candidates discovered: 0"
+      fi
+
+      # Verdict breakdown
+      if [ -f "{{output_dir}}/verdicts.json" ]; then
+        python3 -c "
+      import json
+      v = json.load(open('{{output_dir}}/verdicts.json'))
+      placements = v.get('placements', [])
+      agreed = sum(1 for p in placements if p.get('verdict') == 'AGREE')
+      disagreed = sum(1 for p in placements if p.get('verdict') == 'DISAGREE')
+      print(f'Agreed (auto-applied): {agreed}')
+      print(f'Disagreed (issues filed): {disagreed}')
+      print()
+      if agreed > 0:
+          print('Applied placements:')
+          for p in placements:
+              if p.get('verdict') == 'AGREE':
+                  c = p.get('candidate', {})
+                  pl = p.get('placement', {})
+                  print(f'  + {c.get(\"repo\",\"?\")}/{c.get(\"path\",\"?\")} -> {pl.get(\"target_page\",\"?\")} ({pl.get(\"action\",\"?\")})')
+      if disagreed > 0:
+          print()
+          print('Disputed placements (GitHub issues filed):')
+          for p in placements:
+              if p.get('verdict') == 'DISAGREE':
+                  c = p.get('candidate', {})
+                  print(f'  ! {c.get(\"repo\",\"?\")}/{c.get(\"path\",\"?\")} — {p.get(\"judge_reasoning\",\"no reason given\")[:80]}')
+      "
+      else
+        echo "No placements to report (zero candidates)."
+      fi
+
+      echo ""
+
+      # Show git diff if any changes were made to tracked files
+      if git diff --quiet docs/DOC_SOURCE_MAPPING.csv docs/site-manifest.yaml 2>/dev/null; then
+        echo "No changes to CSV or manifest."
+      else
+        echo "Changes made:"
+        git diff --stat docs/DOC_SOURCE_MAPPING.csv docs/site-manifest.yaml 2>/dev/null || true
+        echo ""
+        echo "Full diff:"
+        git diff docs/DOC_SOURCE_MAPPING.csv docs/site-manifest.yaml 2>/dev/null || true
+      fi
+
+      echo ""
+      echo "Pipeline complete."
+    output: "summary_result"
+    timeout: 60
