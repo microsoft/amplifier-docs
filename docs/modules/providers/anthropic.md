@@ -42,26 +42,41 @@ providers:
 | `use_streaming` | bool | `true` | Use streaming API (required for large contexts) |
 | `enable_prompt_caching` | bool | `true` | Enable prompt caching (90% cost reduction on cached tokens) |
 | `enable_web_search` | bool | `false` | Enable native web search tool |
-| `enable_1m_context` | bool | `false` | Enable 1M token context window (Sonnet and Opus only) |
+| `enable_1m_context` | bool | `true` | Enable 1M token context window (Sonnet and Opus only) |
 | `filtered` | bool | `true` | Filter to curated model list |
+| `beta_headers` | string/list | (none) | Anthropic beta header(s) for experimental features |
 
 ### Rate Limit & Retry
 
 | Option | Type | Default | Description |
 |--------|------|---------|-------------|
 | `max_retries` | int | 5 | Total retry attempts before failing |
-| `retry_jitter` | float | 0.2 | Randomness to add to delays (0.0-1.0) |
+| `retry_jitter` | bool/float | `true` | Jitter fraction (0.0–1.0). Also accepts `true` (→ 0.2) or `false` (→ 0.0) for backward compatibility |
 | `max_retry_delay` | float | 60.0 | Maximum wait between retries (seconds) |
 | `min_retry_delay` | float | 1.0 | Minimum delay if no retry-after header |
+| `overloaded_delay_multiplier` | float | 10.0 | Multiplier applied to delays for 529 Overloaded errors |
 | `throttle_threshold` | float | 0.02 | Pre-emptive throttle trigger (2% capacity remaining) |
 | `throttle_delay` | float | 1.0 | Throttle delay when approaching limits (seconds) |
+| `max_concurrent_requests` | int | 5 | Process-wide in-flight API call limit (0 to disable) |
+| `rate_limit_state_path` | string | `~/.amplifier/rate-limit-state.json` | Path for cross-process rate-limit state sharing (empty string to disable) |
 
 ### Debug Options
 
 | Option | Type | Default | Description |
 |--------|------|---------|-------------|
-| `debug` | bool | `false` | Enable standard debug events |
-| `raw_debug` | bool | `false` | Enable ultra-verbose raw API I/O logging |
+| `raw` | bool | `false` | Include raw payload in provider events |
+
+### Overload Fallback
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `fallback_on_overload` | bool | `false` | Temporarily downgrade to a lower-tier model when a higher-tier model stays overloaded |
+| `fallback_retry_count` | int | 1 | Overload retries before triggering downgrade |
+| `fallback_cooldown_seconds` | float | 1800.0 | Duration (seconds) the downgrade window stays active before retrying the higher model |
+| `fallback_sonnet_model` | string | `claude-sonnet-4-6` | Model to use when Opus is overloaded |
+| `fallback_haiku_model` | string | `claude-haiku-4-5` | Model to use when Sonnet is overloaded |
+| `persist_fallback_state` | bool | `false` | Persist temporary downgrade state across separate Amplifier processes |
+| `fallback_state_path` | string | `~/.amplifier/anthropic-fallback-state.json` | Path for cross-process fallback state file (only used when `persist_fallback_state` is `true`) |
 
 ## Supported Models
 
@@ -120,6 +135,36 @@ providers:
 
 The model can then search the web directly during conversations.
 
+## Beta Headers
+
+Anthropic provides experimental features through beta headers. Enable these features by adding the `beta_headers` configuration field.
+
+**Single beta header:**
+```yaml
+providers:
+  - module: provider-anthropic
+    config:
+      default_model: claude-sonnet-4-5
+      beta_headers: "context-1m-2025-08-07"  # Enable 1M token context window
+```
+
+**Multiple beta headers:**
+```yaml
+providers:
+  - module: provider-anthropic
+    config:
+      default_model: claude-sonnet-4-5
+      beta_headers:
+        - "context-1m-2025-08-07"
+        - "future-feature-header"
+```
+
+Notes:
+- Beta features are experimental and subject to change
+- Check [Anthropic's documentation](https://docs.anthropic.com) for available beta headers
+- Invalid beta headers will cause API errors (fail fast)
+- Beta header usage is logged at initialization for observability
+
 ## Rate Limit Management
 
 The provider tracks rate limits from response headers and pre-emptively throttles when approaching limits:
@@ -129,12 +174,29 @@ providers:
   - module: provider-anthropic
     config:
       throttle_threshold: 0.02  # Throttle at 2% capacity remaining
-      throttle_safety_margin: 1.0  # Add 1s safety delay
+      throttle_delay: 1.0  # Fallback sleep when no reset timestamp available
 ```
 
 Events:
 - `provider:throttle` - Emitted when pre-emptive throttling occurs
 - `provider:retry` - Emitted before each retry attempt
+
+## Overload Fallback
+
+When `fallback_on_overload` is enabled, the provider temporarily routes requests to a lower-tier model if the higher-tier model remains overloaded after `fallback_retry_count` attempts. The downgrade window stays active for `fallback_cooldown_seconds` before automatically retrying the higher model.
+
+```yaml
+providers:
+  - module: provider-anthropic
+    config:
+      fallback_on_overload: true
+      fallback_retry_count: 1
+      fallback_cooldown_seconds: 1800
+```
+
+Events:
+- `provider:fallback_open` - Emitted when a temporary downgrade window opens
+- `provider:fallback_active` - Emitted on each request served through an active downgrade window
 
 ## Retry Configuration
 
@@ -154,38 +216,41 @@ The provider uses exponential backoff with jitter and honors `retry-after` heade
 
 The provider translates Anthropic SDK exceptions to kernel errors:
 
-| SDK Exception | Kernel Error | Retryable |
-|--------------|--------------|-----------|
-| `RateLimitError` | `RateLimitError` | Yes |
-| `OverloadedError` | `ProviderUnavailableError` | Yes (10× backoff) |
-| `InternalServerError` | `ProviderUnavailableError` | Yes |
-| `AuthenticationError` | `AuthenticationError` | No |
-| `BadRequestError` (context length) | `ContextLengthError` | No |
-| `BadRequestError` (content filter) | `ContentFilterError` | No |
-| `BadRequestError` (other) | `InvalidRequestError` | No |
+| SDK Exception | Condition | Kernel Error | Retryable |
+|--------------|-----------|--------------|-----------|
+| `RateLimitError` | 429 | `RateLimitError` | Yes |
+| `OverloadedError` | 529 | `ProviderUnavailableError` | Yes (10× backoff) |
+| `APIStatusError` | 5xx (status >= 500) | `ProviderUnavailableError` | Yes |
+| `AuthenticationError` | 401 | `AuthenticationError` | No |
+| `BadRequestError` | context length / too many tokens | `ContextLengthError` | No |
+| `BadRequestError` | safety / content filter / blocked | `ContentFilterError` | No |
+| `BadRequestError` | other | `InvalidRequestError` | No |
+| `APIStatusError` | 403 | `AccessDeniedError` | No |
+| `APIStatusError` | 404 | `NotFoundError` | No |
+| `APIStatusError` | other non-5xx | `LLMError` | No |
+| `asyncio.TimeoutError` | — | `LLMTimeoutError` | Yes |
+| Other | — | `LLMError` | Yes |
 
 ## Debug Events
 
-Enable debug logging to see request/response details:
+The provider emits events on every request and response. Enable the `raw` option to include the complete unmodified API payload in those events:
 
 ```yaml
 providers:
   - module: provider-anthropic
     config:
-      debug: true  # Standard debug events
-      raw_debug: true  # Ultra-verbose raw API I/O
+      raw: true  # Include raw API payload in provider events
 ```
 
 Events:
-- `llm:request:debug` - Request summary (message counts, model, params)
-- `llm:response:debug` - Response summary (usage, stop reason)
-- `llm:request:raw` - Complete unmodified request params
-- `llm:response:raw` - Complete unmodified response object
+- `llm:request` - Request details (message counts, model, params; includes raw payload if `raw: true`)
+- `llm:response` - Response details (usage, stop reason; includes raw payload if `raw: true`)
 
 ## Environment Variables
 
 ```bash
 export ANTHROPIC_API_KEY="your-api-key-here"
+export ANTHROPIC_BASE_URL="https://api.anthropic.com"  # Optional: override API endpoint
 ```
 
 ## Example Configuration
