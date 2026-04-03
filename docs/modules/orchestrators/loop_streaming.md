@@ -1,11 +1,11 @@
 ---
 title: loop-streaming
-description: Token-level streaming orchestration for real-time response delivery
+description: Streaming orchestration for real-time response delivery
 ---
 
 # loop-streaming Orchestrator
 
-Token-level streaming orchestration for real-time response delivery with parallel tool execution.
+Streaming orchestration for real-time response delivery with parallel tool execution.
 
 ## Overview
 
@@ -41,9 +41,8 @@ orchestrators:
 2. Add to context
 3. Loop:
    a. Get messages from context
-   b. Call provider.complete() → streaming generator
-   c. For each token/chunk:
-      - Emit content_block:delta event
+   b. Call provider.stream() (or provider.complete() fallback)
+   c. For each chunk:
       - Stream token to output
    d. Parse tool calls from streamed response
    e. If tool calls → execute in parallel
@@ -58,7 +57,7 @@ Multiple tool calls execute **concurrently**:
 
 ```
 tool_call_1 ──┐
-tool_call_2 ──┼─→ await gather() → all complete
+tool_call_2 ──┼─ await gather() → all complete
 tool_call_3 ──┘
 ```
 
@@ -69,9 +68,9 @@ Results are added to context in **original order** (deterministic):
 ```
 
 This ensures:
-- ✅ Fast execution (parallel)
-- ✅ Deterministic context (ordered results)
-- ✅ Reproducible behavior
+- Fast execution (parallel)
+- Deterministic context (ordered results)
+- Reproducible behavior
 
 ## Events
 
@@ -81,15 +80,9 @@ This ensures:
   ```python
   {
       "block_type": "text",  # or "thinking", "tool_use"
-      "block_index": 0
-  }
-  ```
-
-- `content_block:delta` - Token received
-  ```python
-  {
       "block_index": 0,
-      "delta": "token text"
+      "total_blocks": 3,
+      "metadata": {...}  # Raw block metadata if available
   }
   ```
 
@@ -97,18 +90,23 @@ This ensures:
   ```python
   {
       "block_index": 0,
+      "total_blocks": 3,
       "block": {...},  # Complete block data
-      "usage": {...}   # Token usage
+      "usage": {...}   # Token usage (if available)
   }
   ```
+
+### Execution Events
+
+- `execution:start` - Streaming execution begins
+- `execution:end` - Streaming execution ends
 
 ### Standard Events
 
 Also emits standard orchestrator events:
-- `execution:start`, `execution:end`
 - `tool:pre`, `tool:post`, `tool:error`
-- `provider:request`, `provider:response`, `provider:error`
-- `prompt:submit`, `prompt:complete`
+- `provider:request`, `provider:error`
+- `prompt:submit`
 - `orchestrator:complete`
 
 ## Extended Thinking
@@ -119,11 +117,10 @@ When `extended_thinking: true`:
 response = await provider.complete(chat_request, extended_thinking=True)
 ```
 
-Providers supporting extended thinking (Anthropic Claude) will include thinking blocks in the stream:
+Providers supporting extended thinking (Anthropic Claude) will include thinking blocks:
 
 ```
 content_block:start → type="thinking"
-content_block:delta → thinking tokens stream
 content_block:end   → complete thinking block
 ```
 
@@ -131,12 +128,12 @@ Hooks (e.g., `hooks-streaming-ui`) can display thinking blocks progressively.
 
 ## Comparison with Other Orchestrators
 
-| Feature | loop-basic | loop-streaming | loop-events |
-|---------|------------|----------------|-------------|
-| Tool execution | Sequential | **Parallel** | Sequential |
-| Response delivery | Buffered | **Streaming** | Buffered |
-| Token-level events | No | **Yes** | No |
-| Best for | Testing | **Interactive UIs** | Multi-agent |
+| Feature | loop-basic | loop-streaming |
+|---------|------------|----------------|
+| Tool execution | Parallel | **Parallel** |
+| Response delivery | Buffered | **Streaming** |
+| Streaming delivery | No | **Yes** |
+| Best for | Testing | **Interactive UIs** |
 
 ## Use Cases
 
@@ -157,13 +154,7 @@ User sees tokens appear in real-time with progressive tool output.
 
 ### 2. Web UIs
 
-```python
-async for event in session.execute_streaming(prompt):
-    if event["type"] == "content_block:delta":
-        await websocket.send(event["delta"])
-```
-
-Stream tokens to browser for progressive rendering.
+Stream tokens to browser for progressive rendering via async iteration over the streaming output.
 
 ### 3. Long-Form Content
 
@@ -200,7 +191,7 @@ Streaming responses can be interrupted mid-stream. Ensure your application handl
 Parallel execution significantly improves multi-tool performance:
 
 ```
-Sequential (loop-basic):
+Sequential (no parallelism):
   tool1 (2s) + tool2 (3s) + tool3 (2s) = 7s total
 
 Parallel (loop-streaming):
@@ -219,16 +210,16 @@ When streaming over network (WebSocket, SSE):
 - Uses async generators for streaming responses
 - Tool results added in deterministic order despite parallel execution
 - Context compaction handled automatically
-- Supports cancellation mid-stream
-- Thinking blocks stream token-by-token (if provider supports)
+- Supports cancellation mid-stream (graceful and immediate)
+- Provider selection: uses `provider.stream()` if available, falls back to `provider.complete()` with simulated token streaming
 
 ## Error Handling
 
 ### Provider Errors
 
-On streaming error:
+On provider error:
 1. Emit `provider:error` event
-2. Return partial response if available
+2. Raise exception (error propagated to caller)
 3. Exit loop
 
 ### Tool Errors
@@ -240,14 +231,15 @@ On tool execution error (during parallel batch):
 
 ### Stream Interruption
 
-If stream interrupted:
-- Partial response returned
-- Context updated with what was received
+If stream interrupted via cancellation:
+- Partial response added to context
+- Synthetic assistant message written to close turn
+- Cancel events emitted (`cancel:requested`, `cancel:completed`)
 - Session remains valid for next turn
 
 ## See Also
 
-- [loop-basic](loop_basic.md) - Sequential execution with complete events
+- [loop-basic](loop_basic.md) - Parallel execution with complete events
 - [loop-events](loop_events.md) - Event-driven with scheduler integration
 - [hooks-streaming-ui](../hooks/streaming_ui.md) - Streaming display hook
 - [Orchestrator Contract](../../reference/contracts/orchestrator.md) - Interface specification

@@ -11,7 +11,7 @@ Agents are specialized configurations that can be invoked as sub-sessions for fo
 
 | Agent | Purpose | Best For |
 |-------|---------|----------|
-| `explorer` | Breadth-first codebase exploration | Understanding new codebases |
+| `explorer` | Deep codebase exploration and reconnaissance | Understanding new codebases |
 | `bug-hunter` | Systematic debugging | Finding and fixing bugs |
 | `zen-architect` | System design with simplicity | Architecture decisions |
 | `modular-builder` | Code implementation | Writing new code |
@@ -24,19 +24,25 @@ Agents are specialized configurations that can be invoked as sub-sessions for fo
 | `foundation-expert` | Bundle and agent authoring guidance | Creating bundles and agents |
 | `ecosystem-expert` | Multi-repo coordination | Cross-repo workflows |
 | `integration-specialist` | External service integration | API and MCP server setup |
+| `shell-exec` | Shell command execution | Build, test, package management tasks |
 | `post-task-cleanup` | Post-task codebase hygiene | Cleaning up after task completion |
 
 ## Using Agents
 
 ### In Interactive Mode
 
-Use the `@` prefix to invoke an agent:
+Agents are invoked automatically by the AI when you describe a task that matches an agent's expertise. The system uses the `tool-task` module to delegate to the appropriate agent:
 
 ```bash
 amplifier
-amplifier> @explorer What is the architecture of this project?
-amplifier> @bug-hunter Find issues in the authentication module
-amplifier> @zen-architect Design a caching system
+amplifier> What is the architecture of this project?
+# → AI delegates to explorer agent via task tool
+
+amplifier> Find issues in the authentication module
+# → AI delegates to bug-hunter agent via task tool
+
+amplifier> Design a caching system
+# → AI delegates to zen-architect agent via task tool
 ```
 
 ### List Available Agents
@@ -68,6 +74,7 @@ Agents are bundles (using the same file format as regular bundles) with:
 - **Specialized instructions** - Domain expertise and operating procedures
 - **Curated tools** - Only the tools needed for their specific tasks
 - **Provider preferences** - Optimal model selections for their work
+- **Model role** - Declared model role preference (e.g., `reasoning`, `general`) resolved via routing matrix
 - **Context loading** - Heavy documentation loaded only when the agent runs
 
 ## Agent Delegation Patterns
@@ -94,6 +101,23 @@ spawn:
 
 This prevents delegation loops (agents delegating to other agents).
 
+### Model Role Override
+
+Agents can declare a preferred model role in their frontmatter:
+
+```yaml
+model_role: reasoning  # Single role
+# or
+model_role: [reasoning, general]  # Multiple roles with fallback
+```
+
+The routing matrix resolves the role to a concrete provider/model. The caller can override this per-delegation.
+
+**Precedence** (highest to lowest):
+1. `provider_preferences` on the delegation call
+2. `model_role` on the delegation call
+3. Agent's declared `model_role` in frontmatter
+
 ## Agent Search Paths
 
 Agents are discovered from multiple locations (first-match-wins):
@@ -117,39 +141,48 @@ amplifier run "design system"  # Uses test version
 ```bash
 amplifier
 # First, understand the codebase
-amplifier> @explorer Survey the authentication system
+amplifier> Survey the authentication system
+# → delegates to explorer agent
 
 # Design the changes
-amplifier> @zen-architect Design improvements to the auth system
+amplifier> Design improvements to the auth system
+# → delegates to zen-architect agent
 
 # Implement
-amplifier> @modular-builder Implement the auth improvements from the spec
+amplifier> Implement the auth improvements from the spec
+# → delegates to modular-builder agent
 ```
 
 ### Bug Hunting → Fix → Review
 
 ```bash
 # Find the issue
-amplifier> @bug-hunter Debug the login timeout issue
+amplifier> Debug the login timeout issue
+# → delegates to bug-hunter agent
 
 # Review the fix
-amplifier> @security-guardian Review the authentication fix for vulnerabilities
+amplifier> Review the authentication fix for vulnerabilities
+# → delegates to security-guardian agent
 
 # Commit
-amplifier> @git-ops Commit the authentication timeout fix
+amplifier> Commit the authentication timeout fix
+# → delegates to git-ops agent
 ```
 
 ### Research → Design → Build
 
 ```bash
 # Research approaches
-amplifier> @web-research Find best practices for rate limiting
+amplifier> Find best practices for rate limiting
+# → delegates to web-research agent
 
 # Design the solution
-amplifier> @zen-architect Design a rate limiting system
+amplifier> Design a rate limiting system
+# → delegates to zen-architect agent
 
 # Implement
-amplifier> @modular-builder Build the rate limiter from the spec
+amplifier> Build the rate limiter from the spec
+# → delegates to modular-builder agent
 ```
 
 ## Creating Custom Agents
@@ -163,6 +196,8 @@ Agents are bundles - they use the same file format and composition model. To cre
 meta:
   name: my-agent
   description: "Clear description with WHY, WHEN, WHAT, HOW"
+
+model_role: general  # Optional: semantic role for model selection
 
 tools:
   - module: tool-filesystem
@@ -178,7 +213,7 @@ Your agent's system instructions here...
    - User-wide: `~/.amplifier/agents/my-agent.md`
    - Project-specific: `.amplifier/agents/my-agent.md`
 
-3. **Invoke**: `@my-agent your task`
+3. **Invoke**: The AI will automatically delegate to your agent when the task matches its description
 
 ### Agent Description Requirements
 
@@ -196,11 +231,11 @@ The `meta.description` field is critical - it's how the system matches requests 
 Agents support multi-turn conversations through automatic state persistence:
 
 ```bash
-amplifier> @explorer Survey the API endpoints
-# ... agent completes first task ...
+amplifier> Survey the API endpoints
+# → delegates to explorer agent, completes first task
 
-amplifier> @explorer Now check which endpoints handle authentication
-# ... agent resumes with previous context ...
+amplifier> Now check which endpoints handle authentication
+# → explorer agent resumes with previous context
 ```
 
 The system automatically:
@@ -245,16 +280,16 @@ This enables agents to understand code relationships beyond text search.
 
 ```bash
 # ✅ Good: Specific task with clear scope
-amplifier> @explorer Find all authentication-related files in src/
+amplifier> Find all authentication-related files in src/
 
 # ❌ Less effective: Vague request
-amplifier> @explorer Look around
+amplifier> Look around
 
 # ✅ Good: Clear design objective
-amplifier> @zen-architect Design a caching layer for the API
+amplifier> Design a caching layer for the API
 
 # ❌ Less effective: Open-ended
-amplifier> @zen-architect Make things better
+amplifier> Make things better
 ```
 
 ## Troubleshooting
@@ -286,7 +321,7 @@ amplifier agents list
 
 ## Advanced: Agent Composition
 
-Since agents ARE bundles, they support full bundle composition:
+Since agents ARE bundles, they use the same file format and composition model as regular bundles:
 
 ```yaml
 # custom-agent.md
@@ -295,22 +330,16 @@ meta:
   name: custom-agent
   description: "My specialized agent"
 
-includes:
-  - bundle: foundation  # Inherit base capabilities
+model_role: general
 
 tools:
-  - module: my-custom-tool  # Add specialized tools
+  - module: tool-filesystem
+  - module: tool-search
 ---
 
 # Custom Agent
 
 Specialized instructions...
 ```
-
-This allows building agents that:
-- Inherit from other agents
-- Compose multiple capability sets
-- Override specific configurations
-- Share tools and context across agents
 
 **See Also:** [Bundle System Documentation](../developer_guides/foundation/amplifier_foundation/bundle_system.md)

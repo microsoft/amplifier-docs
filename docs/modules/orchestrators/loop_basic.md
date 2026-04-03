@@ -1,11 +1,11 @@
 ---
 title: loop-basic
-description: Basic orchestrator with complete event emissions
+description: Basic orchestrator with parallel tool execution and complete event emissions
 ---
 
 # loop-basic Orchestrator
 
-Reference implementation of sequential agent loop orchestration with complete event emissions.
+Reference implementation of parallel-capable agent loop orchestration with complete event emissions.
 
 ## Overview
 
@@ -13,7 +13,7 @@ The `loop-basic` orchestrator provides a straightforward request-response loop:
 
 1. Receive user prompt
 2. Get LLM completion
-3. Execute tool calls sequentially
+3. Execute tool calls in parallel
 4. Repeat until final response
 
 This orchestrator emits all canonical events for full observability.
@@ -49,8 +49,8 @@ orchestrators:
 3. Loop:
    a. Get messages from context
    b. Call provider.complete(messages, tools)
-   c. If no tool calls → return response
-   d. Execute tool calls sequentially
+   c. If no tool calls -> return response
+   d. Execute tool calls in parallel
    e. Add tool results to context
    f. Repeat from step 3
 4. Return final response
@@ -58,15 +58,26 @@ orchestrators:
 
 ### Tool Execution
 
-Tools execute **sequentially** (one at a time):
+Tools execute **in parallel** (concurrently):
 
 ```
-tool_call_1 → execute → add result
-tool_call_2 → execute → add result
-tool_call_3 → execute → add result
+tool_call_1 ──┐
+tool_call_2 ──┼─ await gather() -> all complete
+tool_call_3 ──┘
 ```
 
-This ensures predictable execution order and clear event sequence.
+Results are added to context in **original order** (deterministic):
+
+```
+[tool_result_1, tool_result_2, tool_result_3]  # Always same order
+```
+
+This ensures:
+- Fast execution (parallel)
+- Deterministic context (ordered results)
+- Reproducible behavior
+
+A `parallel_group_id` is emitted in tool events to correlate related parallel executions.
 
 ### Iteration Limit
 
@@ -94,26 +105,13 @@ Simply wrap up naturally.
 
 The orchestrator emits complete event streams for observability:
 
-### Execution Events
-
-- `execution:start` - Loop begins
-  ```python
-  {"prompt": "user prompt"}
-  ```
-
-- `execution:end` - Loop completes
-  ```python
-  {"response": "final response text"}
-  ```
-
 ### Provider Events
 
 - `provider:request` - Before LLM call
   ```python
   {
       "provider": "AnthropicProvider",
-      "iteration": 3,
-      "message_count": 12
+      "iteration": 3
   }
   ```
 
@@ -121,17 +119,18 @@ The orchestrator emits complete event streams for observability:
   ```python
   {
       "provider": "AnthropicProvider",
-      "model": "claude-sonnet-4-5",
-      "usage": {...}
+      "usage": {...},
+      "tool_calls": true
   }
   ```
 
 - `provider:error` - On LLM error
   ```python
   {
-      "error_type": "completion_failed",
-      "error_message": "...",
-      "severity": "high"
+      "provider": "AnthropicProvider",
+      "error": {"type": "LLMError", "msg": "..."},
+      "retryable": true,
+      "status_code": 429
   }
   ```
 
@@ -141,7 +140,8 @@ The orchestrator emits complete event streams for observability:
   ```python
   {
       "tool_name": "bash",
-      "tool_input": {"command": "ls"}
+      "tool_input": {"command": "ls"},
+      "parallel_group_id": "uuid..."
   }
   ```
 
@@ -149,17 +149,18 @@ The orchestrator emits complete event streams for observability:
   ```python
   {
       "tool_name": "bash",
-      "result": {...}
+      "tool_input": {"command": "ls"},
+      "result": {...},
+      "parallel_group_id": "uuid..."
   }
   ```
 
 - `tool:error` - On tool error
   ```python
   {
-      "error_type": "execution_failed",
-      "tool": "bash",
-      "error_message": "...",
-      "severity": "high"
+      "tool_name": "bash",
+      "error": {"type": "RuntimeError", "msg": "..."},
+      "parallel_group_id": "uuid..."
   }
   ```
 
@@ -205,7 +206,7 @@ Providers that support extended thinking (e.g., Anthropic Claude with thinking b
 
 On LLM error:
 1. Emit `provider:error` event
-2. Return error message to user
+2. Raise exception (error propagated to caller)
 3. Exit loop
 
 ### Tool Errors
@@ -215,22 +216,14 @@ On tool execution error:
 2. Add error as tool result to context
 3. Continue loop (LLM sees the error)
 
-### Timeout
-
-If `timeout` expires:
-1. Current operation completes
-2. Return whatever response is available
-3. Session may end gracefully
-
 ## Comparison with Other Orchestrators
 
-| Feature | loop-basic | loop-streaming | loop-events |
-|---------|------------|----------------|-------------|
-| Tool execution | Sequential | Parallel | Sequential |
-| Response delivery | Buffered | Streaming | Buffered |
-| Event emissions | Complete | Partial | Complete |
-| Scheduler integration | No | No | Yes |
-| Best for | Testing, debugging | Interactive UIs | Multi-agent systems |
+| Feature | loop-basic | loop-streaming |
+|---------|------------|----------------|
+| Tool execution | **Parallel** | Parallel |
+| Response delivery | Buffered | Streaming |
+| Event emissions | Complete | Partial |
+| Best for | Testing, debugging | Interactive UIs |
 
 ## Use Cases
 
@@ -248,13 +241,13 @@ hooks:
       log_events: true  # Every event captured
 ```
 
-### 2. Predictable Tool Execution
+### 2. Parallel Tool Execution
 
-Sequential tool execution ensures deterministic order:
+Parallel tool execution with deterministic context ordering:
 
 ```
 Agent calls: [read_file, edit_file, bash]
-Execution:   read → edit → bash (always this order)
+Execution:   all run concurrently -> results ordered as called
 ```
 
 ### 3. Simple Deployments
@@ -276,21 +269,14 @@ config:
   max_iterations: 20  # Prevent infinite loops
 ```
 
-### 2. Use Appropriate Timeout
-
-```yaml
-config:
-  timeout: 600  # 10 minutes for complex tasks
-```
-
-### 3. Monitor Events
+### 2. Monitor Events
 
 ```yaml
 hooks:
   - module: hooks-logging  # Capture all events
 ```
 
-### 4. Switch to Streaming for UX
+### 3. Switch to Streaming for UX
 
 For interactive applications:
 
@@ -303,8 +289,7 @@ session:
 
 - Tool results added to context in execution order
 - Context compaction handled automatically by context manager
-- Provider selection uses `default_provider` from config or first available
-- Cleanup functions called on session end
+- Provider selection uses priority-based ordering (lower priority number = higher precedence)
 
 ## See Also
 

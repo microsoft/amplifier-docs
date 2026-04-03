@@ -116,8 +116,8 @@ amplifier session list [OPTIONS]
 
 | Option | Description |
 |--------|-------------|
-| `--limit, -n` | Number of sessions to show (default: 10) |
-| `--all` | Show all sessions |
+| `--limit, -n` | Number of sessions to show (default: 20) |
+| `--all-projects` | Show sessions from all projects |
 | `--project` | Filter by project path |
 
 ### `session show`
@@ -141,16 +141,27 @@ amplifier session resume SESSION_ID [PROMPT]
 Fork a session at a specific turn.
 
 ```bash
-amplifier session fork SESSION_ID TURN [NEW_NAME]
+amplifier session fork SESSION_ID [OPTIONS]
 ```
+
+| Option | Description |
+|--------|-------------|
+| `--at-turn, -t` | Turn number to fork at (default: latest) |
+| `--name, -n` | Custom name/ID for forked session |
+| `--resume, -r` | Resume forked session immediately |
+| `--no-events` | Skip copying events.jsonl |
 
 ### `session delete`
 
 Delete a session.
 
 ```bash
-amplifier session delete SESSION_ID
+amplifier session delete SESSION_ID [OPTIONS]
 ```
+
+| Option | Description |
+|--------|-------------|
+| `--force, -f` | Skip confirmation |
 
 ### `session cleanup`
 
@@ -162,8 +173,8 @@ amplifier session cleanup [OPTIONS]
 
 | Option | Description |
 |--------|-------------|
-| `--days` | Delete sessions older than N days (default: 30) |
-| `--dry-run` | Show what would be deleted without deleting |
+| `--days, -d` | Delete sessions older than N days (default: 30) |
+| `--force, -f` | Skip confirmation |
 
 ## Bundle Management
 
@@ -604,7 +615,9 @@ amplifier update [OPTIONS]
 | Option | Description |
 |--------|-------------|
 | `--check-only` | Check for updates without installing |
-| `--modules` | Update modules only |
+| `--yes, -y` | Skip confirmations |
+| `--force` | Force update even if already latest |
+| `--verbose, -v` | Show detailed output |
 
 ### `version`
 
@@ -624,17 +637,19 @@ amplifier reset [OPTIONS]
 
 | Option | Description |
 |--------|-------------|
-| `--confirm` | Skip confirmation prompt |
+| `--preserve` | Categories to preserve during reset |
+| `--remove` | Categories to remove during reset |
+| `--full` | Full reset (remove all categories) |
+| `-y, --yes` | Skip confirmation prompt |
+| `--dry-run` | Preview what would be reset |
+| `--no-install` | Skip reinstalling after reset |
 
 ## Environment Variables
 
 | Variable | Description |
 |----------|-------------|
 | `AMPLIFIER_HOME` | Override home directory (default: `~/.amplifier`) |
-| `AMPLIFIER_BUNDLE` | Default bundle to use |
-| `AMPLIFIER_PROVIDER` | Default provider |
-| `AMPLIFIER_MODEL` | Default model |
-| `AMPLIFIER_AGENT_<NAME>` | Override agent path for testing |
+| `AMPLIFIER_AGENT_<NAME>` | Override agent path for testing (uppercase, dashes become underscores) |
 
 ## Shell Completion
 
@@ -656,4 +671,3 @@ amplifier --install-completion fish
 |------|---------|
 | `0` | Success |
 | `1` | Error or failure |
-| `2` | User cancellation |
