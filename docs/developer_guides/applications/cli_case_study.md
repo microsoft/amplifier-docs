@@ -61,31 +61,14 @@ amplifier-app-cli/
 
 **Solution:** Layered configuration with clear precedence:
 
-```python
-from amplifier_foundation import resolve_config
+Layered configuration with clear precedence:
 
-# Layer 1: User settings (~/.amplifier/config.yaml)
-user_config = load_user_settings()
+1. **User settings** (`~/.amplifier/config.yaml`) — base defaults
+2. **Project config** (`.amplifier/config.yaml`) — project-level overrides
+3. **Bundle config** (if a bundle is specified) — bundle-provided settings
+4. **CLI flags** (highest priority) — explicit command-line overrides
 
-# Layer 2: Project config (.amplifier/config.yaml)
-project_config = load_project_config()
-
-# Layer 3: Bundle config (if specified)
-bundle_config = load_bundle(bundle_name) if bundle_name else {}
-
-# Layer 4: CLI flags (highest priority)
-cli_overrides = {
-    "providers": [{"module": provider, "config": {"model": model}}]
-} if model else {}
-
-# Merge with clear precedence
-final_config = resolve_config(
-    base=user_config,
-    project=project_config,
-    bundle=bundle_config,
-    overrides=cli_overrides
-)
-```
+See `effective_config.py` for the implementation details.
 
 **Key Files:**
 - `effective_config.py` - Configuration resolution and merging
@@ -149,24 +132,84 @@ result = await spawn_sub_session(
     parent_session=parent_session,
     agent_configs=agent_configs,
     tool_inheritance={"exclude_tools": ["tool-task"]},  # Prevent recursion
+    hook_inheritance={"exclude_hooks": ["hooks-logging"]},  # Filter hooks
     provider_preferences=[  # Override model selection
         {"provider": "anthropic", "model": "claude-haiku-*"}
     ]
 )
 
-# Returns: {"output": str, "session_id": str}
+# Returns: {"output": str, "session_id": str, "status": str, "turn_count": int, "metadata": dict}
 ```
 
 **Features:**
 - Configuration merging (parent + agent overlay)
-- Tool/hook inheritance filtering
+- Tool inheritance filtering (allowlist or blocklist)
+- Hook inheritance filtering (allowlist or blocklist)
 - Provider preference overrides
+- Subprocess execution mode (`use_subprocess=True`)
 - State persistence for multi-turn
 - Working directory inheritance
 
 **Key Files:**
 - `session_spawner.py` - Agent delegation implementation
 - See [AGENT_DELEGATION_IMPLEMENTATION.md](https://github.com/microsoft/amplifier-app-cli/blob/main/docs/AGENT_DELEGATION_IMPLEMENTATION.md)
+
+#### Spawn Tool Policy
+
+Bundles control which tools spawned agents inherit using the `spawn` section:
+
+```yaml
+# In bundle.md
+spawn:
+  exclude_tools: [tool-task]  # Agents inherit all tools EXCEPT these
+  # OR
+  tools: [tool-a, tool-b]     # Agents get ONLY these tools
+```
+
+**Common pattern** — prevent delegation recursion by excluding `tool-task`:
+
+```yaml
+tools:
+  - module: tool-task      # Coordinator can delegate
+  - module: tool-filesystem
+  - module: tool-bash
+
+spawn:
+  exclude_tools: [tool-task]  # But agents can't delegate further
+```
+
+Default behavior: if no `spawn` section, agents inherit all parent tools.
+
+#### Model Role Override
+
+The `model_role` parameter lets the caller override the agent's default model role for a specific delegation:
+
+```python
+# Via task tool
+result = tool_execute({
+    "agent": "foundation:explorer",
+    "instruction": "Analyze these UI screenshots",
+    "model_role": "vision"
+})
+```
+
+**Precedence** (highest to lowest):
+
+1. `provider_preferences` on the delegation call — explicit provider/model pinning
+2. `model_role` on the delegation call — semantic role override
+3. Agent frontmatter `model_role` — the agent's own declared preference
+4. No preference — session default (resolved from the `general` role)
+
+**Task tool input schema:**
+```python
+{
+    "agent": str,          # Optional - required for spawn, not needed for resume
+    "instruction": str,     # Required - task for agent to execute
+    "session_id": str,     # Optional - when provided, triggers resume instead of spawn
+    "model_role": str,     # Optional - semantic role override (e.g., "coding", "fast")
+    "provider_preferences": list,  # Optional - ordered fallback chain for provider/model
+}
+```
 
 ### 4. Interactive REPL
 
@@ -193,7 +236,7 @@ await interactive_chat(
 - Persistent history (project-scoped)
 - Multi-line input (Ctrl-J)
 - Ctrl+C cancellation (graceful/immediate)
-- Command processing (`/help`, `/mode`, `/config`)
+- Command processing (`/help`, `/mode`, `/config`, `/rename`, `/fork`, `/skills`, `/skill`)
 - Dynamic mode indicators
 - Session state persistence
 
@@ -234,7 +277,6 @@ if store.exists(session_id):
 ```
 ~/.amplifier/projects/{project-slug}/sessions/{session-id}/
 ├── transcript.jsonl     # Conversation history
-├── events.jsonl         # Complete event log
 └── metadata.json        # Session metadata
 ```
 
@@ -249,17 +291,15 @@ if store.exists(session_id):
 **Solution:** amplifier-foundation bundle system:
 
 ```python
-from amplifier_foundation.bundle import prepare_bundle
+from amplifier_foundation import load_bundle
 
-# Prepare bundle (resolves modules, agents, context)
-prepared = await prepare_bundle(
-    bundle_path=bundle_path,
-    resolver=module_resolver
-)
+# Load and prepare bundle (resolves modules, agents, context)
+bundle = await load_bundle(bundle_path)
+prepared = await bundle.prepare()
 
 # Use with session
 await interactive_chat(
-    config=prepared.config,  # Fully resolved mount plan
+    config=prepared.mount_plan,  # Fully resolved mount plan
     prepared_bundle=prepared,  # For module resolution
     bundle_name=bundle_name
 )

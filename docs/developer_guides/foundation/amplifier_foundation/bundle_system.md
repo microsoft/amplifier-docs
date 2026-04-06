@@ -174,6 +174,63 @@ async with prepared.create_session() as session:
     response = await session.execute("Hello!")
 ```
 
+Use `prepared.spawn()` to spawn a sub-session with a child bundle:
+
+```python
+from amplifier_foundation.bundle import Bundle
+
+# Resolve child bundle
+child_bundle = await load_bundle("./agents/bug-hunter.md")
+
+# Spawn sub-session (composed with parent by default)
+result = await prepared.spawn(
+    child_bundle,
+    "Find the bug in auth.py",
+)
+# Returns: {"output": str, "session_id": str, "status": str, "turn_count": int, "metadata": dict}
+
+# Resume existing sub-session
+result = await prepared.spawn(
+    child_bundle,
+    "Continue investigating",
+    session_id=result["session_id"],
+)
+
+# Spawn without composition (standalone bundle, no parent merge)
+result = await prepared.spawn(
+    child_bundle,
+    "Do something",
+    compose=False,
+)
+
+# With provider preferences (fallback chain)
+from amplifier_foundation.spawn_utils import ProviderPreference
+
+result = await prepared.spawn(
+    child_bundle,
+    "Analyze this code",
+    provider_preferences=[
+        ProviderPreference(provider="anthropic", model="claude-haiku-*"),
+        ProviderPreference(provider="openai", model="gpt-5-mini"),
+    ],
+)
+```
+
+**`PreparedBundle.spawn()` parameters:**
+
+- `child_bundle` (`Bundle`) — Bundle to spawn (already resolved by app layer).
+- `instruction` (`str`) — Task instruction for the sub-session.
+- `compose` (`bool`, default `True`) — Whether to compose child with parent bundle.
+- `parent_session` (`Any`, default `None`) — Parent session for lineage tracking and UX inheritance.
+- `session_id` (`str | None`) — Optional session ID for resuming an existing session.
+- `orchestrator_config` (`dict | None`) — Optional orchestrator config to override/merge (e.g., `min_delay_between_calls_ms`).
+- `parent_messages` (`list | None`) — Optional parent messages to inject into child context.
+- `session_cwd` (`Path | None`) — Optional working directory override for the child session.
+- `provider_preferences` (`list[ProviderPreference] | None`) — Ordered provider/model fallback chain.
+- `self_delegation_depth` (`int`, default `0`) — Current delegation depth for depth limiting.
+
+> **Note:** The app layer (CLI, API server) typically wraps `PreparedBundle.spawn()` in a "spawn capability" function that handles additional concerns such as agent name resolution, tool/hook inheritance filtering, and state persistence. See `amplifier-app-cli/session_spawner.py` for the reference production implementation.
+
 ## Registry Management
 
 The `BundleRegistry` manages named bundles:

@@ -225,21 +225,33 @@
       "sources": [
         {
           "repo": "amplifier-foundation",
-          "path": "docs/BUNDLE_GUIDE.md",
+          "path": "amplifier_foundation/bundle/__init__.py",
           "exists": true,
-          "hash": "6ccbeaaa9996453a"
+          "hash": "387ba5fe58afed07"
         },
         {
           "repo": "amplifier-foundation",
-          "path": "amplifier_foundation/bundle.py",
-          "exists": false,
-          "hash": null
+          "path": "amplifier_foundation/bundle/_dataclass.py",
+          "exists": true,
+          "hash": "baab918b0dec85a9"
+        },
+        {
+          "repo": "amplifier-foundation",
+          "path": "amplifier_foundation/bundle/_prepared.py",
+          "exists": true,
+          "hash": "a0449e735ab3e306"
         },
         {
           "repo": "amplifier-foundation",
           "path": "amplifier_foundation/registry.py",
           "exists": true,
           "hash": "8ef4d68cc1561a01"
+        },
+        {
+          "repo": "amplifier-foundation",
+          "path": "docs/BUNDLE_GUIDE.md",
+          "exists": true,
+          "hash": "6ccbeaaa9996453a"
         }
       ]
     },
@@ -450,7 +462,7 @@
           "repo": "amplifier-app-cli",
           "path": "amplifier_app_cli/main.py",
           "exists": true,
-          "hash": "77dfec7ef06503f4"
+          "hash": "cfb3ef67d80f3419"
         },
         {
           "repo": "amplifier-app-cli",
