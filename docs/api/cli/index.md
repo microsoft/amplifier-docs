@@ -47,6 +47,30 @@ CLI commands are implemented in `amplifier_app_cli.commands`:
 
 See [CLI Reference](../../user_guide/cli.md) for complete usage documentation.
 
+## Shell Completion
+
+Install shell completion with `--install-completion`. The shell is auto-detected from `$SHELL`:
+
+```bash
+amplifier --install-completion
+```
+
+Supported shells and their config files:
+
+| Shell | Config File |
+|-------|-------------|
+| bash | `~/.bashrc` or `~/.bash_profile` |
+| zsh | `~/.zshrc` |
+| fish | `~/.config/fish/completions/amplifier.fish` |
+
+To activate after installation:
+
+```bash
+source ~/.bashrc  # or ~/.zshrc for zsh
+```
+
+The command is idempotent — running it again when completion is already installed is a no-op.
+
 ## Architecture
 
 ```
@@ -102,9 +126,28 @@ Interactive sessions use `interactive_chat()` which provides:
 
 - REPL loop with prompt history
 - Ctrl+C cancellation handling
-- Multi-line input support
-- Command processing (`/help`, `/mode`, `/config`, etc.)
+- Multi-line input support (Ctrl-J for newline)
 - Session state persistence
+
+Slash commands available in interactive mode (`CommandProcessor.COMMANDS`):
+
+| Command | Description |
+|---------|-------------|
+| `/help` | Show available commands |
+| `/mode <name>` | Set or toggle a mode (e.g., `/mode plan`) |
+| `/modes` | List available modes |
+| `/status` | Show session status |
+| `/config` | Show current configuration |
+| `/tools` | List available tools |
+| `/agents` | List available agents |
+| `/save [filename]` | Save conversation transcript |
+| `/clear` | Clear conversation context |
+| `/rename <name>` | Rename current session |
+| `/fork [turn] [name]` | Fork session at turn N: `/fork [turn]` |
+| `/skills` | List available skills |
+| `/skill <name>` | Load a skill (e.g., `/skill simplify`) |
+| `/allowed-dirs` | Manage allowed write directories |
+| `/denied-dirs` | Manage denied write directories |
 
 ## Related
 

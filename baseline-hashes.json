@@ -320,13 +320,13 @@
           "repo": "amplifier-foundation",
           "path": "amplifier_foundation/__init__.py",
           "exists": true,
-          "hash": "dae4c6c772f585aa"
+          "hash": "9862d7b5a590bd50"
         },
         {
           "repo": "amplifier-foundation",
-          "path": "amplifier_foundation/bundle.py",
+          "path": "amplifier_foundation/bundle/__init__.py",
           "exists": true,
-          "hash": "dc6fed83c90fc4e8"
+          "hash": "387ba5fe58afed07"
         },
         {
           "repo": "amplifier-foundation",
@@ -805,7 +805,7 @@
           "repo": "amplifier-app-cli",
           "path": "amplifier_app_cli/main.py",
           "exists": true,
-          "hash": "77dfec7ef06503f4"
+          "hash": "cfb3ef67d80f3419"
         }
       ]
     },

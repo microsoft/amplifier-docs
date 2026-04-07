@@ -26,6 +26,21 @@ from amplifier_foundation import Bundle, BundleRegistry, load_bundle
 | `BundleState` | `registry.py` | Tracked state for loaded bundles |
 | `UpdateInfo` | `registry.py` | Available update information |
 
+## Bundle Package
+
+The `amplifier_foundation.bundle` sub-package exports additional classes used for bundle preparation and module resolution:
+
+```python
+from amplifier_foundation.bundle import PreparedBundle, BundleModuleResolver, BundleModuleSource
+```
+
+| Export | Source | Purpose |
+|--------|--------|---------| 
+| `Bundle` | `bundle/_dataclass.py` | Composable unit (also exported at top level) |
+| `PreparedBundle` | `bundle/_prepared.py` | Compiled bundle ready for session use |
+| `BundleModuleResolver` | `bundle/_prepared.py` | Resolves module paths within a bundle |
+| `BundleModuleSource` | `bundle/_prepared.py` | Represents a module source within a bundle |
+
 ## Convenience Functions
 
 | Export | Source | Purpose |
