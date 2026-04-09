@@ -129,14 +129,16 @@
         {
           "repo": "amplifier-core",
           "path": "python/amplifier_core/session.py",
+          "type": "python",
           "exists": true,
           "hash": "4d2902034a64c5dd"
         },
         {
           "repo": "amplifier-app-cli",
           "path": "amplifier_app_cli/session_spawner.py",
+          "type": "python",
           "exists": true,
-          "hash": "dfbcd6c181755ad0"
+          "hash": "726aa25071775450"
         }
       ]
     },

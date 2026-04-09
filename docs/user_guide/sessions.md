@@ -16,75 +16,6 @@ A session represents a single conversation with Amplifier, including:
 - Session metadata (timestamp, profile, provider)
 - Event log for debugging
 
-## Session Basics
-
-### Starting a Session
-
-Every Amplifier command creates a session:
-
-```bash
-# Single command creates a session
-amplifier run "Explain this code"
-
-# Interactive mode is one session
-amplifier
-```
-
-### Listing Sessions
-
-```bash
-amplifier session list
-```
-
-Output:
-```
-ID        Created              Profile  Messages  Last Prompt
-abc123    2024-01-15 10:30    dev      5         "Add error handling"
-def456    2024-01-15 09:15    base     3         "Explain the auth flow"
-ghi789    2024-01-14 16:45    dev      12        "Refactor the API"
-```
-
-### Viewing Session Details
-
-```bash
-amplifier session show abc123
-```
-
-## Resuming Sessions
-
-### Resume Most Recent
-
-```bash
-# Resume and continue conversation
-amplifier continue "Now add tests for that function"
-
-# Resume interactively
-amplifier continue
-```
-
-### Resume Specific Session
-
-```bash
-# By session ID
-amplifier session resume abc123
-
-# With a new prompt
-amplifier session resume abc123 "Continue from here"
-
-# Using --resume flag
-amplifier run --resume abc123 "Continue the refactoring"
-```
-
-## Session Storage
-
-Sessions are stored at:
-
-```
-~/.amplifier/projects/<project-slug>/sessions/<session-id>/
-├── transcript.jsonl     # Conversation history
-└── metadata.json        # Session metadata
-```
-
 ## Session Metadata
 
 Session metadata includes:
@@ -98,10 +29,7 @@ Session metadata includes:
 
 ### Creation
 
-Sessions are created when you:
-- Run `amplifier run "prompt"`
-- Start interactive mode with `amplifier`
-- Resume with `amplifier continue`
+Sessions are created when you start a new conversation or resume an existing one.
 
 ### Persistence
 
@@ -112,75 +40,19 @@ Sessions are automatically saved after each turn, storing:
 
 ### Resumption
 
-Sessions can be resumed:
-- Automatically with `amplifier continue` (most recent)
-- By ID with `amplifier session resume <id>`
+Sessions can be resumed by session ID to continue prior conversations.
 
-## Session Management Commands
+### Session Events
 
-### List Sessions
+The kernel emits lifecycle events during session execution:
 
-```bash
-# Show recent sessions
-amplifier session list
-
-# Show all sessions
-amplifier session list --all
-
-# Show limited number
-amplifier session list --limit 5
-```
-
-### Show Session Details
-
-```bash
-amplifier session show abc123
-```
-
-Shows:
-- Session ID and creation time
-- Bundle and model configuration
-- Message count
-- Last prompt
-- Session name (if set)
-
-### Fork Sessions
-
-Fork a session at a specific turn to explore alternative paths:
-
-```bash
-# Show turns and fork interactively
-amplifier session fork abc123
-
-# Fork at specific turn
-amplifier session fork abc123 5
-
-# Fork with custom name
-amplifier session fork abc123 5 my-experiment
-```
-
-### Delete Sessions
-
-```bash
-# Delete specific session
-amplifier session delete abc123
-
-# Confirm deletion
-amplifier session delete abc123 --confirm
-```
-
-### Clean Up Old Sessions
-
-```bash
-# Delete sessions older than 30 days
-amplifier session cleanup
-
-# Delete sessions older than N days
-amplifier session cleanup --days 7
-
-# Preview without deleting
-amplifier session cleanup --dry-run
-```
+| Event | Emitted When |
+|-------|-------------|
+| `session:start` | New session begins executing |
+| `session:resume` | Existing session is resumed |
+| `session:fork` | Child (sub) session is created |
+| `session:end` | Session cleanup completes |
+| `cancel:completed` | Session execution is cancelled |
 
 ## Sub-Sessions (Agent Delegation)
 
@@ -188,14 +60,54 @@ When agents delegate to other agents, child sessions (sub-sessions) are created:
 
 ### Sub-Session Structure
 
-```
-parent-session-id/
-├── transcript.jsonl
-└── metadata.json
+Sub-session IDs follow the format:
 
-{parent_id}-{child_span}_{agent_name}/  # Sub-session ID format
-├── transcript.jsonl
-└── metadata.json
+```
+{parent_id}-{child_span}_{agent_name}
+```
+
+### Tool and Hook Inheritance
+
+Control which tools and hooks are inherited by sub-sessions:
+
+```python
+# Exclude specific tools from inheritance
+tool_inheritance={"exclude_tools": ["tool-task"]}
+
+# Inherit ONLY specific tools (allowlist)
+tool_inheritance={"inherit_tools": ["tool-filesystem"]}
+
+# Exclude specific hooks from inheritance
+hook_inheritance={"exclude_hooks": ["hooks-logging"]}
+
+# Inherit ONLY specific hooks (allowlist)
+hook_inheritance={"inherit_hooks": ["hooks-approval"]}
+```
+
+Agent-explicit tools and hooks are always preserved regardless of the filtering policy.
+Formula: `final = (inherited - excluded) + explicit`
+
+### Subprocess Spawn Mode
+
+Sub-sessions can run in a subprocess instead of in-process, providing isolation:
+
+```yaml
+# In agent bundle config
+spawn_mode: subprocess
+```
+
+Or pass `use_subprocess: true` in the delegation call. Subprocess mode automatically propagates bundle context (module paths, mention mappings) to the child process.
+
+### Session Metadata
+
+Pass arbitrary metadata into child sessions for observability. Metadata is surfaced on `session:start` and `session:fork` events:
+
+```python
+response = await task_tool.execute({
+    "agent": "architect",
+    "instruction": "Design the API",
+    "session_metadata": {"workflow": "planning", "task_id": "t-123"}
+})
 ```
 
 ### Multi-Turn Sub-Sessions
@@ -252,7 +164,6 @@ Sessions maintain context through:
 ### Session Cleanup
 
 - Regularly clean up old sessions to save disk space
-- Use `--dry-run` to preview cleanup
 - Keep important sessions by giving them descriptive names
 
 ### Forking Sessions
@@ -271,4 +182,3 @@ Sessions maintain context through:
 
 - [CLI Reference](./cli.md) - Complete command reference
 - [Session Storage Specification](../developer/sessions/storage.md) - Technical details
-
