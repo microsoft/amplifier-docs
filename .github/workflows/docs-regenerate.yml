@@ -233,16 +233,18 @@ jobs:
                       if {(x.get('repo',''), x.get('path','')): x.get('hash') for x in s.get('sources', [])}
                       != {(x.get('repo',''), x.get('path','')): x.get('hash') for x in base.get('sections', {}).get(sid, {}).get('sources', [])})
               print(n)
-          except FileNotFoundError:
-              print(0)
-          ")
+          except Exception:
+              print(-1)
+          " || echo "-1")
 
           if [ "$changed" = "0" ]; then
             echo "No sections need regeneration. Skipping."
             exit 0
+          elif [ "$changed" = "-1" ]; then
+            echo "Pre-check could not determine change count. Proceeding with retry loop."
+          else
+            echo "$changed section(s) need regeneration."
           fi
-
-          echo "$changed section(s) need regeneration."
 
           MAX_ATTEMPTS=2
           DELAY=120  # seconds between workflow-level retries
