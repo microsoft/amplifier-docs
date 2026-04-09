@@ -223,10 +223,27 @@ jobs:
       - name: Regenerate docs
         if: steps.preflight.outputs.skip != 'true'
         run: |
-          rm -f .recipe-success
-          amplifier tool invoke recipes \
-            operation=execute \
-            recipe_path=recipes/docs-regenerate.yaml
+          MAX_ATTEMPTS=2
+          DELAY=120  # seconds between workflow-level retries
+
+          for attempt in $(seq 1 $MAX_ATTEMPTS); do
+            echo "=== Regeneration attempt $attempt/$MAX_ATTEMPTS ==="
+            rm -f .recipe-success
+
+            amplifier tool invoke recipes \
+              operation=execute \
+              recipe_path=recipes/docs-regenerate.yaml
+
+            if [ -f .recipe-success ]; then
+              echo "Recipe succeeded on attempt $attempt"
+              break
+            elif [ $attempt -lt $MAX_ATTEMPTS ]; then
+              echo "No .recipe-success marker — retrying in ${DELAY}s..."
+              sleep $DELAY
+            else
+              echo "All $MAX_ATTEMPTS attempts exhausted."
+            fi
+          done
 
       - name: Verify regeneration result
         if: steps.preflight.outputs.skip != 'true'

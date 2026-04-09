@@ -43,6 +43,16 @@
 #     evidence-validation steps (safety margin for solo heavy docs).
 #   - Increased job timeout from 60 to 75 minutes to accommodate.
 #
+# v5.2.0 (2026-04-09):
+#   - Added retry logic for transient Anthropic API errors (overloaded_error)
+#     * ROOT CAUSE: Daily regeneration failed when Anthropic returned 529
+#       overloaded_error during the regenerate-docs step. No retry existed,
+#       so a single transient failure failed the entire CI run.
+#     * FIX: Added retry config (max_attempts: 3, exponential backoff 30-300s)
+#       to both regenerate-docs and evidence-validation agent steps.
+#   - Added workflow-level retry (2 attempts, 120s delay) in docs-regenerate.yml
+#     as defense-in-depth for non-LLM recipe failures.
+#
 # v5.0.0 (2026-02-20):
 #   - Breaking: converted from staged recipe to flat recipe
 #   - Removed: approval gate (evidence validation + semantic diff filter are
@@ -54,7 +64,7 @@
 #
 name: "docs-regenerate"
 description: "Regenerate documentation incrementally using source hash diffs, with evidence validation and unconditional cleanup"
-version: "5.0.0"
+version: "5.2.0"
 tags: ["documentation", "regeneration", "incremental", "evidence-based"]
 
 context:
@@ -346,6 +356,11 @@ steps:
       Work through ALL selected docs. Be surgical - the goal is MINIMAL diff.
     output: "regeneration_result"
     timeout: 1200
+    retry:
+      max_attempts: 3
+      backoff: exponential
+      initial_delay: 30
+      max_delay: 300
 
   # Evidence-based validation: verify all claims against source code
   - id: "evidence-validation"
@@ -418,6 +433,11 @@ steps:
     output: "evidence_result"
     parse_json: true
     timeout: 1200
+    retry:
+      max_attempts: 3
+      backoff: exponential
+      initial_delay: 30
+      max_delay: 300
 
   # Semantic diff analysis - auto-filter cosmetic-only changes
   - id: "semantic-diff-filter"
