@@ -223,6 +223,27 @@ jobs:
       - name: Regenerate docs
         if: steps.preflight.outputs.skip != 'true'
         run: |
+          # Pre-check: skip retry loop entirely if nothing needs regeneration
+          changed=$(python3 -c "
+          import json
+          try:
+              cur = json.load(open('sync-output/cache/source-hashes.json'))
+              base = json.load(open('baseline-hashes.json'))
+              n = sum(1 for sid, s in cur.get('sections', {}).items()
+                      if {(x.get('repo',''), x.get('path','')): x.get('hash') for x in s.get('sources', [])}
+                      != {(x.get('repo',''), x.get('path','')): x.get('hash') for x in base.get('sections', {}).get(sid, {}).get('sources', [])})
+              print(n)
+          except FileNotFoundError:
+              print(0)
+          ")
+
+          if [ "$changed" = "0" ]; then
+            echo "No sections need regeneration. Skipping."
+            exit 0
+          fi
+
+          echo "$changed section(s) need regeneration."
+
           MAX_ATTEMPTS=2
           DELAY=120  # seconds between workflow-level retries
 
@@ -232,13 +253,13 @@ jobs:
 
             amplifier tool invoke recipes \
               operation=execute \
-              recipe_path=recipes/docs-regenerate.yaml
+              recipe_path=recipes/docs-regenerate.yaml || true
 
             if [ -f .recipe-success ]; then
               echo "Recipe succeeded on attempt $attempt"
               break
             elif [ $attempt -lt $MAX_ATTEMPTS ]; then
-              echo "No .recipe-success marker — retrying in ${DELAY}s..."
+              echo "No .recipe-success marker -- retrying in ${DELAY}s..."
               sleep $DELAY
             else
               echo "All $MAX_ATTEMPTS attempts exhausted."
