@@ -130,23 +130,19 @@ result = await spawn_sub_session(
     agent_name="zen-architect",
     instruction="Design authentication system",
     parent_session=parent_session,
-    agent_configs=agent_configs,
     tool_inheritance={"exclude_tools": ["tool-task"]},  # Prevent recursion
-    hook_inheritance={"exclude_hooks": ["hooks-logging"]},  # Filter hooks
     provider_preferences=[  # Override model selection
         {"provider": "anthropic", "model": "claude-haiku-*"}
     ]
 )
 
-# Returns: {"output": str, "session_id": str, "status": str, "turn_count": int, "metadata": dict}
+# Returns: {"response": str, "session_id": str}
 ```
 
 **Features:**
 - Configuration merging (parent + agent overlay)
 - Tool inheritance filtering (allowlist or blocklist)
-- Hook inheritance filtering (allowlist or blocklist)
 - Provider preference overrides
-- Subprocess execution mode (`use_subprocess=True`)
 - State persistence for multi-turn
 - Working directory inheritance
 
@@ -200,6 +196,26 @@ result = tool_execute({
 3. Agent frontmatter `model_role` — the agent's own declared preference
 4. No preference — session default (resolved from the `general` role)
 
+If both `model_role` and `provider_preferences` are provided in the same call, `provider_preferences` wins.
+
+**Available roles**:
+
+| Role | Use for |
+|------|---------| 
+| `general` | Versatile catch-all, no specialization needed |
+| `fast` | Quick utility tasks — parsing, classification, file ops, bulk work |
+| `coding` | Code generation, implementation, debugging |
+| `ui-coding` | Frontend/UI code — components, layouts, styling, spatial reasoning |
+| `security-audit` | Vulnerability assessment, attack surface analysis, code auditing |
+| `reasoning` | Deep architectural reasoning, system design, complex multi-step analysis |
+| `critique` | Analytical evaluation — finding flaws in existing work |
+| `creative` | Design direction, aesthetic judgment, high-quality creative output |
+| `writing` | Long-form content — documentation, marketing, case studies, storytelling |
+| `research` | Deep investigation, information synthesis across multiple sources |
+| `vision` | Understanding visual input — screenshots, diagrams, UI mockups |
+| `image-gen` | Image generation, visual mockup creation, visual ideation |
+| `critical-ops` | High-reliability operational tasks — infrastructure, orchestration, coordination |
+
 **Task tool input schema:**
 ```python
 {
@@ -225,6 +241,7 @@ await interactive_chat(
     config=mount_plan,
     search_paths=module_search_paths,
     verbose=verbose,
+    session_id=None,  # Optional - generated if not provided
     bundle_name=bundle_name,
     prepared_bundle=prepared_bundle,
     initial_prompt="Start task",  # Optional auto-execution
@@ -277,7 +294,8 @@ if store.exists(session_id):
 ```
 ~/.amplifier/projects/{project-slug}/sessions/{session-id}/
 ├── transcript.jsonl     # Conversation history
-└── metadata.json        # Session metadata
+├── metadata.json        # Session metadata
+└── bundle.md            # Bundle snapshot (if applicable)
 ```
 
 **Key Files:**
