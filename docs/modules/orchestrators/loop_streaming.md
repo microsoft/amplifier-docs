@@ -31,6 +31,8 @@ orchestrators:
 |--------|------|---------|-------------|
 | `max_iterations` | integer | `-1` | Maximum loop iterations (`-1` = unlimited) |
 | `extended_thinking` | boolean | `false` | Enable extended thinking mode for supported models |
+| `min_delay_between_calls_ms` | integer | `0` | Minimum delay between provider calls in milliseconds (`0` = disabled) |
+| `reasoning_effort` | string | `null` | Reasoning effort level passed to the provider (provider-specific) |
 
 ## Behavior
 
@@ -100,6 +102,15 @@ This ensures:
 
 - `execution:start` - Streaming execution begins
 - `execution:end` - Streaming execution ends
+- `orchestrator:rate_limit_delay` - Rate limit delay applied between provider calls
+  ```python
+  {
+      "delay_ms": 150.0,       # Actual delay applied (ms)
+      "configured_ms": 200,    # Configured minimum (ms)
+      "elapsed_ms": 50.0,      # Elapsed since last call (ms)
+      "iteration": 2           # Current iteration
+  }
+  ```
 
 ### Standard Events
 
@@ -108,6 +119,7 @@ Also emits standard orchestrator events:
 - `provider:request`, `provider:error`
 - `prompt:submit`
 - `orchestrator:complete`
+- `cancel:requested`, `cancel:completed`
 
 ## Extended Thinking
 
@@ -130,10 +142,10 @@ Hooks (e.g., `hooks-streaming-ui`) can display thinking blocks progressively.
 
 | Feature | loop-basic | loop-streaming |
 |---------|------------|----------------|
-| Tool execution | Parallel | **Parallel** |
-| Response delivery | Buffered | **Streaming** |
-| Streaming delivery | No | **Yes** |
-| Best for | Testing | **Interactive UIs** |
+| Tool execution | — | **Parallel** |
+| Response delivery | — | **Streaming** |
+| Streaming delivery | — | **Yes** |
+| Best for | — | **Interactive UIs** |
 
 ## Use Cases
 

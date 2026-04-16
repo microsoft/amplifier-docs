@@ -19,7 +19,8 @@ from amplifier_foundation import Bundle, BundleRegistry, load_bundle
 
 | Export | Source | Purpose |
 |--------|--------|---------| 
-| `Bundle` | `bundle.py` | Composable unit with mount plan config |
+| `Bundle` | `bundle/__init__.py` | Composable unit with mount plan config |
+| `SessionConfigurator` | `configurator.py` | Runtime session configuration |
 | `BundleRegistry` | `registry.py` | Named bundle management and loading |
 | `BundleValidator` | `validator.py` | Bundle structure validation |
 | `ValidationResult` | `validator.py` | Validation result with errors/warnings |
@@ -175,7 +176,7 @@ Each source file has comprehensive docstrings. To read them:
 
 ```bash
 # In your editor
-code amplifier_foundation/bundle.py
+code amplifier_foundation/bundle/__init__.py
 
 # Or via Python
 python -c "from amplifier_foundation import Bundle; help(Bundle)"

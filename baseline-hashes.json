@@ -322,7 +322,7 @@
           "repo": "amplifier-foundation",
           "path": "amplifier_foundation/__init__.py",
           "exists": true,
-          "hash": "9862d7b5a590bd50"
+          "hash": "55aebde5ec95cc5d"
         },
         {
           "repo": "amplifier-foundation",
@@ -807,7 +807,7 @@
           "repo": "amplifier-app-cli",
           "path": "amplifier_app_cli/main.py",
           "exists": true,
-          "hash": "cfb3ef67d80f3419"
+          "hash": "504c9ef12c44b99c"
         }
       ]
     },
@@ -1125,7 +1125,7 @@
           "repo": "amplifier-module-loop-streaming",
           "path": "amplifier_module_loop_streaming/__init__.py",
           "exists": true,
-          "hash": "66045a3ed77ad682"
+          "hash": "f35e935666473cd8"
         },
         {
           "repo": "amplifier-module-loop-streaming",
