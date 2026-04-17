@@ -79,12 +79,14 @@
         {
           "repo": "amplifier-app-cli",
           "path": "amplifier_app_cli/main.py",
+          "type": "python",
           "exists": true,
-          "hash": "cfb3ef67d80f3419"
+          "hash": "504c9ef12c44b99c"
         },
         {
           "repo": "amplifier-app-cli",
           "path": "amplifier_app_cli/commands/__init__.py",
+          "type": "python",
           "exists": true,
           "hash": "4d3e0a9b3d8f0315"
         }
@@ -227,33 +229,38 @@
       "sources": [
         {
           "repo": "amplifier-foundation",
+          "path": "docs/BUNDLE_GUIDE.md",
+          "type": "markdown",
+          "exists": true,
+          "hash": "6ccbeaaa9996453a"
+        },
+        {
+          "repo": "amplifier-foundation",
           "path": "amplifier_foundation/bundle/__init__.py",
+          "type": "python",
           "exists": true,
           "hash": "387ba5fe58afed07"
         },
         {
           "repo": "amplifier-foundation",
           "path": "amplifier_foundation/bundle/_dataclass.py",
+          "type": "python",
           "exists": true,
-          "hash": "baab918b0dec85a9"
+          "hash": "ddc8126f2df822fe"
         },
         {
           "repo": "amplifier-foundation",
           "path": "amplifier_foundation/bundle/_prepared.py",
+          "type": "python",
           "exists": true,
-          "hash": "a0449e735ab3e306"
+          "hash": "ed1534764e55e5ae"
         },
         {
           "repo": "amplifier-foundation",
           "path": "amplifier_foundation/registry.py",
+          "type": "python",
           "exists": true,
           "hash": "8ef4d68cc1561a01"
-        },
-        {
-          "repo": "amplifier-foundation",
-          "path": "docs/BUNDLE_GUIDE.md",
-          "exists": true,
-          "hash": "6ccbeaaa9996453a"
         }
       ]
     },
@@ -857,12 +864,14 @@
         {
           "repo": "amplifier-module-provider-anthropic",
           "path": "amplifier_module_provider_anthropic/__init__.py",
+          "type": "python",
           "exists": true,
-          "hash": "6f9487769dcbf9d5"
+          "hash": "f0b77a0963d96e9c"
         },
         {
           "repo": "amplifier-module-provider-anthropic",
           "path": "README.md",
+          "type": "readme",
           "exists": true,
           "hash": "055e5112eb545b90"
         }

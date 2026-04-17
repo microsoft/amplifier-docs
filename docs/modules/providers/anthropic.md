@@ -109,6 +109,8 @@ request = ChatRequest(
 
 The response will include thinking blocks showing the model's reasoning process.
 
+When extended thinking is requested alongside tools, the provider automatically adds the `interleaved-thinking-2025-05-14` beta header so thinking blocks and tool calls can appear in the same turn.
+
 ## Prompt Caching
 
 Anthropic's prompt caching reduces costs by 90% for repeated content. Enable it:
@@ -225,11 +227,41 @@ The provider translates Anthropic SDK exceptions to kernel errors:
 | `BadRequestError` | context length / too many tokens | `ContextLengthError` | No |
 | `BadRequestError` | safety / content filter / blocked | `ContentFilterError` | No |
 | `BadRequestError` | other | `InvalidRequestError` | No |
+| `APIStatusError` | 403 (Cloudflare HTML challenge) | `ProviderUnavailableError` | Yes |
 | `APIStatusError` | 403 | `AccessDeniedError` | No |
 | `APIStatusError` | 404 | `NotFoundError` | No |
 | `APIStatusError` | other non-5xx | `LLMError` | No |
 | `asyncio.TimeoutError` | — | `LLMTimeoutError` | Yes |
 | Other | — | `LLMError` | Yes |
+
+The provider distinguishes Cloudflare bot-challenge 403 responses (HTML body, no JSON) from real API 403s. Cloudflare challenges are treated as transient and retried; real 403s surface as `AccessDeniedError`.
+
+Events:
+- `provider:cloudflare_challenge` - Emitted when a Cloudflare bot challenge is detected on a 403 response
+
+## Graceful Error Recovery
+
+The provider automatically detects and repairs broken tool call sequences before sending requests to the API.
+
+**The Problem**: If tool results are missing from conversation history (due to context compaction bugs, parsing errors, or state corruption), the Anthropic API rejects the entire request.
+
+**The Solution**: The provider scans messages for tool calls that have no corresponding tool result. For each missing result it injects a synthetic error result before validation:
+
+```python
+{
+    "role": "user",
+    "content": [{
+        "type": "tool_result",
+        "tool_use_id": "toolu_123",
+        "content": "[SYSTEM ERROR: Tool result missing]\n\nTool: get_weather\n..."
+    }]
+}
+```
+
+The LLM receives a complete, valid message sequence, acknowledges the error, and can ask the user to retry the failed operation.
+
+Events:
+- `provider:tool_sequence_repaired` - Emitted when one or more synthetic tool results are injected, with details of the repaired tool IDs
 
 ## Debug Events
 

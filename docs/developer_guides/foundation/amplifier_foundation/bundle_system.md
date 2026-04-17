@@ -244,7 +244,22 @@ bundle = await registry.load("foundation")
 
 # Strict mode: include failures raise exceptions instead of logging warnings
 registry = BundleRegistry(strict=True)
+
+# With include source resolver: override include URI resolution (app-layer routing)
+registry = BundleRegistry(
+    include_source_resolver=lambda source: overrides.get(source)
+)
+
+# Or set/clear the resolver after construction
+registry.set_include_source_resolver(lambda source: overrides.get(source))
+registry.set_include_source_resolver(None)  # Clear
 ```
+
+**`BundleRegistry` constructor parameters:**
+
+- `home` (`Path | None`) — Base directory. Resolves in order: explicit parameter → `AMPLIFIER_HOME` env var → `~/.amplifier`.
+- `strict` (`bool`, default `False`) — If True, include failures raise exceptions instead of logging warnings.
+- `include_source_resolver` (`Callable[[str], str | None] | None`) — Optional callback `(source_uri) -> resolved_uri | None`. Called before default include resolution logic; return `None` to fall back to default behavior. Can also be set after construction via `set_include_source_resolver()`.
 
 ### Registry Features
 
@@ -252,6 +267,7 @@ registry = BundleRegistry(strict=True)
 - **Caching** - Downloaded bundles cached locally
 - **Update checking** - Check for available updates
 - **Dependency tracking** - Track includes relationships
+- **Include source override** - App-layer callback for custom include URI routing (`include_source_resolver`)
 
 ## Best Practices
 

@@ -91,8 +91,13 @@ amplifier continue --full-history "Continue from here"
 Interactively select and resume a session.
 
 ```bash
-amplifier resume [PATTERN]
+amplifier resume [SESSION_ID]
 ```
+
+| Option | Description |
+|--------|-------------|
+| `--limit, -n` | Number of sessions per page (default: 10) |
+| `--force-bundle, -B` | Force a different bundle for this session (experimental) |
 
 **Examples:**
 
@@ -100,7 +105,7 @@ amplifier resume [PATTERN]
 # Interactive session picker
 amplifier resume
 
-# Search by pattern
+# Resume by partial session ID
 amplifier resume auth
 ```
 
@@ -119,22 +124,36 @@ amplifier session list [OPTIONS]
 | `--limit, -n` | Number of sessions to show (default: 20) |
 | `--all-projects` | Show sessions from all projects |
 | `--project` | Filter by project path |
+| `--tree, -t` | Show lineage tree for a session |
 
 ### `session show`
 
 Show session details.
 
 ```bash
-amplifier session show SESSION_ID
+amplifier session show SESSION_ID [OPTIONS]
 ```
+
+| Option | Description |
+|--------|-------------|
+| `--detailed, -d` | Show detailed transcript metadata |
 
 ### `session resume`
 
 Resume a specific session.
 
 ```bash
-amplifier session resume SESSION_ID [PROMPT]
+amplifier session resume SESSION_ID [OPTIONS]
 ```
+
+| Option | Description |
+|--------|-------------|
+| `--force-bundle, -B` | Force a different bundle for this session (experimental) |
+| `--no-history` | Skip displaying conversation history |
+| `--full-history` | Show all messages (default: last 10) |
+| `--replay` | Replay conversation with timing simulation |
+| `--replay-speed, -s` | Replay speed multiplier (default: 2.0) |
+| `--show-thinking` | Show thinking blocks in history |
 
 ### `session fork`
 
@@ -658,11 +677,6 @@ Install shell completion for better CLI experience:
 ```bash
 # Auto-detect shell and install
 amplifier --install-completion
-
-# Or specify shell
-amplifier --install-completion bash
-amplifier --install-completion zsh
-amplifier --install-completion fish
 ```
 
 ## Exit Codes
