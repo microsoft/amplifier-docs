@@ -97,14 +97,10 @@ providers:
       default_model: claude-sonnet-4-5
 ```
 
-Then in your request:
+Extended thinking is enabled at the orchestrator level via `extended_thinking: true` config. The orchestrator then passes it to the provider:
 
 ```python
-request = ChatRequest(
-    model="claude-sonnet-4-5",
-    messages=[...],
-    enable_thinking=True
-)
+response = await provider.complete(chat_request, extended_thinking=True)
 ```
 
 The response will include thinking blocks showing the model's reasoning process.
@@ -161,9 +157,28 @@ providers:
         - "future-feature-header"
 ```
 
+### 1M Token Context Window
+
+Claude Sonnet 4.5 supports a 1M token context window when the `context-1m-2025-08-07` beta header is enabled:
+
+```yaml
+providers:
+  - module: provider-anthropic
+    config:
+      default_model: claude-sonnet-4-5
+      beta_headers: "context-1m-2025-08-07"
+      max_tokens: 8192  # Output tokens remain separate from context window
+```
+
+With this configuration:
+- **Context window**: Up to 1M tokens of input (messages, tools, system prompt)
+- **Output tokens**: Controlled by `max_tokens` (separate from context window)
+- **Use case**: Process large codebases, extensive documentation, or long conversation histories
+
 Notes:
 - Beta features are experimental and subject to change
 - Check [Anthropic's documentation](https://docs.anthropic.com) for available beta headers
+- Beta headers are optional - existing configurations work unchanged
 - Invalid beta headers will cause API errors (fail fast)
 - Beta header usage is logged at initialization for observability
 
@@ -178,10 +193,6 @@ providers:
       throttle_threshold: 0.02  # Throttle at 2% capacity remaining
       throttle_delay: 1.0  # Fallback sleep when no reset timestamp available
 ```
-
-Events:
-- `provider:throttle` - Emitted when pre-emptive throttling occurs
-- `provider:retry` - Emitted before each retry attempt
 
 ## Overload Fallback
 
@@ -219,7 +230,7 @@ The provider uses exponential backoff with jitter and honors `retry-after` heade
 The provider translates Anthropic SDK exceptions to kernel errors:
 
 | SDK Exception | Condition | Kernel Error | Retryable |
-|--------------|-----------|--------------|-----------|
+|--------------|-----------|--------------|-----------| 
 | `RateLimitError` | 429 | `RateLimitError` | Yes |
 | `OverloadedError` | 529 | `ProviderUnavailableError` | Yes (10× backoff) |
 | `APIStatusError` | 5xx (status >= 500) | `ProviderUnavailableError` | Yes |

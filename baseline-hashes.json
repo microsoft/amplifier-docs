@@ -864,14 +864,12 @@
         {
           "repo": "amplifier-module-provider-anthropic",
           "path": "amplifier_module_provider_anthropic/__init__.py",
-          "type": "python",
           "exists": true,
-          "hash": "f0b77a0963d96e9c"
+          "hash": "8148439a61f05b0a"
         },
         {
           "repo": "amplifier-module-provider-anthropic",
           "path": "README.md",
-          "type": "readme",
           "exists": true,
           "hash": "055e5112eb545b90"
         }
