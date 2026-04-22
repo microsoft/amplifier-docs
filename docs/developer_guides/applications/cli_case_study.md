@@ -176,6 +176,138 @@ spawn:
 
 Default behavior: if no `spawn` section, agents inherit all parent tools.
 
+#### Multi-Turn Sub-Session Resumption
+
+Sub-sessions support multi-turn conversations through automatic state persistence. When a sub-session completes, its state (transcript and configuration) is saved to persistent storage, enabling the parent session to resume the conversation across multiple turns.
+
+##### State Persistence
+
+The system automatically persists sub-session state after each execution:
+
+```python
+# After sub-session execution, before cleanup
+from amplifier_app_cli.session_store import SessionStore
+
+# Capture current state
+context = child_session.coordinator.get("context")
+transcript = await context.get_messages() if context else []
+
+metadata = {
+    "session_id": sub_session_id,
+    "parent_id": parent_session.session_id,
+    "agent_name": agent_name,
+    "created": datetime.now(UTC).isoformat(),
+    "config": merged_config,  # Full merged mount plan
+    "agent_overlay": agent_config,  # Original agent config
+}
+
+# Persist to storage
+store = SessionStore()  # Project-scoped: ~/.amplifier/projects/{project}/sessions/
+store.save(sub_session_id, transcript, metadata)
+```
+
+**Storage Location**: `~/.amplifier/projects/{project-slug}/sessions/{session-id}/`
+- `transcript.jsonl` - Conversation history
+- `metadata.json` - Session configuration and metadata
+- `bundle.md` - Bundle snapshot (if applicable)
+
+##### Resuming Existing Sessions
+
+Resume a previous sub-session by providing its `session_id`:
+
+```python
+from amplifier_app_cli.session_spawner import resume_sub_session
+
+# Resume by session ID
+result = await resume_sub_session(
+    sub_session_id="parent-123-zen-architect-abc456",
+    instruction="Now add OAuth 2.0 support"
+)
+# Returns: {"output": str, "session_id": str}
+```
+
+**Resume Process**:
+1. Load transcript and metadata from `SessionStore`
+2. Recreate `AmplifierSession` with stored configuration
+3. Restore transcript to context via `add_message()`
+4. Execute new instruction with full conversation history
+5. Save updated state
+6. Cleanup and return
+
+**Key Design Points**:
+- **Stateless**: Each resume loads fresh from disk (no in-memory caching)
+- **Deterministic**: Uses stored merged config (independent of parent changes)
+- **Self-contained**: All state needed for reconstruction persists with session
+- **Resumable**: Survives parent session restarts and crashes
+
+##### Multi-Turn Example
+
+```python
+# Turn 1: Initial delegation
+response1 = await task_tool.execute({
+    "agent": "zen-architect",
+    "instruction": "Design a caching system"
+})
+session_id = response1["session_id"]  # Save for later
+
+# Turn 2: Resume with refinement
+response2 = await task_tool.execute({
+    "session_id": session_id,
+    "instruction": "Add TTL support to the cache"
+})
+
+# Turn 3: Continue iteration
+response3 = await task_tool.execute({
+    "session_id": session_id,
+    "instruction": "Add eviction policies"
+})
+
+# Each turn builds on previous context
+```
+
+##### Error Handling
+
+**Missing Session**:
+```python
+# Attempting to resume non-existent session
+try:
+    await resume_sub_session("fake-id", "test")
+except FileNotFoundError as e:
+    print(f"Session not found: {e}")
+    # Error: "Sub-session 'fake-id' not found. Session may have expired..."
+```
+
+**Corrupted Metadata**:
+```python
+# If metadata.json is corrupted
+try:
+    await resume_sub_session("corrupted-id", "test")
+except RuntimeError as e:
+    print(f"Session corrupted: {e}")
+    # Error: "Corrupted session metadata for 'corrupted-id'..."
+```
+
+**Observability**: Resume operations emit `session:resume` events for monitoring and debugging.
+
+#### Provider Preferences
+
+Control which provider/model a spawned agent uses via `provider_preferences`:
+
+```python
+result = await task_tool.execute({
+    "agent": "foundation:explorer",
+    "instruction": "Quick analysis",
+    "provider_preferences": [
+        {"provider": "anthropic", "model": "claude-haiku-*"},
+        {"provider": "openai", "model": "gpt-4o-mini"},
+    ]
+})
+```
+
+- System tries each preference in order until finding an available provider
+- Model names support glob patterns (e.g., `claude-haiku-*` → latest haiku)
+- See [amplifier-foundation](https://github.com/microsoft/amplifier-foundation) for `ProviderPreference` details
+
 #### Model Role Override
 
 The `model_role` parameter lets the caller override the agent's default model role for a specific delegation:
@@ -203,7 +335,7 @@ If both `model_role` and `provider_preferences` are provided in the same call, `
 | Role | Use for |
 |------|---------| 
 | `general` | Versatile catch-all, no specialization needed |
-| `fast` | Quick utility tasks — parsing, classification, file ops, bulk work |
+| `fast` | Quick parsing, classification, file ops, bulk work |
 | `coding` | Code generation, implementation, debugging |
 | `ui-coding` | Frontend/UI code — components, layouts, styling, spatial reasoning |
 | `security-audit` | Vulnerability assessment, attack surface analysis, code auditing |
@@ -214,7 +346,7 @@ If both `model_role` and `provider_preferences` are provided in the same call, `
 | `research` | Deep investigation, information synthesis across multiple sources |
 | `vision` | Understanding visual input — screenshots, diagrams, UI mockups |
 | `image-gen` | Image generation, visual mockup creation, visual ideation |
-| `critical-ops` | High-reliability operational tasks — infrastructure, orchestration, coordination |
+| `critical-ops` | High-reliability operational tasks — infrastructure, orchestration |
 
 **Task tool input schema:**
 ```python

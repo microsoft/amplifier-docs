@@ -128,7 +128,7 @@ The `BundleValidator` checks bundle structure:
 from amplifier_foundation import validate_bundle
 
 result = validate_bundle(bundle)
-if not result.is_valid:
+if not result.valid:
     for error in result.errors:
         print(f"Error: {error}")
 ```

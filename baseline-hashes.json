@@ -230,35 +230,30 @@
         {
           "repo": "amplifier-foundation",
           "path": "docs/BUNDLE_GUIDE.md",
-          "type": "markdown",
           "exists": true,
-          "hash": "6ccbeaaa9996453a"
+          "hash": "67161ce8b9d74876"
         },
         {
           "repo": "amplifier-foundation",
           "path": "amplifier_foundation/bundle/__init__.py",
-          "type": "python",
           "exists": true,
           "hash": "387ba5fe58afed07"
         },
         {
           "repo": "amplifier-foundation",
           "path": "amplifier_foundation/bundle/_dataclass.py",
-          "type": "python",
           "exists": true,
           "hash": "ddc8126f2df822fe"
         },
         {
           "repo": "amplifier-foundation",
           "path": "amplifier_foundation/bundle/_prepared.py",
-          "type": "python",
           "exists": true,
           "hash": "ed1534764e55e5ae"
         },
         {
           "repo": "amplifier-foundation",
           "path": "amplifier_foundation/registry.py",
-          "type": "python",
           "exists": true,
           "hash": "8ef4d68cc1561a01"
         }
@@ -471,7 +466,7 @@
           "repo": "amplifier-app-cli",
           "path": "amplifier_app_cli/main.py",
           "exists": true,
-          "hash": "f275ddf618b579e2"
+          "hash": "504c9ef12c44b99c"
         },
         {
           "repo": "amplifier-app-cli",
@@ -1115,7 +1110,7 @@
           "repo": "amplifier-module-loop-basic",
           "path": "amplifier_module_loop_basic/__init__.py",
           "exists": true,
-          "hash": "b58c861e77d138ea"
+          "hash": "24fa52a6a90e2dcf"
         },
         {
           "repo": "amplifier-module-loop-basic",
@@ -1149,7 +1144,7 @@
           "repo": "amplifier-module-loop-events",
           "path": "amplifier_module_loop_events/__init__.py",
           "exists": true,
-          "hash": "8706f9bf16e834b9"
+          "hash": "0b04ebe201e5889b"
         },
         {
           "repo": "amplifier-module-loop-events",

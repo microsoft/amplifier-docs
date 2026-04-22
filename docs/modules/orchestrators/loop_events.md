@@ -31,6 +31,7 @@ orchestrators:
       max_iterations: -1              # Maximum iterations (-1 = unlimited)
       default_provider: "anthropic"   # Default provider name (optional)
       extended_thinking: false        # Enable extended thinking mode (default: false)
+      reasoning_effort: null          # Reasoning effort level passed to the provider (optional)
 ```
 
 ## Configuration Options
@@ -40,6 +41,7 @@ orchestrators:
 | `max_iterations` | integer | `-1` | Maximum loop iterations (`-1` = unlimited) |
 | `default_provider` | string | `null` | Default provider name (uses first available if not set) |
 | `extended_thinking` | boolean | `false` | Enable extended thinking mode for supported models |
+| `reasoning_effort` | string | `null` | Reasoning effort level passed to the provider (provider-specific) |
 
 ## Behavior
 
@@ -189,7 +191,7 @@ Providers supporting extended thinking will include thinking blocks in responses
 
 | Feature | loop-basic | loop-streaming | loop-events |
 |---------|------------|----------------|-------------|
-| Tool execution | Sequential | Parallel | Sequential |
+| Tool execution | **Parallel** | Parallel | Sequential |
 | Scheduler integration | No | No | **Yes** |
 | Event-driven decisions | No | No | **Yes** |
 | Ephemeral injection | No | No | **Yes** |
@@ -332,4 +334,3 @@ This prevents API errors from orphaned tool calls (tool_call without matching re
 - [loop-basic](loop_basic.md) - Sequential execution reference implementation
 - [loop-streaming](loop_streaming.md) - Streaming responses with parallel tools
 - [Scheduler Hooks](../hooks/scheduler.md) - Building scheduler modules
-- [Orchestrator Contract](../../reference/contracts/orchestrator.md) - Interface specification
