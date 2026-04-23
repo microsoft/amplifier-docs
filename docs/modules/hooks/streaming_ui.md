@@ -11,7 +11,7 @@ Progressive display for thinking blocks, tool invocations, and token usage in th
 
 The `hooks-streaming-ui` module provides real-time console output for:
 
-- **Thinking blocks** - Formatted display of LLM reasoning
+- **Thinking blocks** - Formatted display of LLM reasoning (thinking and reasoning block types)
 - **Tool invocations** - Shows tool name and truncated arguments
 - **Tool results** - Success/failure status with truncated output
 - **Token usage** - Input/output/total token counts with caching info
@@ -47,8 +47,8 @@ show_token_usage = true       # Display token usage after each turn (default: tr
 
 | Event | Purpose | Action |
 |-------|---------|--------|
-| `content_block:start` | Detect thinking block start | Display "Thinking..." indicator |
-| `content_block:end` | Complete thinking block | Display formatted thinking content |
+| `content_block:start` | Detect thinking/reasoning block start | Display "Thinking..." indicator |
+| `content_block:end` | Complete thinking/reasoning block | Display formatted thinking content |
 | `tool:pre` | Tool invocation | Display tool name and arguments |
 | `tool:post` | Tool result | Display success/failure with output |
 | `llm:response` | LLM response received | Capture model/provider info for token display |
@@ -135,9 +135,9 @@ Text blocks that accompany tool calls (not the final response) are displayed wit
 
 **Rail mode** (3+ lines):
 ```
-▏ First line
-▏ Second line
-▏ Third line
+▍ First line
+▍ Second line
+▍ Third line
 ```
 
 ## Visual Hierarchy
@@ -153,7 +153,7 @@ The module uses careful visual hierarchy to distinguish context:
 | Parent tool result | ✅/❌ | Cyan status, dim output | None |
 | Sub-agent tool result | ✅/❌ + box drawing | Cyan status, dim output | 4 spaces |
 | Token usage | 📊 | Dim | Based on context |
-| Intermediate text | ▸ or ▏ | Muted blue/lavender | Based on context |
+| Intermediate text | ▸ or ▍ | Muted blue/lavender | Based on context |
 
 ## Sub-Agent Session Detection
 

@@ -32,6 +32,7 @@ orchestrators:
 | `max_iterations` | integer | `-1` | Maximum loop iterations (`-1` = unlimited) |
 | `extended_thinking` | boolean | `false` | Enable extended thinking mode for supported models |
 | `min_delay_between_calls_ms` | integer | `0` | Minimum delay between provider calls in milliseconds (`0` = disabled) |
+| `stream_delay` | float | `0.01` | Delay between streamed tokens in seconds (artificial pacing) |
 | `reasoning_effort` | string | `null` | Reasoning effort level passed to the provider (provider-specific) |
 
 ## Behavior
@@ -157,9 +158,14 @@ session:
 
 hooks:
   - module: hooks-streaming-ui
-    config:
-      show_thinking_stream: true
-      show_tool_lines: 5
+```
+
+Configure display settings in your profile's `[ui]` section:
+
+```toml
+[ui]
+show_thinking_stream = true
+show_tool_lines = 5
 ```
 
 User sees tokens appear in real-time with progressive tool output.
