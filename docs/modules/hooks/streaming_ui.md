@@ -249,11 +249,12 @@ Special handling for bash tool results:
 if success:
     output = stdout or stderr or "(no output)"
 
-# Failure (returncode != 0): show both stdout and stderr
+# Failure (returncode != 0): show stdout and stderr combined
 else:
     output = stdout
     if stderr:
-        output = f"{output}\n[stderr]: {stderr}"
+        output = f"{output}\n[stderr]: {stderr}" if output else f"[stderr]: {stderr}"
+    output = output or "(no output)"
 ```
 
 ## Use Cases
