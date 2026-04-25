@@ -25,13 +25,16 @@ providers:
 |--------|------|---------|-------------|
 | `api_key` | string | `$OPENAI_API_KEY` | API key |
 | `base_url` | string | null | Optional custom endpoint (`$OPENAI_BASE_URL`); null = OpenAI default |
-| `default_model` | string | `gpt-5.4` | Default model |
+| `default_model` | string | `gpt-5.5` | Default model |
 | `max_tokens` | integer | `4096` | Maximum output tokens |
 | `temperature` | float | null | Sampling temperature; null = not sent (some models don't support it) |
-| `reasoning` | string | null | Reasoning effort: `minimal\|low\|medium\|high`; null = not sent |
-| `reasoning_summary` | string | `detailed` | Reasoning verbosity: `auto\|concise\|detailed` |
+| `reasoning` | string | null | Reasoning effort: `none\|low\|medium\|high\|xhigh`; null = not sent |
+| `reasoning_summary` | string | `auto` | Reasoning verbosity: `auto\|concise\|detailed` |
 | `truncation` | string | `auto` | Automatic context management |
 | `enable_state` | boolean | `false` | Enable stateful conversations |
+| `filtered` | boolean | `true` | Filter to curated model list by default |
+| `enable_long_context` | boolean | `false` | Enable full context window (>272K tokens, 2x input / 1.5x output pricing) |
+| `use_streaming` | boolean | `true` | Use streaming HTTP transport (prevents timeouts on large context requests) |
 | `debug` | boolean | `false` | Enable standard debug events |
 | `raw_debug` | boolean | `false` | Enable ultra-verbose raw API I/O logging |
 | `priority` | int | 100 | Provider priority for selection |
@@ -45,8 +48,13 @@ providers:
 
 | Model | Description |
 |-------|-------------|
-| `gpt-5.4` | GPT 5.4 (default) |
+| `gpt-5.5` | GPT 5.5 (default) |
+| `gpt-5.5-pro` | GPT 5.5 Pro |
+| `gpt-5.4` | GPT 5.4 |
 | `gpt-5.4-pro` | GPT 5.4 Pro |
+| `gpt-5.3-codex` | GPT-5.3 codex |
+| `gpt-5.2` | GPT 5.2 |
+| `gpt-5.2-pro` | GPT 5.2 Pro |
 | `gpt-5.1` | GPT 5.1 |
 | `gpt-5.1-codex` | GPT-5.1 codex |
 | `gpt-5-mini` | Smaller, faster GPT-5 |
@@ -62,15 +70,16 @@ Control the model's reasoning effort and output verbosity:
 providers:
   - module: provider-openai
     config:
-      reasoning: "medium"  # minimal|low|medium|high
+      reasoning: "medium"  # none|low|medium|high|xhigh
       reasoning_summary: "detailed"  # auto|concise|detailed
 ```
 
 **Reasoning levels:**
-- `minimal` - Quick responses, minimal reasoning
+- `none` - No reasoning
 - `low` - Light reasoning for simple tasks
 - `medium` - Balanced reasoning for most tasks
 - `high` - Deep reasoning for complex problems
+- `xhigh` - Maximum reasoning effort (gpt-5.5-pro: medium/high/xhigh only)
 
 **Summary verbosity:**
 - `auto` - Model decides appropriate detail level
@@ -111,7 +120,7 @@ The provider automatically detects and processes tool calls from the Responses A
 providers:
   - module: provider-openai
     config:
-      default_model: gpt-5.4
+      default_model: gpt-5.5
 ```
 
 Tools declared in your configuration are available to the model automatically.
@@ -149,7 +158,7 @@ providers:
     source: git+https://github.com/microsoft/amplifier-module-provider-openai@main
     config:
       api_key: ${OPENAI_API_KEY}
-      default_model: gpt-5.4
+      default_model: gpt-5.5
       max_tokens: 4096
       temperature: 0.7
       reasoning: medium

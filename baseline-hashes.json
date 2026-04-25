@@ -46,7 +46,7 @@
           "repo": "amplifier-module-provider-openai",
           "path": "README.md",
           "exists": true,
-          "hash": "719fd8b71cf69b67"
+          "hash": "4c2766b7e9801c9e"
         },
         {
           "repo": "amplifier-module-provider-azure-openai",
@@ -837,7 +837,7 @@
           "repo": "amplifier-module-provider-openai",
           "path": "README.md",
           "exists": true,
-          "hash": "719fd8b71cf69b67"
+          "hash": "4c2766b7e9801c9e"
         },
         {
           "repo": "amplifier-module-provider-azure-openai",
@@ -877,13 +877,13 @@
           "repo": "amplifier-module-provider-openai",
           "path": "amplifier_module_provider_openai/__init__.py",
           "exists": true,
-          "hash": "f0219e109b72759f"
+          "hash": "ee56a4795c5a6061"
         },
         {
           "repo": "amplifier-module-provider-openai",
           "path": "README.md",
           "exists": true,
-          "hash": "719fd8b71cf69b67"
+          "hash": "4c2766b7e9801c9e"
         }
       ]
     },

@@ -29,7 +29,7 @@ providers:
     config:
       api_key: ${ANTHROPIC_API_KEY}
       default_model: claude-sonnet-4-5
-      max_tokens: 4096
+      max_tokens: 8192
       temperature: 1.0
 ```
 

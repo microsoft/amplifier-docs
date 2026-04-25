@@ -12,10 +12,9 @@ Amplifier supports multiple LLM providers. This guide covers setting up each one
 | Provider | Models | Best For |
 |----------|--------|----------|
 | **Anthropic** | Claude 4 Sonnet, Opus, Haiku | General purpose, coding, analysis |
-| **OpenAI** | GPT-5.4, GPT-5-mini, GPT-5-nano | Broad capabilities, function calling |
+| **OpenAI** | GPT-5.5, GPT-5-mini, GPT-5-nano | Broad capabilities, function calling |
 | **Azure OpenAI** | GPT-5.4 via Azure | Enterprise, compliance requirements |
 | **Ollama** | Llama, Mistral, etc. | Local/offline, privacy, experimentation |
-| **vLLM** | Any vLLM-compatible | Self-hosted inference, high throughput |
 
 For detailed configuration options and advanced features, see [Provider Modules](../modules/providers/index.md).
 
@@ -113,13 +112,13 @@ amplifier provider use openai
 
 | Model | Description |
 |-------|-------------|
-| `gpt-5.4` | Optimized for code, recommended (default) |
+| `gpt-5.5` | Optimized for code, recommended (default) |
 | `gpt-5-mini` | Smaller, faster GPT-5 |
 | `gpt-5-nano` | Smallest GPT-5 variant |
 
 ```bash
 # Use a specific model
-amplifier run --model gpt-5.4 "Complex analysis task"
+amplifier run --model gpt-5.5 "Complex analysis task"
 ```
 
 ### Advanced Configuration
@@ -138,7 +137,7 @@ providers:
 providers:
   - module: provider-openai
     config:
-      reasoning: "low"              # Reasoning effort: minimal|low|medium|high
+      reasoning: "low"              # Reasoning effort: none|low|medium|high|xhigh
       reasoning_summary: "detailed" # Reasoning verbosity: auto|concise|detailed
 ```
 
