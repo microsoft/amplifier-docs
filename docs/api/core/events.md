@@ -119,6 +119,12 @@ Events follow a `namespace:action` naming convention.
 | `cancel:requested` | Cancellation requested |
 | `cancel:completed` | Cancellation completed |
 
+### Module Lifecycle Events
+
+| Event | Description |
+|-------|-------------|
+| `module:on_session_ready_failed` | A module's `on_session_ready()` callback raised an exception |
+
 ## Using Events
 
 ### Register a Hook
