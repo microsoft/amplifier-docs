@@ -11,8 +11,8 @@
         {
           "repo": "amplifier-app-cli",
           "path": "README.md",
-          "exists": true,
-          "hash": "3af848d057d4e7c4"
+          "exists": false,
+          "hash": null
         }
       ]
     },
@@ -68,8 +68,8 @@
         {
           "repo": "amplifier-app-cli",
           "path": "README.md",
-          "exists": true,
-          "hash": "3af848d057d4e7c4"
+          "exists": false,
+          "hash": null
         }
       ]
     },
@@ -219,8 +219,8 @@
         {
           "repo": "amplifier-foundation",
           "path": "docs/CONCEPTS.md",
-          "exists": true,
-          "hash": "d40f28c686b74f0e"
+          "exists": false,
+          "hash": null
         }
       ]
     },
@@ -618,8 +618,8 @@
         {
           "repo": "amplifier-core",
           "path": "docs/DESIGN_PHILOSOPHY.md",
-          "exists": true,
-          "hash": "dc8aad2f7a2e6e44"
+          "exists": false,
+          "hash": null
         }
       ]
     },
@@ -730,8 +730,8 @@
         {
           "repo": "amplifier-core",
           "path": "python/amplifier_core/__init__.py",
-          "exists": true,
-          "hash": "aecf5bc0009dfab9"
+          "exists": false,
+          "hash": null
         }
       ]
     },

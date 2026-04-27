@@ -42,50 +42,9 @@ Amplifier follows a Linux kernel-inspired architecture where a tiny, stable core
 
 </div>
 
-## Quick Architecture Overview
-
-```
-┌─────────────────────────────────────────────────────────────────┐
-│  Application Layer (amplifier-app-cli)                          │
-│  • Resolves configuration → Creates Mount Plans                 │
-│  • Provides approval/display systems                            │
-│  • Manages sessions and agents                                  │
-└──────┬──────────────────────────────────────────────────────────┘
-       │
-       │ Mount Plan (config dictionary)
-       │
-┌──────▼──────────────────────────────────────────────────────────┐
-│  Kernel Layer (amplifier-core)                                  │
-│  • Validates Mount Plans                                        │
-│  • Discovers and loads modules                                  │
-│  • Provides Coordinator infrastructure                          │
-│  • Emits canonical events                                       │
-└──────┬──────────────────────────────────────────────────────────┘
-       │
-       │ Coordinator (session_id, config, hooks, mount points)
-       │
-┌──────▼──────────────────────────────────────────────────────────┐
-│  Module Layer (Competing Implementations)                       │
-│                                                                  │
-│  Providers         Tools            Orchestrators               │
-│  ┌──────────┐     ┌──────────┐     ┌──────────┐                │
-│  │ Anthropic│     │Filesystem│     │  Basic   │                │
-│  │  OpenAI  │     │   Bash   │     │Streaming │                │
-│  │  Gemini  │     │   Web    │     │  Events  │                │
-│  └──────────┘     └──────────┘     └──────────┘                │
-│                                                                  │
-│  Context Managers  Hooks                                        │
-│  ┌──────────┐     ┌──────────┐                                 │
-│  │  Simple  │     │ Logging  │                                 │
-│  │Persistent│     │Redaction │                                 │
-│  └──────────┘     │ Approval │                                 │
-│                    └──────────┘                                 │
-└─────────────────────────────────────────────────────────────────┘
-```
-
 ## Core Principles
 
-### 1. Mechanisms, Not Policies
+### 1. Mechanism, Not Policy
 
 The kernel provides **capabilities**, not **decisions**:
 
@@ -133,16 +92,33 @@ The kernel provides **capabilities**, not **decisions**:
 
 Amplifier mirrors Linux kernel concepts:
 
-| Linux Concept | Amplifier Analog | Purpose |
-|---------------|------------------|---------|
-| Ring 0 kernel | `amplifier-core` | Mechanisms only, never policy |
-| Syscalls | Session operations | Few, sharp APIs |
-| Loadable drivers | Modules | Compete at edges |
-| Signals/Netlink | Event bus / hooks | Observe and control |
-| /proc & dmesg | JSONL logs | Single canonical stream |
-| Capabilities | Approval system | Deny-by-default |
-| Scheduler | Orchestrator modules | Swap execution strategies |
-| VM/Memory | Context manager | Conversation memory |
+| Linux Concept | Amplifier Analog | Decision Guidance |
+|---------------|------------------|-------------------|
+| Ring 0 kernel | `amplifier-core` | Export mechanisms (mount, emit), never policy. Keep tiny & boring. |
+| Syscalls | Session operations | Few and sharp: `create_session()`, `mount()`, `emit()`. Stable ABI. |
+| Loadable drivers | Modules (providers, tools, hooks, orchestrators) | Compete at edges; comply with protocols; regeneratable. |
+| Signals/Netlink | Event bus / hooks | Kernel emits lifecycle events; hooks observe; non-blocking. |
+| /proc & dmesg | Unified JSONL log | One canonical stream; redaction before logging. |
+| Capabilities/LSM | Approval & capability checks | Least privilege; deny-by-default; policy at edges. |
+| Scheduler | Orchestrator modules | Swap strategies by replacing module, not changing kernel. |
+| VM/Memory | Context manager | Deterministic compaction; emit `context:*` events. |
+
+## Polyglot Module Loading
+
+Modules can be written in any language. Four transport types determine how a module integrates with its host:
+
+- **python**: Direct import into Python host. Dependencies managed via `uv pip install` at load time.
+- **rust**: Rust host links directly as a native library. Non-Rust host spawns the compiled binary as a gRPC sidecar.
+- **wasm**: Loaded in-process via a WASM runtime. Sandboxed execution with no host OS access unless explicitly granted.
+- **grpc**: Connects to an external gRPC service at the runtime endpoint declared in `amplifier.toml`.
+
+The `amplifier.toml` manifest declares the module's transport. The host runtime reads this declaration and selects the appropriate loading strategy:
+
+- **Rust host + `transport=rust`** → direct native link. Zero serialization overhead.
+- **Python host + `transport=rust`** → gRPC sidecar. The host spawns the compiled binary and communicates over gRPC.
+- **Any host + `transport=grpc`** → remote endpoint. The host connects to the service address at startup.
+
+gRPC bridges exist for all six module types (tool, hook, orchestrator, context, provider, and scaffold), allowing any module type to cross a language boundary without changing its external contract.
 
 ## Next Steps
 

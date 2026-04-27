@@ -9,12 +9,13 @@ Welcome to Amplifier! This guide will help you get up and running quickly.
 
 ## What is Amplifier?
 
-Amplifier is a **modular AI agent system** that lets you build, customize, and run AI-powered development workflows. It follows a Linux kernel-inspired architecture:
+Amplifier is an **AI-powered modular development platform** with a command-line interface built on amplifier-core:
 
-- **Tiny kernel** (`amplifier-core`) - Provides mechanisms only
-- **Pluggable modules** - All features live at the edges as replaceable components
-- **Composable configuration** - Mix and match capabilities via bundles
-- **Load-time validation** - The kernel validates module configurations at load time
+- **Bundle system** - Composable configuration packages (via amplifier-foundation)
+- **Settings management** - Three-scope configuration (local/project/global)
+- **Session storage** - Project-scoped persistence with multi-turn sub-session resumption
+- **Agent delegation** - Spawn and resume sub-sessions for iterative collaboration with specialized agents
+- **Interactive mode** - REPL with slash commands
 
 ## Quick Start
 
@@ -31,23 +32,21 @@ uv tool install git+https://github.com/microsoft/amplifier
 ### First Run
 
 ```bash
-# Interactive setup (auto-runs on first use)
+# First-time setup — opens a combined dashboard to add providers,
+# select a routing matrix, and verify configuration (auto-runs if no config)
 amplifier init
 
 # Start a conversation
 amplifier
 ```
 
-The `init` wizard will:
-1. Detect available API keys from environment variables
-2. Help you configure your preferred provider
-3. Set up default settings
+**Tip**: Set environment variables before running `init` for faster setup — the dashboard detects env vars and shows them as defaults.
 
 ### Provider Support
 
 | Provider | Models | Notes |
 |----------|--------|-------|
-| **Anthropic** | Claude Sonnet, Opus, Haiku | Recommended, most tested |
+| **Anthropic** | Sonnet, Opus | Recommended, most tested |
 | **OpenAI** | GPT-4o, GPT-4o-mini, o1 | Good alternative |
 | **Azure OpenAI** | GPT models via Azure | Enterprise users |
 | **Google Gemini** | Gemini 2.5 Flash, Pro | Large context windows |
@@ -63,11 +62,6 @@ export OPENAI_API_KEY="your-key"
 export GOOGLE_API_KEY="your-key"
 ```
 
-```bash
-# Ollama (local, no API key needed)
-amplifier provider use ollama
-```
-
 ## Basic Usage
 
 ### Single Command
@@ -77,7 +71,7 @@ amplifier provider use ollama
 amplifier run "Create a Python function to calculate fibonacci numbers"
 
 # Use specific provider/model
-amplifier run --provider anthropic --model claude-opus-4 "Complex task"
+amplifier run -p anthropic -m claude-sonnet-4-5 "Complex task"
 
 # Single command via stdin (useful for scripts/pipelines)
 echo "Summarize this spec" | amplifier run
@@ -92,12 +86,6 @@ amplifier
 # Or resume last session
 amplifier continue
 ```
-
-In interactive mode:
-- Type naturally, press Enter to send
-- Use `Ctrl-J` for multi-line input
-- Use `Ctrl-D` to exit
-- Use `/help` for slash commands
 
 ### Session Management
 

@@ -71,16 +71,31 @@ amplifier session list
 amplifier bundle list
 amplifier bundle use my-bundle
 amplifier bundle current
+amplifier bundle show <name>
+amplifier bundle add <git-url> [--name alias]
+amplifier bundle remove <name>
+amplifier bundle clear
 
 # Providers
+amplifier provider add <name> [--local|--project|--global]
 amplifier provider list
-amplifier provider use anthropic
-amplifier provider current
+amplifier provider remove <name> [--scope]
+amplifier provider edit <name>
+amplifier provider test [<name>]
+amplifier provider manage
+
+# Routing matrix
+amplifier routing list
+amplifier routing use <name> [--local|--project|--global]
+amplifier routing show [<name>]
+amplifier routing manage
 
 # Modules
 amplifier module list
 amplifier module add tool-web
 amplifier module show tool-web
+amplifier module refresh [<name>] [--mutable-only]
+amplifier module check-updates
 ```
 
 ### Getting Help
@@ -89,12 +104,6 @@ amplifier module show tool-web
 # Command help
 amplifier --help
 amplifier run --help
-
-# List agents
-amplifier agents list
-
-# Show agent details
-amplifier agents show explorer
 ```
 
 ## Common Workflows
@@ -150,11 +159,11 @@ amplifier bundle clear
 
 ## Configuration Hierarchy
 
-Amplifier uses a three-level configuration system:
+Amplifier uses a three-scope configuration system:
 
-1. **Global** (`~/.amplifier/`) - System-wide defaults
-2. **Project** (`.amplifier/`) - Project-specific settings
-3. **Session** - Runtime overrides
+1. **Global** - System-wide defaults
+2. **Project** - Project-specific settings
+3. **Local** - Directory-specific overrides
 
 Later levels override earlier ones.
 
@@ -163,7 +172,7 @@ Later levels override earlier ones.
 Most commands support scope flags:
 
 ```bash
-# Global scope (default)
+# Global scope
 amplifier bundle use my-bundle --global
 
 # Project scope
@@ -181,9 +190,6 @@ export ANTHROPIC_API_KEY="your-key"
 export OPENAI_API_KEY="your-key"
 export AZURE_OPENAI_API_KEY="your-key"
 export GOOGLE_API_KEY="your-key"
-
-# Override config location
-export AMPLIFIER_CONFIG_DIR="~/.config/amplifier"
 ```
 
 ## Tips and Tricks
@@ -195,28 +201,9 @@ amplifier --install-completion
 source ~/.bashrc  # or ~/.zshrc
 ```
 
-### Multi-line Input
-
-In interactive mode:
-- Press `Ctrl-J` to insert newline
-- Press `Enter` to send message
-
 ### Slash Commands
 
-In interactive mode:
-
-```
-/help        - Show available commands
-/mode        - Set or toggle modes
-/status      - Show session status
-/config      - Show configuration
-/tools       - List available tools
-/agents      - List available agents
-/save        - Save transcript
-/clear       - Clear context
-/rename      - Rename session
-/fork        - Fork session at turn N
-```
+In interactive mode, the REPL supports slash commands. Use `amplifier --help` or the in-session help for available commands.
 
 ### Unix Piping
 
@@ -226,16 +213,6 @@ cat file.txt | amplifier run
 
 # Continue session via pipe
 echo "new prompt" | amplifier continue
-```
-
-### JSON Output
-
-```bash
-# Get JSON response for scripting
-amplifier run --output-format json "What is 2+2?"
-
-# With execution trace
-amplifier run --output-format json-trace "Your prompt"
 ```
 
 ## Next Steps

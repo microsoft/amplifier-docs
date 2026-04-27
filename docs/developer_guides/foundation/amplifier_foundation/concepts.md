@@ -60,6 +60,13 @@ Contains: `session`, `providers`, `tools`, `hooks`, `agents`
 
 **Not included**: `includes` (resolved), `context` (processed separately), `instruction` (injected into context).
 
+## Mount Plans vs Bundles
+
+- **Mount plans are REQUIRED**: AmplifierSession needs a mount plan to run
+- **Bundles are OPTIONAL**: They're a composition/sharing layer on top
+
+Bundles exist for **sharing and remixing**. You can create mount plans directly in code without ever touching bundles. Bundles make it easy to share and compose configurations, but they're not mandatory.
+
 ## Prepared Bundle
 
 A **PreparedBundle** is a bundle ready for execution with all modules activated.
@@ -68,178 +75,148 @@ A **PreparedBundle** is a bundle ready for execution with all modules activated.
 bundle = await load_bundle("/path/to/bundle.md")
 prepared = await bundle.prepare()  # Downloads modules
 async with prepared.create_session() as session:
-    response = await session.execute("your prompt")
+    response = await session.execute("Hello!")
 ```
 
-**Preparation** fetches external modules, validates configuration, and creates a ready-to-run session factory.
+`prepare()` downloads modules from git URLs, installs dependencies, and returns a PreparedBundle with module resolver.
 
-## Bundle Registry
+## @Mention Resolution
 
-The **BundleRegistry** manages named bundles with caching and update tracking.
-
-```python
-from amplifier_foundation import BundleRegistry
-
-registry = BundleRegistry()
-registry.register({"foundation": "git+https://github.com/microsoft/amplifier-foundation@main"})
-bundle = await registry.load("foundation")
-```
-
-### Registry Features
-
-- **Named bundles**: Register URIs with friendly names
-- **Caching**: Downloaded bundles cached in `~/.amplifier/cache`
-- **Update tracking**: Detect when bundles have new versions
-- **State persistence**: Saved to `~/.amplifier/registry.json`
-
-### Bundle State Tracking
-
-The registry tracks metadata for each bundle:
-
-```python
-state = registry.get_state("foundation")
-# Returns BundleState with:
-# - uri: Source URI
-# - name: Bundle name
-# - version: Current version
-# - loaded_at: Last load timestamp
-# - local_path: Cache location
-# - is_root: True for root bundles, False for nested
-# - root_name: For nested bundles, the containing root's name
-# - includes: Bundles this bundle includes
-# - included_by: Bundles that include this bundle
-```
-
-### Root vs Nested Bundles
-
-**Root bundle**: A bundle at `/bundle.md` or `/bundle.yaml` at the root of a repo or directory tree. Establishes the namespace and root directory for path resolution.
-
-**Nested bundle**: A bundle loaded via `#subdirectory=` URIs or `@namespace:path` references. Shares the namespace with its root bundle and resolves paths relative to its own location.
-
-Examples:
-- `git+https://github.com/org/repo@main` → root bundle
-- `git+https://github.com/org/repo@main#subdirectory=behaviors/streaming` → nested bundle
-- `foundation:behaviors/streaming-ui` → nested bundle (namespace:path syntax)
-
-The namespace comes from `bundle.name`, not the repo URL or directory name.
-
-## Includes
-
-Bundles compose via `includes`:
-
-```yaml
-includes:
-  - bundle: foundation
-  - bundle: my-custom-tools
-```
-
-**Include resolution**:
-1. Registered names (via registry)
-2. URIs (git+, file://, http://)
-3. `namespace:path` syntax (e.g., `foundation:behaviors/streaming-ui`)
-
-**Circular dependencies**: The registry detects and prevents circular includes.
-
-## @Mentions
-
-Reference context files using `@mentions`:
+Instructions can reference context files from composed bundles using `@namespace:path` syntax:
 
 ```markdown
----
-context:
-  - "@foundation:context/IMPLEMENTATION_PHILOSOPHY.md"
-  - "@mybundle:docs/guidelines.md"
----
+See @foundation:context/guidelines.md for guidelines.
 ```
 
-**Syntax**: `@namespace:path/to/file.md`
+How it works:
+1. During composition, each bundle's `base_path` is tracked by namespace (from `bundle.name`)
+2. PreparedBundle resolves `@namespace:path` references against the original bundle's path
+3. Content is loaded and included inline
 
-The mention resolver:
-1. Looks up namespace in registry
-2. Resolves path relative to bundle's location
-3. Loads file content
-4. Injects into session context
+This allows instructions to reference files from any included bundle without knowing absolute paths.
 
-## Source Resolution
+## Bundle Loading: Structural Concepts
 
-Bundles can reference external modules and other bundles by URI:
+Bundles have a **structural** classification based on how they load. This affects namespace registration and path resolution.
+
+### Root Bundles vs Nested Bundles
+
+| Term | Definition | Registry State |
+|------|------------|----------------|
+| **Root bundle** | A `/bundle.md` or `/bundle.yaml` at the root of a repo or directory tree. Establishes the namespace and root directory for path resolution. | `is_root = True` |
+| **Nested bundle** | Any bundle loaded via `#subdirectory=` URIs or `@namespace:path` references. Paths resolve relative to its location, shares namespace with root. | `is_root = False` |
+
+**Key insight:** The namespace comes from `bundle.name`, not the repo URL or directory name.
+
+### Namespace Registration
+
+When a bundle loads, its `bundle.name` becomes a namespace for `@mention` resolution:
+
+```
+Load foundation → Registers "foundation" namespace
+               → @foundation:docs/GUIDE.md resolves to /path/to/foundation/docs/GUIDE.md
+```
+
+Root bundles establish the namespace. Nested bundles (behaviors, providers, etc.) share the root's namespace and resolve paths relative to their own location.
+
+### Loading Flow
+
+```
+Root bundle loads → Registers namespace → All nested bundles share that namespace
+                                       → Paths resolve relative to bundle location
+```
+
+### Example: Nested Bundle Loading
 
 ```yaml
-tools:
-  - module: my-tool
-    source: git+https://github.com/org/my-tool@main
+# A root bundle at repo root
+# bundles/with-anthropic.yaml (loaded via foundation:bundles/with-anthropic)
+includes:
+  - bundle: foundation                          # The root bundle
+  - bundle: foundation:providers/anthropic-opus  # A nested bundle
 ```
 
-**Supported URI formats**:
-- `git+https://github.com/org/repo@branch`
-- `git+https://github.com/org/repo@tag`
-- `git+https://github.com/org/repo@commit-hash`
-- `git+https://github.com/org/repo@main#subdirectory=path/to/module`
-- `file:///absolute/path`
-- Relative paths (resolved relative to bundle location)
+When `foundation:bundles/with-anthropic` loads:
+1. It's detected as a **nested bundle** (there's a root `bundle.md` above it)
+2. It shares the `foundation` namespace
+3. Its own includes resolve relative to its location
+
+### Structural vs Conventional
+
+Bundles have two independent classification systems:
+
+| Layer | Enforced By | Purpose |
+|-------|-------------|---------|
+| **Structural** | Code (registry.py) | How bundles load, namespace registration |
+| **Conventional** | Patterns (see [BUNDLE_GUIDE.md](https://github.com/microsoft/amplifier-foundation/blob/main/docs/BUNDLE_GUIDE.md)) | How to organize repos for maximum utility |
+
+A bundle can be:
+- **Structurally:** Nested (`is_root=False`) - loaded under root's directory
+- **Conventionally:** A "standalone bundle" - ready to use as-is from `/bundles/`
+
+These aren't contradictions—they describe different aspects.
+
+## Agents
+
+**Agents are bundles.** They use the same file format (markdown + YAML frontmatter) and are loaded via the same `load_bundle()` function.
+
+The only difference is the frontmatter key:
+- Bundles use `bundle:` with `name` and `version`
+- Agents use `meta:` with `name` and `description`
+
+```python
+# Both use load_bundle()
+bundle = await load_bundle("./bundle.md")
+agent = await load_bundle("./agents/my-agent.md")
+```
+
+See [AGENT_AUTHORING.md](https://github.com/microsoft/amplifier-foundation/blob/main/docs/AGENT_AUTHORING.md) for agent-specific guidance (the `description` field pattern).
+
+## Session Capabilities
+
+**Capabilities** are named values registered on the coordinator that modules can query at runtime. Foundation registers several capabilities during session creation.
+
+### session.working_dir
+
+The session's working directory. Critical for server/web deployments where `Path.cwd()` returns the server's directory, not the user's project.
+
+**Registered by**: `PreparedBundle.create_session()` and `spawn()`
+
+**Value**: Absolute path string (e.g., `/home/user/myproject`)
+
+**Module usage**:
+```python
+from amplifier_foundation import get_working_dir
+
+# In mount() or tool execute()
+working_dir = get_working_dir(coordinator)  # Returns Path
+```
+
+**Fallback behavior**: If capability not set, `get_working_dir()` returns `Path.cwd()` for backward compatibility.
+
+**Dynamic updates**: Use `set_working_dir(coordinator, path)` to change the working directory mid-session (e.g., when assistant "cd"s into a subdirectory).
+
+### bundle_package_paths
+
+List of `src/` directories from bundles that need to be on `sys.path` for module imports.
+
+**Registered by**: `PreparedBundle.create_session()` when bundles include Python packages.
 
 ## Design Philosophy
 
 ### Mechanism, Not Policy
 
-Foundation provides **mechanisms** (loading, composition, resolution) but doesn't dictate **policy** (which bundles, what configuration).
+Foundation provides **mechanism** for bundle composition. It doesn't decide which bundles to use or how to configure them—those are **policy** decisions for your application.
 
-Applications like `amplifier-app-cli` define policy:
-- Which bundles to load
-- How to compose them
-- What defaults to apply
+### Text-First
 
-### Composability First
-
-Everything composes:
-- Bundles compose via `includes`
-- Configuration sections merge predictably
-- No global state or singletons
-
-### Pure Data Flow
-
-Bundles are pure data transformations:
-```
-Sources → Load → Compose → Mount Plan → Session
-```
-
-No side effects during composition. Side effects (module loading, session creation) happen explicitly via `prepare()` and `create_session()`.
-
-## Common Patterns
-
-### Base + Override Pattern
-
-```python
-base = await registry.load("foundation")
-override = await load_bundle("./local-overrides.md")
-composed = base.compose(override)
-```
-
-Use for: Local customization of shared bundles.
-
-### Multi-Layer Composition
-
-```python
-result = base.compose(team).compose(project).compose(personal)
-```
-
-Layers merge left-to-right. Later layers override earlier.
-
-### Agent-Specific Overlays
-
-```python
-agent_bundle = await load_bundle("./agents/zen-architect.md")
-agent_config = agent_bundle.to_mount_plan()
-
-# Merge with parent config
-merged = parent_config.copy()
-deep_merge(merged, agent_config)
-```
-
-Use for: Agent delegation with config overlays.
+- Bundles are markdown (human-readable)
+- Configuration is YAML (diffable)
+- No binary formats
 
 ## Related Documentation
 
-- [Bundle System Deep Dive](bundle_system.md) - Loading, validation, preparation
-- [Common Patterns](patterns.md) - Code examples and recipes
+- [Common Patterns](patterns.md) - Common usage patterns with code examples
 - [API Reference](api_reference.md) - Complete API documentation
+- [URI Formats](https://github.com/microsoft/amplifier-foundation/blob/main/docs/URI_FORMATS.md) - Source URI reference
+- [Application Integration Guide](https://github.com/microsoft/amplifier-foundation/blob/main/APPLICATION_INTEGRATION_GUIDE.md) - Embedding Amplifier in web apps, voice assistants, Slack bots, and more
