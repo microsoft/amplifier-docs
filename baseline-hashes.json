@@ -675,14 +675,16 @@
         {
           "repo": "amplifier-core",
           "path": "docs/contracts/README.md",
+          "type": "readme",
           "exists": true,
           "hash": "cc3413843d01bb8a"
         },
         {
           "repo": "amplifier-core",
           "path": "python/amplifier_core/loader.py",
+          "type": "python",
           "exists": true,
-          "hash": "b1a8486a9593999e"
+          "hash": "3c2221a4e85899f7"
         }
       ]
     },
@@ -709,14 +711,16 @@
         {
           "repo": "amplifier-core",
           "path": "docs/specs/CONTRIBUTION_CHANNELS.md",
+          "type": "markdown",
           "exists": true,
           "hash": "734ccfa08db6b318"
         },
         {
           "repo": "amplifier-core",
           "path": "python/amplifier_core/events.py",
+          "type": "python",
           "exists": true,
-          "hash": "e8380f9596cf685e"
+          "hash": "01536bf6671cd671"
         }
       ]
     },

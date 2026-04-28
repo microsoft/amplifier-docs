@@ -21,15 +21,9 @@ Amplifier uses an event-driven architecture for observability. The kernel emits 
 | Event | When | Data |
 |-------|------|------|
 | `session:start` | Session initialized | session_id, mount_plan |
-| `session:start:debug` | Session start (debug level) | debug details |
-| `session:start:raw` | Session start (raw data) | raw initialization data |
 | `session:end` | Session cleanup | session_id, duration |
 | `session:fork` | Sub-session created | parent_id, child_id |
-| `session:fork:debug` | Session fork (debug level) | debug details |
-| `session:fork:raw` | Session fork (raw data) | raw fork data |
 | `session:resume` | Session resumed | session_id |
-| `session:resume:debug` | Session resume (debug level) | debug details |
-| `session:resume:raw` | Session resume (raw data) | raw resume data |
 
 ### Prompt Lifecycle
 
@@ -104,6 +98,12 @@ Amplifier uses an event-driven architecture for observability. The kernel emits 
 | `execution:start` | Execution started | prompt |
 | `execution:end` | Execution ended | response, duration |
 
+### Module Lifecycle
+
+| Event | When | Data |
+|-------|------|------|
+| `module:on_session_ready_failed` | Module's `on_session_ready` callback failed | module_id, error |
+
 ### User Notifications
 
 | Event | When | Data |
@@ -143,6 +143,7 @@ from amplifier_core.events import (
     SESSION_END,
     TOOL_PRE,
     TOOL_POST,
+    MODULE_ON_SESSION_READY_FAILED,
     # ... all other events
 )
 ```

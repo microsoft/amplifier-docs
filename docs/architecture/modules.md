@@ -17,7 +17,7 @@ Modules are swappable implementations of kernel contracts:
 | **Tool** | `Tool` | `tools` | Agent capabilities |
 | **Orchestrator** | `Orchestrator` | `orchestrator` | Execution loops |
 | **Context** | `ContextManager` | `context` | Memory management |
-| **Hook** | `HookHandler` | (registered) | Observability |
+| **Hook** | `HookHandler` | `hooks` | Observability |
 | **Resolver** | `ModuleSourceResolver` | `module-source-resolver` | Module sources |
 
 ## Module Discovery
