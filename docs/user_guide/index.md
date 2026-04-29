@@ -51,11 +51,18 @@ amplifier run "Your prompt"
 # Single command via stdin (useful for scripts/pipelines)
 echo "Summarize this spec" | amplifier run
 
+# Runtime overrides (highest priority, override all config levels)
+amplifier run -p anthropic "prompt"              # Use specific provider
+amplifier run -m claude-sonnet-4-5 "prompt"      # Use specific model
+amplifier run --max-tokens 500 "prompt"          # Limit output tokens
+amplifier run -p openai -m gpt-5.2 --max-tokens 1000 "prompt"  # Combine flags
+
 # Interactive mode
 amplifier
 
 # Resume last session
 amplifier continue
+amplifier continue "new prompt"          # Resume most recent (single-shot)
 
 # Use specific bundle
 amplifier run --bundle my-bundle "Your prompt"
@@ -91,11 +98,27 @@ amplifier routing show [<name>]
 amplifier routing manage
 
 # Modules
+amplifier module add <name> [--local|--project|--global]
+amplifier module remove <name> [--scope]
+amplifier module current
 amplifier module list
-amplifier module add tool-web
-amplifier module show tool-web
+amplifier module show <name>
 amplifier module refresh [<name>] [--mutable-only]
 amplifier module check-updates
+
+# Source management
+amplifier source add <id> <uri> [--local|--project|--global]
+amplifier source remove <id> [--scope]
+amplifier source list
+amplifier source show <id>
+
+# Notification settings (requires notify bundle)
+amplifier notify status                              # Show current notification settings
+amplifier notify desktop --enable [--scope]          # Enable desktop/terminal notifications
+amplifier notify desktop --disable [--scope]         # Disable desktop notifications
+amplifier notify ntfy --enable --topic <topic>       # Enable ntfy.sh push notifications
+amplifier notify ntfy --disable [--scope]            # Disable push notifications
+amplifier notify reset --all [--scope]               # Clear all notification settings
 ```
 
 ### Getting Help

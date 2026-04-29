@@ -48,13 +48,13 @@ amplifier> Design a caching system
 ### List Available Agents
 
 ```bash
-amplifier agents list
+amplifier agent list
 ```
 
 ### Show Agent Details
 
 ```bash
-amplifier agents show explorer
+amplifier agent show explorer
 ```
 
 ## How Agents Work
@@ -319,7 +319,7 @@ amplifier> Make things better
 
 ```bash
 # Check available agents
-amplifier agents list
+amplifier agent list
 
 # Check search paths (in order):
 # 1. $AMPLIFIER_AGENT_<NAME>
@@ -338,7 +338,7 @@ amplifier agents list
 
 - Check for name collisions in search paths
 - More specific agents in higher-priority paths override bundled agents
-- Use `amplifier agents show <name>` to verify which agent will be used
+- Use `amplifier agent show <name>` to verify which agent will be used
 
 ## Advanced: Agent Composition
 

@@ -68,8 +68,8 @@
         {
           "repo": "amplifier-app-cli",
           "path": "README.md",
-          "exists": false,
-          "hash": null
+          "exists": true,
+          "hash": "3af848d057d4e7c4"
         }
       ]
     },
@@ -98,28 +98,24 @@
         {
           "repo": "amplifier-foundation",
           "path": "agents/explorer.md",
-          "type": "markdown",
           "exists": true,
           "hash": "ac9fdb98d5a615ca"
         },
         {
           "repo": "amplifier-foundation",
           "path": "agents/foundation-expert.md",
-          "type": "markdown",
           "exists": true,
-          "hash": "451597d60994e4da"
+          "hash": "d3425c3cd79d4ddf"
         },
         {
           "repo": "amplifier-foundation",
           "path": "agents/zen-architect.md",
-          "type": "markdown",
           "exists": true,
           "hash": "4304dfb03814bfda"
         },
         {
           "repo": "amplifier-app-cli",
           "path": "docs/AGENT_DELEGATION_IMPLEMENTATION.md",
-          "type": "markdown",
           "exists": true,
           "hash": "a14bb129bde300f4"
         }
