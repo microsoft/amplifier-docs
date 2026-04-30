@@ -112,13 +112,21 @@ Modules can be written in any language. Four transport types determine how a mod
 - **wasm**: Loaded in-process via a WASM runtime. Sandboxed execution with no host OS access unless explicitly granted.
 - **grpc**: Connects to an external gRPC service at the runtime endpoint declared in `amplifier.toml`.
 
+### The Module Declares What It IS, The Host Decides How to CONSUME
+
 The `amplifier.toml` manifest declares the module's transport. The host runtime reads this declaration and selects the appropriate loading strategy:
 
 - **Rust host + `transport=rust`** → direct native link. Zero serialization overhead.
 - **Python host + `transport=rust`** → gRPC sidecar. The host spawns the compiled binary and communicates over gRPC.
 - **Any host + `transport=grpc`** → remote endpoint. The host connects to the service address at startup.
 
-gRPC bridges exist for all six module types (tool, hook, orchestrator, context, provider, and scaffold), allowing any module type to cross a language boundary without changing its external contract.
+This separation keeps module authors free from host concerns. A module declares what it is; it does not dictate how it is consumed. A Rust module written for direct linking works transparently as a sidecar in any non-Rust host without modification.
+
+### gRPC as Universal Cross-Language Bridge
+
+gRPC bridges exist for all six module types (tool, hook, orchestrator, context, provider, and scaffold). Any module type can cross a language boundary through gRPC without changing its external contract.
+
+The gRPC sidecar pattern is symmetric with Architecture Decision #3: the same binary that a non-Rust host launches as a sidecar is the binary that a CI environment or container deployment runs as a standalone service. No separate packaging or build step is required for cross-language deployment.
 
 ## Next Steps
 

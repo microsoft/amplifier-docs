@@ -12,10 +12,12 @@ Welcome to Amplifier! This guide will help you get up and running quickly.
 Amplifier is an **AI-powered modular development platform** with a command-line interface built on amplifier-core:
 
 - **Bundle system** - Composable configuration packages (via amplifier-foundation)
-- **Settings management** - Three-scope configuration (local/project/global)
-- **Session storage** - Project-scoped persistence with multi-turn sub-session resumption
+- **Settings management** - Three-scope configuration (local/project/global via amplifier-config)
+- **Module resolution** - Module source resolution for tools, providers, hooks
+- **Session storage** - Project-scoped session persistence with multi-turn sub-session resumption
 - **Agent delegation** - Spawn and resume sub-sessions for iterative collaboration with specialized agents
 - **Interactive mode** - REPL with slash commands
+- **Key management** - Secure API key storage
 
 ## Quick Start
 
@@ -48,7 +50,7 @@ amplifier
 |----------|--------|-------|
 | **Anthropic** | Sonnet, Opus | Recommended, most tested |
 | **OpenAI** | GPT-4o, GPT-4o-mini, o1 | Good alternative |
-| **Azure OpenAI** | GPT models via Azure | Enterprise users |
+| **Azure OpenAI** | — | Enterprise users with Azure subscriptions |
 | **Google Gemini** | Gemini 2.5 Flash, Pro | Large context windows |
 | **Ollama** | Local models | Free, no API key needed |
 

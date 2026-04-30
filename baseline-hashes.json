@@ -11,8 +11,8 @@
         {
           "repo": "amplifier-app-cli",
           "path": "README.md",
-          "exists": false,
-          "hash": null
+          "exists": true,
+          "hash": "3af848d057d4e7c4"
         }
       ]
     },
@@ -614,8 +614,8 @@
         {
           "repo": "amplifier-core",
           "path": "docs/DESIGN_PHILOSOPHY.md",
-          "exists": false,
-          "hash": null
+          "exists": true,
+          "hash": "dc8aad2f7a2e6e44"
         }
       ]
     },
