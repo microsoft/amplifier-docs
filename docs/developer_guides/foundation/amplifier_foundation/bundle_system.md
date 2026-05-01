@@ -135,12 +135,13 @@ if not result.valid:
 
 ### Validation Rules
 
-- Bundle name must be a valid identifier
-- Includes must be valid URIs
-- Module sources must be valid URIs
-- Agent references must resolve
-- Context references must resolve
-- No circular includes
+- Bundle must have a name
+- Module entries must be dicts with a `module` field
+- Module `config` must be a dict if present
+- `session.orchestrator` must be a string or dict (with `module`/`source` key)
+- `session.context` must be a string or dict (with `module`/`source` key)
+- Agent entries must be dicts
+- Context file paths must exist (warning in default mode; error in `strict=True` mode)
 
 ## Preparation
 

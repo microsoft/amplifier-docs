@@ -202,7 +202,7 @@ List of `src/` directories from bundles that need to be on `sys.path` for module
 
 **Registered by**: `PreparedBundle.create_session()` when bundles include Python packages.
 
-## Design Philosophy
+## Philosophy
 
 ### Mechanism, Not Policy
 

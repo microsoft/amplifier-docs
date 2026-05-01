@@ -215,8 +215,8 @@
         {
           "repo": "amplifier-foundation",
           "path": "docs/CONCEPTS.md",
-          "exists": false,
-          "hash": null
+          "exists": true,
+          "hash": "d40f28c686b74f0e"
         }
       ]
     },
@@ -227,7 +227,7 @@
           "repo": "amplifier-foundation",
           "path": "docs/BUNDLE_GUIDE.md",
           "exists": true,
-          "hash": "67161ce8b9d74876"
+          "hash": "7891ac5790683b8f"
         },
         {
           "repo": "amplifier-foundation",
