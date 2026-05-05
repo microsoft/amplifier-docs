@@ -36,7 +36,7 @@ hooks:
 - **Zero code changes** - Pure configuration
 - **Auto-discovery** - Modules declare observable events
 - **Standard Python logging** - No external dependencies
-- **Flexible output** - Console, file, or both
+- **Session JSONL logs** - Per-session event files with configurable path template
 
 ## Repository
 

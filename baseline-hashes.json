@@ -911,7 +911,7 @@
           "repo": "amplifier-module-provider-ollama",
           "path": "amplifier_module_provider_ollama/__init__.py",
           "exists": true,
-          "hash": "2157221802397d84"
+          "hash": "7c72e2b50bc9fb8a"
         },
         {
           "repo": "amplifier-module-provider-ollama",
@@ -1235,7 +1235,7 @@
           "repo": "amplifier-module-hooks-logging",
           "path": "amplifier_module_hooks_logging/__init__.py",
           "exists": true,
-          "hash": "3d205f02b0a29a50"
+          "hash": "898a3098c8e7074b"
         },
         {
           "repo": "amplifier-module-hooks-logging",

@@ -34,33 +34,11 @@ providers:
 | `max_tokens` | int | `4096` | Maximum tokens to generate |
 | `temperature` | float | `0.7` | Generation temperature |
 | `timeout` | float | `600.0` | Request timeout in seconds |
-| `debug` | boolean | `false` | Enable standard debug events |
-| `raw_debug` | boolean | `false` | Enable ultra-verbose raw API I/O logging |
 | `auto_pull` | boolean | `false` | Automatically pull missing models |
-
-### Debug Configuration
-
-**Standard Debug** (`debug: true`):
-- Emits `llm:request:debug` and `llm:response:debug` events
-- Contains request/response summaries with message counts, model info, usage stats
-- Long values automatically truncated for readability
-- Moderate log volume, suitable for development
-
-**Raw Debug** (`debug: true, raw_debug: true`):
-- Emits `llm:request:raw` and `llm:response:raw` events
-- Contains complete, unmodified request params and response objects
-- Extreme log volume, use only for deep provider integration debugging
-- Captures the exact data sent to/from Ollama API before any processing
-
-**Example**:
-```yaml
-providers:
-  - module: provider-ollama
-    config:
-      debug: true      # Enable debug events
-      raw_debug: true  # Enable raw API I/O capture
-      default_model: llama3.2:3b
-```
+| `raw` | boolean | `false` | Include raw API response data in output |
+| `enable_thinking` | boolean | `true` | Enable thinking/reasoning for supported models |
+| `num_ctx` | integer | `0` | Context window size override (0 = auto-detect from model) |
+| `keep_alive` | string | — | Duration to keep model loaded in memory (e.g., `5m`, `-1` for indefinite) |
 
 ## Supported Models
 
@@ -87,7 +65,8 @@ The provider supports thinking/reasoning for compatible models like DeepSeek R1 
 - `deepseek-r1` - DeepSeek's reasoning model
 - `qwen3` - Alibaba's Qwen 3 (with `think` parameter)
 - `qwq` - Alibaba's QwQ reasoning model
-- `phi4-reasoning` - Microsoft's Phi-4 reasoning variant
+- `magistral` - Mistral's reasoning model
+- `cogito` - Reasoning-capable models with thinking support
 
 ### Streaming
 
