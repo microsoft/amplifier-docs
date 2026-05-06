@@ -16,8 +16,7 @@ Learn how to build production-ready CLI applications with Amplifier - proper arc
 - **Session Lifecycle**: Initialization, execution, cleanup
 - **CLI Patterns**: Interactive mode and single-prompt mode
 
-**Time to Complete**: 15 minutes  
-**Complexity**: ⭐⭐ Intermediate
+**Time to Complete**: 15 minutes
 
 ## Running the Example
 
@@ -90,25 +89,29 @@ class AppConfig:
         )
     
     def validate(self) -> None:
-        """Validate configuration before use"""
+        """Validate configuration."""
         if not self.api_key:
-            raise ValueError("API key not set")
+            raise ValueError("ANTHROPIC_API_KEY not set")
+
+        if not self.storage_path.exists():
+            self.storage_path.mkdir(parents=True, exist_ok=True)
 ```
 
-**Configuration sources** (in order of precedence):
-1. Environment variables
-2. Config files (`.amplifier/settings.yaml`)
-3. Command-line arguments
-4. Defaults
-
-Learn more: [Config Library](/libraries/config.md)
+**Configuration sources** (in production, you'd load from):
+- Environment variables
+- Config files (`.amplifier/settings.yaml`)
+- Command-line arguments
+- Secrets management (AWS Secrets Manager, etc.)
 
 ### Error Handling Pattern
 
 ```python
 async def execute(self, prompt: str) -> str:
+    if not self.session:
+        raise RuntimeError("Session not initialized. Call initialize() first.")
+    
     try:
-        self.logger.info(f"Executing: {prompt[:100]}...")
+        self.logger.info(f"Executing prompt: {prompt[:100]}...")
         response = await self.session.execute(prompt)
         self.logger.info("Execution completed")
         return response

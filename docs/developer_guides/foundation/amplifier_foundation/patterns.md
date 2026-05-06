@@ -491,8 +491,6 @@ for prompt in prompts:
         response = await session.execute(prompt)
 ```
 
-## Next Steps
+## See Also
 
-- [Bundle System Deep Dive](bundle_system.md) - Loading, composition, and validation details
-- [API Reference](api_reference.md) - Complete API documentation
-- [Examples](examples/) - Practical examples and tutorials
+- [Application Integration Guide](https://github.com/microsoft/amplifier-foundation/blob/main/APPLICATION_INTEGRATION_GUIDE.md) - Application lifecycle patterns, the protocol boundary pattern, and production anti-patterns

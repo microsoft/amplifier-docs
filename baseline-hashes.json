@@ -68,8 +68,8 @@
         {
           "repo": "amplifier-app-cli",
           "path": "README.md",
-          "exists": true,
-          "hash": "3af848d057d4e7c4"
+          "exists": false,
+          "hash": null
         }
       ]
     },
@@ -215,8 +215,8 @@
         {
           "repo": "amplifier-foundation",
           "path": "docs/CONCEPTS.md",
-          "exists": true,
-          "hash": "d40f28c686b74f0e"
+          "exists": false,
+          "hash": null
         }
       ]
     },
@@ -302,8 +302,8 @@
         {
           "repo": "amplifier-foundation",
           "path": "docs/PATTERNS.md",
-          "exists": true,
-          "hash": "bdf8e7001c0aa810"
+          "exists": false,
+          "hash": null
         }
       ]
     },
@@ -416,8 +416,8 @@
         {
           "repo": "amplifier-foundation",
           "path": "examples/08_cli_application.py",
-          "exists": true,
-          "hash": "1494c16e0d692726"
+          "exists": false,
+          "hash": null
         }
       ]
     },
@@ -478,8 +478,8 @@
         {
           "repo": "amplifier-core",
           "path": "docs/contracts/README.md",
-          "exists": true,
-          "hash": "cc3413843d01bb8a"
+          "exists": false,
+          "hash": null
         }
       ]
     },
@@ -741,8 +741,8 @@
         {
           "repo": "amplifier-core",
           "path": "python/amplifier_core/session.py",
-          "exists": true,
-          "hash": "4d2902034a64c5dd"
+          "exists": false,
+          "hash": null
         }
       ]
     },
@@ -752,8 +752,8 @@
         {
           "repo": "amplifier-core",
           "path": "python/amplifier_core/coordinator.py",
-          "exists": true,
-          "hash": "4e4d0a8e5006464c"
+          "exists": false,
+          "hash": null
         }
       ]
     },

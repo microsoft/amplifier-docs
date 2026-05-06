@@ -121,6 +121,22 @@ amplifier notify ntfy --disable [--scope]            # Disable push notification
 amplifier notify reset --all [--scope]               # Clear all notification settings
 ```
 
+### Utility Commands
+
+```bash
+amplifier init                                     # First-time setup (combined dashboard)
+amplifier update [--check-only] [--force] [-y]    # Update Amplifier and modules
+amplifier --install-completion                     # Set up tab completion
+amplifier --version                                # Show version
+amplifier --help                                   # Show help
+```
+
+**Update command options**:
+- `--check-only`: Check for updates without installing
+- `--force`: Force update all sources (skip update detection)
+- `-y, --yes`: Skip confirmation prompts
+- `--verbose`: Show detailed multi-line output per source (default: concise one-line format)
+
 ### Getting Help
 
 ```bash

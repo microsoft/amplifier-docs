@@ -9,6 +9,12 @@ The `ModuleCoordinator` manages module lifecycle and provides access to loaded m
 
 **Source**: [amplifier_core/coordinator.py](https://github.com/microsoft/amplifier-core/blob/main/amplifier_core/coordinator.py)
 
+!!! note "Implementation Location"
+    The coordinator implementation lives in the Rust kernel (`amplifier_core._engine.RustCoordinator`). The Python module re-exports it for backward compatibility:
+    ```python
+    from amplifier_core.coordinator import ModuleCoordinator
+    ```
+
 ## ModuleCoordinator
 
 The coordinator is created by `AmplifierSession` and provides infrastructure context to all modules including:
@@ -16,7 +22,6 @@ The coordinator is created by `AmplifierSession` and provides infrastructure con
 - Mount points for module attachment
 - Infrastructure context (session ID, parent ID, config)
 - Capability registry for inter-module communication
-- Contribution channels for pull-based aggregation
 - Event system with hook registry
 
 ### Properties
@@ -55,30 +60,6 @@ Register a capability that other modules can query.
 coordinator.register_capability("session.working_dir", "/path/to/project")
 ```
 
-#### `register_contributor(channel, source, fn)`
-
-Register a contributor function for pull-based aggregation.
-
-```python
-coordinator.register_contributor(
-    "observability.events",
-    "my-module",
-    lambda: ["my:event:1", "my:event:2"]
-)
-```
-
-#### `process_hook_result(result, event, source)`
-
-Process hook results and apply actions.
-
-```python
-result = await coordinator.process_hook_result(
-    hook_result, "tool:pre", tool_name
-)
-if result.action == "deny":
-    return f"Operation denied: {result.reason}"
-```
-
 ## Capability Registry
 
 The capability registry enables loose coupling between modules:
@@ -96,18 +77,4 @@ if model_info:
     budget = model_info["context_window"] - model_info["max_output_tokens"]
 ```
 
-## Contribution Channels
 
-Contribution channels enable pull-based aggregation:
-
-```python
-# Multiple modules register contributors
-coordinator.register_contributor("observability.events", "mod-a", 
-    lambda: ["event:a1", "event:a2"])
-coordinator.register_contributor("observability.events", "mod-b",
-    lambda: ["event:b1"])
-
-# Consumer pulls all contributions
-all_events = coordinator.get_capability("observability.events")
-# Result: ["event:a1", "event:a2", "event:b1"]
-```

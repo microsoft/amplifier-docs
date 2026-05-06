@@ -22,7 +22,7 @@ async with AmplifierSession(config=mount_plan) as session:
 
 ```python
 AmplifierSession(
-    config: dict,                              # Mount plan configuration
+    config: dict[str, Any],                    # Mount plan configuration
     loader: ModuleLoader | None = None,        # Optional module loader
     session_id: str | None = None,             # Optional session ID (auto-generated if not provided)
     parent_id: str | None = None,              # Parent session ID for child sessions
@@ -40,7 +40,7 @@ The `is_resumed` parameter controls whether the session emits `session:start` (n
 
 #### `initialize()`
 
-Initialize the session, loading all modules specified in the mount plan.
+Initialize the session, loading all modules specified in the mount plan. Delegates to `_session_init.initialize_session()` — the single implementation shared by both `AmplifierSession` and `RustSession`.
 
 ```python
 await session.initialize()

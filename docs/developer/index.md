@@ -9,9 +9,6 @@ description: Building modules and extending Amplifier
 
 This guide covers creating custom modules that extend Amplifier's capabilities: providers, tools, hooks, orchestrators, and context managers.
 
-!!! note "Audience"
-    Building a module that plugs into Amplifier (Provider, Tool, Hook, Orchestrator, Context)? You're in the right place. For building an application with Amplifier, see [Foundation Guide](../developer_guides/foundation/index.md).
-
 ## Module Types
 
 | Module Type | Contract | Purpose |
@@ -75,16 +72,4 @@ amplifier module validate ./my-module
 
 See individual contract documents for type-specific validation requirements.
 
-## Next Steps
-
-- **Choose a module type** - Pick from the table above
-- **Read the contract** - Understand the protocol requirements
-- **Study examples** - Review canonical implementations
-- **Build and test** - Implement and validate your module
-- **Publish** - Share with the ecosystem
-
-## Resources
-
-- **amplifier-core** - [Module contracts and protocols](https://github.com/microsoft/amplifier-core/tree/main/docs/contracts)
-- **Example modules** - Study existing provider, tool, and hook implementations
-- **Community** - Join discussions and get help
+**For ecosystem overview**: [amplifier](https://github.com/microsoft/amplifier)

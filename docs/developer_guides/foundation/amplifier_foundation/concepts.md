@@ -217,6 +217,6 @@ Foundation provides **mechanism** for bundle composition. It doesn't decide whic
 ## Related Documentation
 
 - [Common Patterns](patterns.md) - Common usage patterns with code examples
-- [API Reference](api_reference.md) - Complete API documentation
+- [API Reference](api_reference.md) - API index pointing to source
 - [URI Formats](https://github.com/microsoft/amplifier-foundation/blob/main/docs/URI_FORMATS.md) - Source URI reference
 - [Application Integration Guide](https://github.com/microsoft/amplifier-foundation/blob/main/APPLICATION_INTEGRATION_GUIDE.md) - Embedding Amplifier in web apps, voice assistants, Slack bots, and more
