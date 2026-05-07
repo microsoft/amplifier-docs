@@ -121,6 +121,29 @@ amplifier notify ntfy --disable [--scope]            # Disable push notification
 amplifier notify reset --all [--scope]               # Clear all notification settings
 ```
 
+
+### Tool Commands
+
+```bash
+# List tools available in the active bundle (shows actual tool names)
+amplifier tool list                               # Table format (mounts tools)
+amplifier tool list --modules                     # Show module names (fast, no mount)
+amplifier tool list --bundle my-bundle            # Specify bundle
+amplifier tool list --output json                 # JSON format
+
+# Show details about a specific tool
+amplifier tool info <tool-name>                   # Show tool info
+amplifier tool info read_file --bundle my-bundle  # With specific bundle
+amplifier tool info --module tool-filesystem      # Show module info (fast)
+
+# Invoke a tool directly with arguments
+amplifier tool invoke read_file file_path=/tmp/test.txt
+amplifier tool invoke bash command="ls -la"
+amplifier tool invoke web_fetch url="https://example.com"
+```
+
+**Note**: Tool modules (e.g., `tool-filesystem`) expose multiple actual tools (e.g., `read_file`, `write_file`, `edit_file`). Use `amplifier tool list` to see actual tool names, or `--modules` for a fast module-level view.
+
 ### Utility Commands
 
 ```bash

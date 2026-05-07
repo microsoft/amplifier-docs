@@ -68,8 +68,8 @@
         {
           "repo": "amplifier-app-cli",
           "path": "README.md",
-          "exists": false,
-          "hash": null
+          "exists": true,
+          "hash": "3af848d057d4e7c4"
         }
       ]
     },
@@ -530,7 +530,7 @@
           "repo": "amplifier-core",
           "path": "docs/contracts/PROVIDER_CONTRACT.md",
           "exists": true,
-          "hash": "dbf2a14f597e80f1"
+          "hash": "04b39901eec6a7a5"
         },
         {
           "repo": "amplifier-core",
@@ -697,7 +697,7 @@
           "repo": "amplifier-core",
           "path": "python/amplifier_core/models.py",
           "exists": true,
-          "hash": "55168832a62ecc9a"
+          "hash": "eb2e0596b470c44e"
         }
       ]
     },

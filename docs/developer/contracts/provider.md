@@ -23,51 +23,30 @@ Providers translate between Amplifier's unified message format and vendor-specif
 
 This contract document provides the quick-reference essentials. The specification contains the full details.
 
-## Protocol
+## Protocol Definition
 
-**Source**: `amplifier_core/interfaces.py` lines 65-128
+**Source**: `amplifier_core/interfaces.py` → `class Provider(Protocol)`
 
 ```python
-from typing import Protocol, runtime_checkable
-from amplifier_core.models import ProviderInfo, ModelInfo
-from amplifier_core.message_models import ChatRequest, ChatResponse, ToolCall
-
 @runtime_checkable
 class Provider(Protocol):
     @property
-    def name(self) -> str:
-        """Provider name."""
-        ...
+    def name(self) -> str: ...
 
-    def get_info(self) -> ProviderInfo:
-        """Get provider metadata."""
-        ...
+    def get_info(self) -> ProviderInfo: ...
 
-    async def list_models(self) -> list[ModelInfo]:
-        """List available models."""
-        ...
+    async def list_models(self) -> list[ModelInfo]: ...
 
-    async def complete(
-        self,
-        request: ChatRequest,
-        **kwargs
-    ) -> ChatResponse:
-        """Generate completion from ChatRequest."""
-        ...
+    async def complete(self, request: ChatRequest, **kwargs) -> ChatResponse: ...
 
-    def parse_tool_calls(
-        self,
-        response: ChatResponse
-    ) -> list[ToolCall]:
-        """Parse tool calls from response."""
-        ...
+    def parse_tool_calls(self, response: ChatResponse) -> list[ToolCall]: ...
 ```
 
 **Note**: `ToolCall` is from `amplifier_core.message_models` (see [REQUEST_ENVELOPE_V1](https://github.com/microsoft/amplifier-core/blob/main/docs/specs/PROVIDER_SPECIFICATION.md) for details)
 
 ## ModelInfo Extensions (Model Class Routing)
 
-The `list_models()` method returns `list[ModelInfo]`. Beyond the required fields, ModelInfo supports optional extension fields for model class routing and cost-aware selection:
+The `list_models()` method returns `list[ModelInfo]`. Beyond the required fields (`id`, `display_name`, `context_window`, `max_output_tokens`), ModelInfo supports optional extension fields for model class routing and cost-aware selection:
 
 | Field | Type | Default | Description |
 |-------|------|---------|-------------|
@@ -163,6 +142,48 @@ coordinator.register_contributor(
 ```
 
 See [CONTRIBUTION_CHANNELS.md](https://github.com/microsoft/amplifier-core/blob/main/docs/specs/CONTRIBUTION_CHANNELS.md) for the pattern.
+
+### `llm:response` Event — `usage` Payload Schema
+
+Providers **MUST** emit `llm:response` with the following `usage` payload. Key names are normative — derived from the kernel `Usage` struct (`crates/amplifier-core/src/messages.rs`):
+
+| Key | Type | Required | Description |
+|-----|------|----------|-------------|
+| `input_tokens` | `int` | **MUST** | Total input tokens — gross total (fresh + cache_read combined) |
+| `output_tokens` | `int` | **MUST** | Total output tokens generated |
+| `cache_read_tokens` | `int` | SHOULD (when non-zero) | Tokens served from prompt cache |
+| `cache_write_tokens` | `int` | SHOULD (when non-zero) | Tokens written to prompt cache (billed on top of gross) |
+
+**DO NOT use:** `"input"`, `"output"`, `"input_tokens_used"`, `"completion_tokens"`, or any other variant. These break consumers silently.
+
+`total_tokens` is not included in the event payload. Consumers that need it can derive it as `input_tokens + output_tokens` from the event `usage` dict.
+
+**Reference emit pattern** (build `ChatResponse` before emitting):
+
+```python
+chat_response = self._convert_to_chat_response(response)  # build first
+
+event_usage: dict[str, Any] = {
+    "input_tokens": chat_response.usage.input_tokens,
+    "output_tokens": chat_response.usage.output_tokens,
+}
+if chat_response.usage.cache_read_tokens is not None:
+    event_usage["cache_read_tokens"] = chat_response.usage.cache_read_tokens
+if chat_response.usage.cache_write_tokens is not None:
+    event_usage["cache_write_tokens"] = chat_response.usage.cache_write_tokens
+
+await coordinator.hooks.emit("llm:response", {
+    "provider": self.name,
+    "model": model,
+    "status": "ok",
+    "duration_ms": elapsed_ms,
+    "usage": event_usage,
+})
+
+return chat_response  # return the already-built response
+```
+
+---
 
 ## Canonical Example
 

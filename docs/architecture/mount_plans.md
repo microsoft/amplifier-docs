@@ -21,50 +21,50 @@ Mount Plans are the **only way** applications communicate configuration to the k
 ```python
 {
     "session": {
-        "orchestrator": str,    # Required: module ID
-        "context": str,         # Required: module ID
-        "injection_budget_per_turn": int | None,
-        "injection_size_limit": int | None
+        "orchestrator": str,           # Required: orchestrator module ID
+        "orchestrator_source": str,    # Optional: orchestrator source URI
+        "context": str,                # Required: context manager module ID
+        "context_source": str,         # Optional: context source URI
+        "injection_budget_per_turn": int | None,  # Optional: max tokens hooks can inject per turn (default: 10000, None for unlimited)
+        "injection_size_limit": int | None        # Optional: max bytes per hook injection (default: 10240, None for unlimited)
     },
     "orchestrator": {
-        "config": dict          # Orchestrator-specific config
+        "config": dict        # Optional: orchestrator-specific configuration
     },
     "context": {
-        "config": dict          # Context-specific config
+        "config": dict        # Optional: context-specific configuration
     },
-    "providers": [
+    "providers": [            # Optional: list of provider configurations
         {
-            "module": str,      # Module ID
-            "source": str,      # Git URL or path
-            "config": dict      # Provider-specific config
+            "module": str,     # Required: provider module ID
+            "source": str,     # Optional: source URI (git, file, package)
+            "config": dict     # Optional: provider-specific config
         }
     ],
-    "tools": [
+    "tools": [                # Optional: list of tool configurations
         {
-            "module": str,
-            "source": str,
-            "config": dict
+            "module": str,     # Required: tool module ID
+            "source": str,     # Optional: source URI (git, file, package)
+            "config": dict     # Optional: tool-specific config
         }
     ],
-    "hooks": [
+    "agents": {               # Optional: agent configuration overlays (app-layer data)
+        "<agent-name>": {
+            "description": str,         # Agent description (for task tool display)
+            "session": dict,            # Optional: override orchestrator/context
+            "providers": list,          # Optional: override providers
+            "tools": list,              # Optional: override tools
+            "hooks": list,              # Optional: override hooks
+            "system": {"instruction": str}  # System instruction for agent persona
+        }
+    },
+    "hooks": [                # Optional: list of hook configurations
         {
-            "module": str,
-            "source": str,
-            "config": dict
+            "module": str,     # Required: hook module ID
+            "source": str,     # Optional: source URI (git, file, package)
+            "config": dict     # Optional: hook-specific config
         }
-    ],
-    "agents": {
-        "agent-name": {
-            "description": str,
-            "session": dict,
-            "providers": list,
-            "tools": list,
-            "hooks": list,
-            "system": {
-                "instruction": str
-            }
-        }
-    }
+    ]
 }
 ```
 
@@ -143,7 +143,7 @@ All module references support an optional `source` field:
 
 **Source URI formats:**
 - Git: `git+https://github.com/org/repo@ref`
-- File: `file:///absolute/path` or `./relative/path`
+- File: `file:///absolute/path` or `/absolute/path` or `./relative/path`
 - Package: `package-name` (or omit source to use installed package)
 
 ## Module Configuration
@@ -222,7 +222,11 @@ Agent configurations are partial mount plans that get merged with a parent sessi
 
 ## Validation
 
-Use `MountPlanValidator` to validate structure before loading:
+Validation happens in two phases: structural validation (before loading) and runtime validation (during initialization).
+
+### Pre-Load Structural Validation
+
+Use `MountPlanValidator` to validate mount plan structure before attempting to load modules:
 
 ```python
 from amplifier_core.validation import MountPlanValidator
@@ -233,6 +237,9 @@ result = validator.validate(mount_plan)
 if not result.passed:
     print(result.format_errors())
     sys.exit(1)
+
+# Safe to proceed with session creation
+session = AmplifierSession(mount_plan)
 ```
 
 `MountPlanValidator` checks:
@@ -240,6 +247,27 @@ if not result.passed:
 - Session section has required `orchestrator` and `context` fields
 - Module specs have required `module` field
 - Config and source fields are correct types when present
+- Unknown sections generate warnings (not errors)
+
+### Runtime Validation
+
+`AmplifierSession` performs additional validation on initialization:
+
+- `session.orchestrator` must be loadable
+- `session.context` must be loadable
+- At least one provider must be configured (required for agent loops)
+
+### Module Loading
+
+- All specified module IDs must be discoverable
+- Module loading failures are logged but non-fatal (except orchestrator and context)
+- Invalid config for a module causes that module to fail loading
+
+### Error Handling
+
+- Missing required fields: `ValueError` raised immediately
+- Module not found: Logged as warning, session continues
+- Invalid module config: Logged as warning, module skipped
 
 ## Creating Sessions
 
