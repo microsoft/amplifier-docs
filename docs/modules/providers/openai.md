@@ -29,20 +29,24 @@ providers:
 | `max_tokens` | integer | `4096` | Maximum output tokens |
 | `temperature` | float | null | Sampling temperature; null = not sent (some models don't support it) |
 | `reasoning` | string | null | Reasoning effort: `none\|low\|medium\|high\|xhigh`; null = not sent |
-| `reasoning_summary` | string | `auto` | Reasoning verbosity: `auto\|concise\|detailed` |
-| `truncation` | string | `auto` | Automatic context management |
+| `reasoning_summary` | string | `detailed` | Reasoning verbosity: `auto\|concise\|detailed` |
+| `truncation` | string | null | Automatic context management; null = omit field (use `"auto"` for legacy auto-drop behavior) |
 | `enable_state` | boolean | `false` | Enable stateful conversations |
 | `filtered` | boolean | `true` | Filter to curated model list by default |
 | `enable_long_context` | boolean | `false` | Enable full context window (>272K tokens, 2x input / 1.5x output pricing) |
 | `use_streaming` | boolean | `true` | Use streaming HTTP transport (prevents timeouts on large context requests) |
-| `debug` | boolean | `false` | Enable standard debug events |
-| `raw_debug` | boolean | `false` | Enable ultra-verbose raw API I/O logging |
+| `prompt_cache_key` | string | null | Per-conversation cache routing key for prompt caching |
+| `prompt_cache_retention` | string | `"24h"` | Cache retention: `in_memory` (5-10 min) or `24h` (extended GPU-local KV storage) |
+| `enable_response_chaining` | string/bool | `"auto"` | Response chaining for reasoning models: `auto`\|`true`\|`false` |
+| `raw` | boolean | `false` | Include raw API payload in provider events |
 | `priority` | int | 100 | Provider priority for selection |
 | `timeout` | float | 600.0 | API timeout in seconds |
 | `max_retries` | int | 5 | Retry attempts before failing |
-| `retry_jitter` | float | 0.2 | Randomness in retry delays (0.0-1.0) |
+| `retry_jitter` | bool | `true` | Add randomness to retry delays |
 | `min_retry_delay` | float | 1.0 | Minimum delay between retries |
 | `max_retry_delay` | float | 60.0 | Maximum delay between retries |
+| `poll_interval` | float | 5.0 | Status check interval for background tasks in seconds (deep research) |
+| `background_timeout` | float | 1800.0 | Maximum wait time for background tasks in seconds |
 
 ## Supported Models
 
@@ -58,7 +62,6 @@ providers:
 | `gpt-5.1` | GPT 5.1 |
 | `gpt-5.1-codex` | GPT-5.1 codex |
 | `gpt-5-mini` | Smaller, faster GPT-5 |
-| `gpt-5-nano` | Smallest GPT-5 variant |
 | `o3-deep-research` | o3 Deep Research |
 | `o4-mini-deep-research` | o4-mini Deep Research |
 
@@ -110,7 +113,7 @@ providers:
       truncation: "auto"  # auto|none
 ```
 
-When set to `auto`, OpenAI automatically truncates older messages to fit within context limits.
+By default (`null`), the truncation field is omitted and OpenAI returns an explicit error when the context fills, allowing you to handle it explicitly. Set to `"auto"` to opt into OpenAI's legacy auto-drop behavior.
 
 ## Tool Calling
 
@@ -127,21 +130,18 @@ Tools declared in your configuration are available to the model automatically.
 
 ## Debug Events
 
-Enable debug logging:
+Enable raw payload logging:
 
 ```yaml
 providers:
   - module: provider-openai
     config:
-      debug: true  # Standard debug events
-      raw_debug: true  # Ultra-verbose raw API I/O
+      raw: true  # Include raw API payload in provider events
 ```
 
 Events:
-- `llm:request:debug` - Request summary
-- `llm:response:debug` - Response summary
-- `llm:request:raw` - Complete request params
-- `llm:response:raw` - Complete response object
+- `llm:request` - Request details (includes raw payload when `raw: true`)
+- `llm:response` - Response details (includes raw payload when `raw: true`)
 
 ## Environment Variables
 
@@ -163,5 +163,4 @@ providers:
       temperature: 0.7
       reasoning: medium
       reasoning_summary: detailed
-      truncation: auto
 ```

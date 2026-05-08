@@ -876,14 +876,18 @@
         {
           "repo": "amplifier-module-provider-openai",
           "path": "amplifier_module_provider_openai/__init__.py",
+          "type": "python",
+          "required": true,
           "exists": true,
-          "hash": "ee56a4795c5a6061"
+          "hash": "f0b03599b7051715"
         },
         {
           "repo": "amplifier-module-provider-openai",
           "path": "README.md",
+          "type": "readme",
+          "required": true,
           "exists": true,
-          "hash": "4c2766b7e9801c9e"
+          "hash": "6542e6698cd2da2b"
         }
       ]
     },
