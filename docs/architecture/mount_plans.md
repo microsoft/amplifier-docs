@@ -146,6 +146,21 @@ All module references support an optional `source` field:
 - File: `file:///absolute/path` or `/absolute/path` or `./relative/path`
 - Package: `package-name` (or omit source to use installed package)
 
+## Module IDs
+
+Module IDs are strings that identify which module to load. The ModuleLoader will:
+
+1. First try to load via Python entry points (group: `amplifier.modules`)
+2. Then try filesystem discovery (directories matching `amplifier-module-<module-id>`)
+
+Common module ID formats:
+
+- Orchestrators: `loop-basic`, `loop-streaming`, `loop-events`
+- Context managers: `context-simple`, `context-persistent`
+- Providers: `provider-mock`, `provider-anthropic`, `provider-openai`
+- Tools: `tool-filesystem`, `tool-bash`, `tool-web`, `tool-search`, `tool-task`
+- Hooks: `hooks-logging`, `hooks-backup`, `hooks-scheduler-heuristic`
+
 ## Module Configuration
 
 Each module can have an optional `config` dictionary:
