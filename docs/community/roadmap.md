@@ -44,7 +44,7 @@ Focus is on leveraging emergent capabilities over building desired features that
 
 ### Agentic Loop Independence
 
-Today, Amplifier depends on external tools for the agentic loop, which enforces structures and hooks that complicate context and modularity. We're exploring providing our own agentic loop for increased flexibility.
+Today, Amplifier depends on Claude Code for an agentic loop. That enforces directory structures and hooks that complicate context and modularity. We're exploring providing our own agentic loop for increased flexibility.
 
 ### Multi-Amplifier and Modes
 
@@ -102,34 +102,6 @@ Team members should share context without exposing private data publicly. Option
 - Version history and ease of use are key requirements
 
 A mount-based approach treats everything as files and avoids custom API connectors, allowing individual choice of storage platforms.
-
-## Feature Areas
-
-### In Development
-
-| Feature | Status | Description |
-|---------|--------|-------------|
-| **Streaming** | Active | Real-time token streaming via hooks |
-| **Vision** | Active | Image input support across providers |
-| **Debug mode** | Active | Enhanced logging and observability |
-
-### Planned
-
-| Feature | Priority | Description |
-|---------|----------|-------------|
-| **Recipe system** | High | Declarative multi-step workflows |
-| **Approval gates** | High | Human-in-loop checkpoints |
-| **Session analysis** | Medium | Pattern extraction from sessions |
-| **Context mounts** | Medium | External context sources |
-
-### Exploring
-
-| Feature | Notes |
-|---------|-------|
-| **Custom orchestrators** | Beyond basic loop patterns |
-| **Memory systems** | Long-term knowledge retention |
-| **Team collaboration** | Shared context and artifacts |
-| **Non-developer UX** | Simplified interfaces |
 
 ## Philosophy
 

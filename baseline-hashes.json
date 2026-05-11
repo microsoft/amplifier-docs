@@ -22,14 +22,14 @@
         {
           "repo": "amplifier-app-cli",
           "path": "README.md",
-          "exists": true,
-          "hash": "3af848d057d4e7c4"
+          "exists": false,
+          "hash": null
         },
         {
           "repo": "amplifier-app-cli",
           "path": "pyproject.toml",
-          "exists": true,
-          "hash": "a7a3924405234b4a"
+          "exists": false,
+          "hash": null
         }
       ]
     },
@@ -797,8 +797,8 @@
         {
           "repo": "amplifier-core",
           "path": "python/amplifier_core/events.py",
-          "exists": true,
-          "hash": "01536bf6671cd671"
+          "exists": false,
+          "hash": null
         }
       ]
     },
@@ -808,8 +808,8 @@
         {
           "repo": "amplifier-app-cli",
           "path": "amplifier_app_cli/main.py",
-          "exists": true,
-          "hash": "504c9ef12c44b99c"
+          "exists": false,
+          "hash": null
         }
       ]
     },
@@ -1416,8 +1416,8 @@
         {
           "repo": "amplifier-core",
           "path": "README.md",
-          "exists": true,
-          "hash": "748e242e28dc0ba4"
+          "exists": false,
+          "hash": null
         }
       ]
     },
@@ -1427,8 +1427,8 @@
         {
           "repo": "amplifier",
           "path": "ROADMAP.md",
-          "exists": true,
-          "hash": "cc3d3132a44299d1"
+          "exists": false,
+          "hash": null
         }
       ]
     }

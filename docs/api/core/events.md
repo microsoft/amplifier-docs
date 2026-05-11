@@ -7,7 +7,7 @@ description: Canonical event constants
 
 Amplifier uses a canonical event system for observability and hook integration.
 
-**Source**: [amplifier_core/events.py](https://github.com/microsoft/amplifier-core/blob/main/amplifier_core/events.py)
+**Source**: [amplifier_core/events.py](https://github.com/microsoft/amplifier-core/blob/main/python/amplifier_core/events.py)
 
 ## Event Taxonomy
 

@@ -34,7 +34,7 @@ CLI commands are implemented in `amplifier_app_cli.commands`:
 | `provider` | Provider management (install, add, list, remove, edit, test, models, manage) |
 | `module` | Module management (list, show, add, remove, current, update, validate, override) |
 | `source` | Source override management (add, remove, list, show) |
-| `routing` | Model routing configuration (list, use, show, manage, create) |
+| `routing` | Model routing configuration (list, use, show, manage) |
 | `agents` | Agent management (list, show, dirs) |
 | `allowed-dirs` | Allowed write directory management (list, add, remove) |
 | `denied-dirs` | Denied write directory management (list, add, remove) |
@@ -46,6 +46,28 @@ CLI commands are implemented in `amplifier_app_cli.commands`:
 | `reset` | Reset Amplifier configuration |
 
 See [CLI Reference](../../user_guide/cli.md) for complete usage documentation.
+
+## Interactive Mode (Slash Commands)
+
+In interactive REPL mode, the following slash commands are available:
+
+| Command | Description |
+|---------|-------------|
+| `/mode` | Set or toggle a mode (e.g., `/mode plan`) |
+| `/modes` | List available modes |
+| `/save` | Save conversation transcript |
+| `/status` | Show session status |
+| `/clear` | Clear conversation context |
+| `/help` | Show available commands |
+| `/config` | Live session config — `/config [category] [disable\|enable name]` |
+| `/tools` | List available tools |
+| `/agents` | List available agents |
+| `/allowed-dirs` | Manage allowed write directories |
+| `/denied-dirs` | Manage denied write directories |
+| `/rename` | Rename current session |
+| `/fork` | Fork session at turn N: `/fork [turn]` |
+| `/skills` | List available skills |
+| `/skill` | Load a skill (e.g., `/skill simplify`) |
 
 ## Shell Completion
 

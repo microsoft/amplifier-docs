@@ -11,7 +11,7 @@ Amplifier is an experimental platform with a multi-repository ecosystem. Contrib
 
 Amplifier's architecture is modular by design:
 
-- **Core kernel** (`amplifier-core`) - Small, stable, boring. High bar for changes.
+- **Core kernel** (`amplifier-core`) - Small, stable, boring. Rust kernel with Python bindings via PyO3. High bar for changes.
 - **CLI application** (`amplifier-app-cli`) - Reference CLI for building and validating new capabilities. Not user-focused.
 - **Reference implementations** - Canonical examples for each module type and application pattern
 - **Community ecosystem** - Your own modules, tools, apps, and collections
@@ -112,7 +112,7 @@ Execution loop strategies (basic, streaming, events).
 
 #### Contexts
 
-Memory management strategies (simple, persistent, semantic).
+Memory management strategies (simple, persistent).
 
 **Reference Implementations:**
 - [context-simple](https://github.com/microsoft/amplifier-module-context-simple)
@@ -210,13 +210,8 @@ The kernel has a high bar for changes. Most functionality belongs in modules.
 3. Submit a PR with tests
 4. Reference the issue in your PR
 
----
-
-## Questions?
-
-- **Slack**: Join the community channel
-- **GitHub Discussions**: Ask questions, share ideas
-- **Issues**: Report bugs, request features
+!!! note "Rust Toolchain Required"
+    The `amplifier-core` kernel is implemented in Rust with Python bindings via PyO3. Contributing to core requires the Rust toolchain (`rustup`) and `maturin` for building the Python extension.
 
 ---
 

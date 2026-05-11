@@ -81,6 +81,9 @@ source ~/.bashrc  # or ~/.zshrc for zsh
 
 ## Provider Configuration
 
+!!! note "Provider Sources"
+    `amplifier provider add …` pins the canonical module source for each first-party provider (for example, the OpenAI provider resolves to `git+https://github.com/microsoft/amplifier-module-provider-openai@main`). Existing installations inherit these canonical URIs at runtime as well, so fresh environments download the provider code via **uv** automatically. No manual source overrides are required for the built-in providers.
+
 ### Anthropic (Recommended)
 
 ```bash
@@ -181,17 +184,7 @@ If provider setup fails:
 
 If modules fail to load:
 
-1. **Update Amplifier**:
-   ```bash
-   uv tool upgrade amplifier
-   ```
-
-2. **Clear module cache**:
-   ```bash
-   rm -rf ~/.amplifier/modules/
-   ```
-
-3. **Reinstall with fresh dependencies**:
+1. **Reinstall with fresh dependencies**:
    ```bash
    uv tool uninstall amplifier
    uv tool install git+https://github.com/microsoft/amplifier
