@@ -1416,8 +1416,8 @@
         {
           "repo": "amplifier-core",
           "path": "README.md",
-          "exists": false,
-          "hash": null
+          "exists": true,
+          "hash": "748e242e28dc0ba4"
         }
       ]
     },

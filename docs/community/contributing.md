@@ -194,6 +194,9 @@ Include in your README:
 
 ## Core Contributions
 
+!!! note "External Contributions"
+    This project is not currently accepting external contributions, but we're actively working toward opening this up. We value community input and look forward to collaborating in the future. For now, feel free to fork and experiment!
+
 The kernel has a high bar for changes. Most functionality belongs in modules.
 
 **When to contribute to core:**
