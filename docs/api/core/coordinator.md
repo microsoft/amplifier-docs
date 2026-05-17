@@ -7,7 +7,7 @@ description: ModuleCoordinator class reference
 
 The `ModuleCoordinator` manages module lifecycle and provides access to loaded modules.
 
-**Source**: [amplifier_core/coordinator.py](https://github.com/microsoft/amplifier-core/blob/main/amplifier_core/coordinator.py)
+**Source**: [amplifier_core/coordinator.py](https://github.com/microsoft/amplifier-core/blob/main/python/amplifier_core/coordinator.py)
 
 !!! note "Implementation Location"
     The coordinator implementation lives in the Rust kernel (`amplifier_core._engine.RustCoordinator`). The Python module re-exports it for backward compatibility:
@@ -45,19 +45,21 @@ await coordinator.mount("orchestrator", my_orchestrator)  # Single module, no na
 
 #### `get_capability(name)`
 
-Query a registered capability.
+Query a registered capability. Returns `None` if the capability has not been registered.
 
 ```python
-events = coordinator.get_capability("observability.events") or []
-working_dir = coordinator.get_capability("session.working_dir")
+value = coordinator.get_capability("my.capability")
+if value is None:
+    # Capability not registered
+    pass
 ```
 
 #### `register_capability(name, value)`
 
-Register a capability that other modules can query.
+Register a capability that other modules can query. Calling again with the same name overwrites the previous value.
 
 ```python
-coordinator.register_capability("session.working_dir", "/path/to/project")
+coordinator.register_capability("my.capability", some_value)
 ```
 
 ## Capability Registry
@@ -65,16 +67,13 @@ coordinator.register_capability("session.working_dir", "/path/to/project")
 The capability registry enables loose coupling between modules:
 
 ```python
-# Provider registers model info
-coordinator.register_capability("provider.model_info", {
-    "context_window": 200_000,
-    "max_output_tokens": 8192
-})
+# Module A registers a capability
+coordinator.register_capability("agents.list", get_agent_list)
 
-# Context manager queries it
-model_info = coordinator.get_capability("provider.model_info")
-if model_info:
-    budget = model_info["context_window"] - model_info["max_output_tokens"]
+# Module B queries it
+agents_fn = coordinator.get_capability("agents.list")
+if agents_fn:
+    agents = agents_fn()
 ```
 
 

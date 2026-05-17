@@ -752,8 +752,8 @@
         {
           "repo": "amplifier-core",
           "path": "python/amplifier_core/coordinator.py",
-          "exists": false,
-          "hash": null
+          "exists": true,
+          "hash": "4e4d0a8e5006464c"
         }
       ]
     },
