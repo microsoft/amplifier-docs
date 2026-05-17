@@ -133,13 +133,12 @@ jobs:
                     f"stderr: {e.stderr}", file=sys.stderr)
               sys.exit(1)
 
-          # Map of title -> issue dict for O(1) in-memory lookups
-          open_issues_map = {issue["title"]: issue for issue in open_issues}
+          # Set of open issue titles for O(1) in-memory lookups
+          open_issues_titles = {issue["title"] for issue in open_issues}
 
           def file_or_skip(title, body):
-              existing = open_issues_map.get(title)
-              if existing:
-                  print(f"Issue already exists or was filed in this run: {title} — {existing['url']}")
+              if title in open_issues_titles:
+                  print(f"Issue already exists or was filed in this run: {title}")
               else:
                   try:
                       result = subprocess.run([
@@ -150,13 +149,8 @@ jobs:
                       ], capture_output=True, text=True, check=True)
                       created_url = result.stdout.strip()
                       print(f"Created issue: {title} — {created_url}")
-                      # Parse the issue number from the end of the URL
-                      try:
-                          number = int(created_url.split("/")[-1])
-                      except Exception:
-                          number = -1
-                      # Add to open_issues_map so O(1) checks catch subsequent occurrences in the same run
-                      open_issues_map[title] = {"number": number, "url": created_url}
+                      # Add to open_issues_titles so O(1) checks catch subsequent occurrences in the same run
+                      open_issues_titles.add(title)
                   except subprocess.CalledProcessError as e:
                       print(f"::warning::Failed to create issue for warning '{title}': {e}", file=sys.stderr)
 
@@ -243,7 +237,8 @@ jobs:
 
           # ── Reconcile all open docs-warning issues and close resolved ones ──
           print("Reconciling open issues against active warnings...")
-          for title, issue in open_issues_map.items():
+          for issue in open_issues:
+              title = issue.get("title", "")
               # Check if this is one of our managed docs-warning issue types
               is_warning_type = (
                   title.startswith("[docs-warning] Missing source:") or
