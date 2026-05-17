@@ -183,7 +183,7 @@ jobs:
                               f"missing required 'repo' or 'path' in source {source!r}",
                               file=sys.stderr,
                           )
-                          continue
+                          raise SystemExit(1)
                       title = f"[docs-warning] Missing source: {repo}/{path}"
                       active_warning_titles.add(title)
                       body = f"""## Missing Source File
@@ -262,7 +262,7 @@ jobs:
                               "gh", "issue", "close",
                               str(issue["number"]),
                               "--comment", "Resolved: The warning condition is no longer present in the updated outline and sources."
-                          ], check=True)
+                          ], check=True, capture_output=True, text=True)
                       except subprocess.CalledProcessError as e:
                           print(f"::warning::Failed to close issue {issue['number']}: {e}\n"
                                 f"stdout: {e.stdout}\n"
