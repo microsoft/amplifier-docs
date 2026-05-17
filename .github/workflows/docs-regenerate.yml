@@ -124,7 +124,7 @@ jobs:
                   "--label", "docs-warning",
                   "--state", "open",
                   "--json", "number,title,url",
-                  "--limit", "300"
+                  "--limit", "1000"
               ], capture_output=True, text=True, check=True)
               open_issues = json.loads(result.stdout or "[]")
           except subprocess.CalledProcessError as e:
@@ -137,7 +137,7 @@ jobs:
           def file_or_skip(title, body):
               existing = open_issues_map.get(title)
               if existing:
-                  print(f"Issue already exists: {title} — {existing['url']}")
+                  print(f"Issue already exists or was filed in this run: {title} — {existing['url']}")
               else:
                   subprocess.run([
                       "gh", "issue", "create",
@@ -146,6 +146,8 @@ jobs:
                       "--label", "docs-warning"
                   ])
                   print(f"Created issue: {title}")
+                  # Add to open_issues_map so O(1) checks catch subsequent occurrences in the same run
+                  open_issues_map[title] = {"number": -1, "url": "newly-created"}
 
           with open(HASHES) as f:
               hashes_data = json.load(f)
