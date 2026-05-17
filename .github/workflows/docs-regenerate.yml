@@ -137,6 +137,16 @@ jobs:
                   ])
                   print(f"Created issue: {title}")
 
+          def close_issue_if_exists(title, comment):
+              existing = find_existing_issue(title)
+              if existing:
+                  print(f"Closing resolved issue: {title} — {existing['url']}")
+                  subprocess.run([
+                      "gh", "issue", "close",
+                      str(existing["number"]),
+                      "--comment", comment
+                  ])
+
           if not HASHES.exists():
               print("No source-hashes.json — skipping issue filing")
               sys.exit(0)
@@ -156,10 +166,10 @@ jobs:
           # ── Type 1: Missing sources (in outline, not found in repo) ────────
           for section_id, section in hashes_data.get("sections", {}).items():
               for source in section.get("sources", []):
+                  repo = source["repo"]
+                  path = source["path"]
+                  title = f"[docs-warning] Missing source: {repo}/{path}"
                   if not source.get("exists", True):
-                      repo = source["repo"]
-                      path = source["path"]
-                      title = f"[docs-warning] Missing source: {repo}/{path}"
                       body = f"""## Missing Source File
 
           **Section:** `{section_id}`
@@ -171,13 +181,15 @@ jobs:
           **Suggested action:** Update `docs/DOC_SOURCE_MAPPING.csv` to remove or fix this entry, then regenerate the outline with `python3 scripts/csv_to_outline.py`.
           """
                       file_or_skip(title, body)
+                  else:
+                      close_issue_if_exists(title, "Resolved: Source file has been found in the repository.")
 
           # ── Type 2: Outdated sections (every source for a section is missing)
           for section_id, section in hashes_data.get("sections", {}).items():
               sources = section.get("sources", [])
+              title = f"[docs-warning] Outdated mapping section: {section_id}"
               if sources and all(not s.get("exists", True) for s in sources):
                   doc_path = section.get("doc_path", "unknown")
-                  title = f"[docs-warning] Outdated mapping section: {section_id}"
                   body = f"""## Outdated Mapping Section
 
           **Section:** `{section_id}`
@@ -189,6 +201,8 @@ jobs:
           **Suggested action:** Remove the `{section_id}` entry from `docs/DOC_SOURCE_MAPPING.csv`, delete `{doc_path}` if it is no longer relevant, then regenerate the outline.
           """
                   file_or_skip(title, body)
+              else:
+                  close_issue_if_exists(title, "Resolved: Section mapping is no longer completely stale.")
 
           # ── Type 3: New undocumented files (in repo, not in outline) ────────
           if REPOS_DIR.exists():
@@ -203,8 +217,8 @@ jobs:
                   )
                   for candidate in candidates:
                       rel_path = str(candidate.relative_to(repo_dir))
+                      title = f"[docs-warning] Potential new source: {repo_name}/{rel_path}"
                       if (repo_name, rel_path) not in outlined_sources:
-                          title = f"[docs-warning] Potential new source: {repo_name}/{rel_path}"
                           body = f"""## Potential New Source File
 
           **Repo:** `{repo_name}`
@@ -215,6 +229,8 @@ jobs:
           **Suggested action:** If this file should be documented, add an entry to `docs/DOC_SOURCE_MAPPING.csv` and regenerate the outline with `python3 scripts/csv_to_outline.py`.
           """
                           file_or_skip(title, body)
+                      else:
+                          close_issue_if_exists(title, "Resolved: Potential new source has been documented.")
 
           print("Issue filing complete.")
           PYEOF
