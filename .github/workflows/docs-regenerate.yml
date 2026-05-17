@@ -128,8 +128,10 @@ jobs:
               ], capture_output=True, text=True, check=True)
               open_issues = json.loads(result.stdout or "[]")
           except subprocess.CalledProcessError as e:
-              print(f"::warning::Failed to query open warning issues: {e}", file=sys.stderr)
-              open_issues = []
+              print(f"::error::Failed to query open warning issues: {e}\n"
+                    f"stdout: {e.stdout}\n"
+                    f"stderr: {e.stderr}", file=sys.stderr)
+              sys.exit(1)
 
           # Map of title -> issue dict for O(1) in-memory lookups
           open_issues_map = {issue["title"]: issue for issue in open_issues}
@@ -139,15 +141,24 @@ jobs:
               if existing:
                   print(f"Issue already exists or was filed in this run: {title} — {existing['url']}")
               else:
-                  subprocess.run([
-                      "gh", "issue", "create",
-                      "--title", title,
-                      "--body", body,
-                      "--label", "docs-warning"
-                  ])
-                  print(f"Created issue: {title}")
-                  # Add to open_issues_map so O(1) checks catch subsequent occurrences in the same run
-                  open_issues_map[title] = {"number": -1, "url": "newly-created"}
+                  try:
+                      result = subprocess.run([
+                          "gh", "issue", "create",
+                          "--title", title,
+                          "--body", body,
+                          "--label", "docs-warning"
+                      ], capture_output=True, text=True, check=True)
+                      created_url = result.stdout.strip()
+                      print(f"Created issue: {title} — {created_url}")
+                      # Parse the issue number from the end of the URL
+                      try:
+                          number = int(created_url.split("/")[-1])
+                      except Exception:
+                          number = -1
+                      # Add to open_issues_map so O(1) checks catch subsequent occurrences in the same run
+                      open_issues_map[title] = {"number": number, "url": created_url}
+                  except subprocess.CalledProcessError as e:
+                      print(f"::warning::Failed to create issue for warning '{title}': {e}", file=sys.stderr)
 
           with open(HASHES) as f:
               hashes_data = json.load(f)
@@ -167,10 +178,10 @@ jobs:
           # ── Type 1: Missing sources (in outline, not found in repo) ────────
           for section_id, section in hashes_data.get("sections", {}).items():
               for source in section.get("sources", []):
-                  repo = source["repo"]
-                  path = source["path"]
-                  title = f"[docs-warning] Missing source: {repo}/{path}"
                   if not source.get("exists", True):
+                      repo = source.get("repo", "unknown")
+                      path = source.get("path", "unknown")
+                      title = f"[docs-warning] Missing source: {repo}/{path}"
                       active_warning_titles.add(title)
                       body = f"""## Missing Source File
 
@@ -240,15 +251,16 @@ jobs:
                   title.startswith("[docs-warning] Potential new source:")
               )
               if is_warning_type and title not in active_warning_titles:
-                  print(f"Closing resolved warning issue: {title} — {issue['url']}")
-                  try:
-                      subprocess.run([
-                          "gh", "issue", "close",
-                          str(issue["number"]),
-                          "--comment", "Resolved: The warning condition is no longer present in the updated outline and sources."
-                      ], check=True)
-                  except subprocess.CalledProcessError as e:
-                      print(f"::warning::Failed to close issue {issue['number']}: {e}", file=sys.stderr)
+                  if issue.get("number", -1) > 0:
+                      print(f"Closing resolved warning issue: {title} — {issue['url']}")
+                      try:
+                          subprocess.run([
+                              "gh", "issue", "close",
+                              str(issue["number"]),
+                              "--comment", "Resolved: The warning condition is no longer present in the updated outline and sources."
+                          ], check=True)
+                      except subprocess.CalledProcessError as e:
+                          print(f"::warning::Failed to close issue {issue['number']}: {e}", file=sys.stderr)
 
           print("Issue filing and reconciliation complete.")
           PYEOF
