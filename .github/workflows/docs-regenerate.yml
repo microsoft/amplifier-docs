@@ -152,7 +152,9 @@ jobs:
                       # Add to open_issues_titles so O(1) checks catch subsequent occurrences in the same run
                       open_issues_titles.add(title)
                   except subprocess.CalledProcessError as e:
-                      print(f"::warning::Failed to create issue for warning '{title}': {e}", file=sys.stderr)
+                      print(f"::warning::Failed to create issue for warning '{title}': {e}\n"
+                            f"stdout: {e.stdout}\n"
+                            f"stderr: {e.stderr}", file=sys.stderr)
 
           with open(HASHES) as f:
               hashes_data = json.load(f)
@@ -173,8 +175,15 @@ jobs:
           for section_id, section in hashes_data.get("sections", {}).items():
               for source in section.get("sources", []):
                   if not source.get("exists", True):
-                      repo = source.get("repo", "unknown")
-                      path = source.get("path", "unknown")
+                      repo = source.get("repo")
+                      path = source.get("path")
+                      if not repo or not path:
+                          print(
+                              f"::error::Invalid source-hashes.json entry for section '{section_id}': "
+                              f"missing required 'repo' or 'path' in source {source!r}",
+                              file=sys.stderr,
+                          )
+                          continue
                       title = f"[docs-warning] Missing source: {repo}/{path}"
                       active_warning_titles.add(title)
                       body = f"""## Missing Source File
@@ -255,7 +264,9 @@ jobs:
                               "--comment", "Resolved: The warning condition is no longer present in the updated outline and sources."
                           ], check=True)
                       except subprocess.CalledProcessError as e:
-                          print(f"::warning::Failed to close issue {issue['number']}: {e}", file=sys.stderr)
+                          print(f"::warning::Failed to close issue {issue['number']}: {e}\n"
+                                f"stdout: {e.stdout}\n"
+                                f"stderr: {e.stderr}", file=sys.stderr)
 
           print("Issue filing and reconciliation complete.")
           PYEOF
