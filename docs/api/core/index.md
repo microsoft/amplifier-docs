@@ -14,6 +14,7 @@ The `amplifier-core` package provides the kernel APIs.
 - **[Hooks](hooks.md)** - `HookRegistry` and `HookResult`
 - **[Models](models.md)** - Data models
 - **[Events](events.md)** - Event constants
+- **`capabilities`** - Session capabilities sub-module (re-exported from `amplifier_foundation`)
 
 ## Quick Import
 
@@ -129,6 +130,9 @@ from amplifier_core import (
     RustCancellationToken,
     RustCoordinator,
 )
+
+# Sub-module re-export
+from amplifier_core import capabilities  # session capabilities (get_working_dir, set_working_dir)
 ```
 
 !!! note "Rust-backed types"

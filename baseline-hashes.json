@@ -730,8 +730,9 @@
         {
           "repo": "amplifier-core",
           "path": "python/amplifier_core/__init__.py",
-          "exists": false,
-          "hash": null
+          "type": "python",
+          "exists": true,
+          "hash": "156c2a0765b1bec1"
         }
       ]
     },
