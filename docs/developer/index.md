@@ -7,12 +7,19 @@ description: Building modules and extending Amplifier
 
 **Start here for building Amplifier modules.**
 
-This guide covers creating custom modules that extend Amplifier's capabilities: providers, tools, hooks, orchestrators, and context managers.
+This guide covers creating custom modules that extend Amplifier's capabilities: providers, tools, hooks, orchestrators, and context managers. Each contract document explains:
+
+1. **What it is** - Purpose and responsibilities
+2. **Protocol reference** - Link to interfaces.py with exact line numbers
+3. **Entry point pattern** - How modules are discovered and loaded
+4. **Configuration** - Mount Plan integration
+5. **Canonical example** - Reference implementation
+6. **Validation** - How to verify your module works
 
 ## Module Types
 
 | Module Type | Contract | Purpose |
-|-------------|----------|---------|
+|-------------|----------|---------| 
 | **Provider** | [Provider Contract](contracts/provider.md) | LLM backend integration |
 | **Tool** | [Tool Contract](contracts/tool.md) | Agent capabilities |
 | **Hook** | [Hook Contract](contracts/hook.md) | Lifecycle observation and control |

@@ -48,18 +48,14 @@ After installation, run:
 amplifier init
 ```
 
-The setup wizard will:
-
-1. **Detect API keys** - Checks for `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, `AZURE_OPENAI_API_KEY`, `GOOGLE_API_KEY`
-2. **Configure provider** - Sets your preferred LLM provider
-3. **Set defaults** - Configures default model and settings
-
-**Tip**: Set environment variables before running `init` for faster setup:
+This opens a combined dashboard to add providers, select a routing matrix, and verify configuration (auto-runs if no config). The dashboard detects env vars and shows them as defaults:
 
 ```bash
 export ANTHROPIC_API_KEY="your-key"
 amplifier init
 ```
+
+**Environment variables detected automatically**: `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, `AZURE_OPENAI_API_KEY`, `GOOGLE_API_KEY`
 
 ## Shell Completion
 
