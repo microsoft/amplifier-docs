@@ -136,7 +136,7 @@ amplifier session show SESSION_ID [OPTIONS]
 
 | Option | Description |
 |--------|-------------|
-| `--detailed, -d` | Show detailed transcript metadata |
+| `--with-transcript, -T` | Include full transcript in output |
 
 ### `session resume`
 
@@ -474,7 +474,7 @@ amplifier routing manage
 Create a new routing matrix.
 
 ```bash
-amplifier routing create NAME
+amplifier routing create
 ```
 
 ## Agent Management

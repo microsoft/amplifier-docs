@@ -51,7 +51,6 @@ The kernel emits lifecycle events during session execution:
 | `session:start` | New session begins executing |
 | `session:resume` | Existing session is resumed |
 | `session:fork` | Child (sub) session is created |
-| `session:end` | Session cleanup completes |
 | `cancel:completed` | Session execution is cancelled |
 
 ## Sub-Sessions (Agent Delegation)

@@ -79,14 +79,12 @@
         {
           "repo": "amplifier-app-cli",
           "path": "amplifier_app_cli/main.py",
-          "type": "python",
           "exists": true,
-          "hash": "504c9ef12c44b99c"
+          "hash": "7269926831439365"
         },
         {
           "repo": "amplifier-app-cli",
           "path": "amplifier_app_cli/commands/__init__.py",
-          "type": "python",
           "exists": true,
           "hash": "4d3e0a9b3d8f0315"
         }
@@ -127,16 +125,14 @@
         {
           "repo": "amplifier-core",
           "path": "python/amplifier_core/session.py",
-          "type": "python",
           "exists": true,
-          "hash": "4d2902034a64c5dd"
+          "hash": "432148c62150ee0e"
         },
         {
           "repo": "amplifier-app-cli",
           "path": "amplifier_app_cli/session_spawner.py",
-          "type": "python",
           "exists": true,
-          "hash": "726aa25071775450"
+          "hash": "f611d7a1c07fd039"
         }
       ]
     },
@@ -730,9 +726,8 @@
         {
           "repo": "amplifier-core",
           "path": "python/amplifier_core/__init__.py",
-          "type": "python",
           "exists": true,
-          "hash": "156c2a0765b1bec1"
+          "hash": "937473c7d38cb4b9"
         }
       ]
     },
