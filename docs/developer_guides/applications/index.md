@@ -96,6 +96,7 @@ session = AmplifierSession(
 
 **Session Parameters**:
 - `config`: Required mount plan (orchestrator and context must be specified)
+- `loader`: Optional module loader for custom module resolution (creates default if None)
 - `session_id`: Optional explicit ID (generates UUID if None)
 - `parent_id`: Optional parent session ID for child sessions (forking)
 - `approval_system`: Optional approval policy (app-layer UX)
@@ -301,7 +302,7 @@ for provider_config in config["providers"]:
 
 ## The Rust Kernel
 
-amplifier-core is implemented in Rust with Python bindings via PyO3:
+amplifier-core has a Rust kernel implementation:
 
 - **Same API**: Python code requires zero changes
 - **Same imports**: `from amplifier_core import AmplifierSession`

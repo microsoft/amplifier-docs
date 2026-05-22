@@ -440,12 +440,14 @@
         {
           "repo": "amplifier-core",
           "path": "python/amplifier_core/session.py",
+          "type": "python",
           "exists": true,
-          "hash": "4d2902034a64c5dd"
+          "hash": "432148c62150ee0e"
         },
         {
           "repo": "amplifier-app-cli",
           "path": "amplifier_app_cli/__init__.py",
+          "type": "python",
           "exists": true,
           "hash": "aacc89826cf3bdfa"
         }
@@ -1423,8 +1425,9 @@
         {
           "repo": "amplifier",
           "path": "ROADMAP.md",
-          "exists": false,
-          "hash": null
+          "type": "markdown",
+          "exists": true,
+          "hash": "cc3d3132a44299d1"
         }
       ]
     }

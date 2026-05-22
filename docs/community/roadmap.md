@@ -117,17 +117,4 @@ Prioritization is on moving and learning over extensive up-front analysis. This 
 
 Each improvement should enable faster, more capable subsequent improvements—a virtuous cycle of self-improvement.
 
-## Contributing
 
-See the [Contributing Guide](../contributing/) for how to get involved. Areas where contributions are particularly welcome:
-
-- **Module development**: New tools, providers, hooks
-- **Documentation**: Guides, examples, patterns
-- **Testing**: Coverage, edge cases, integration tests
-- **Use cases**: Share your Amplifier workflows
-
-## References
-
-- **→ [ROADMAP.md](https://github.com/microsoft/amplifier/blob/main/ROADMAP.md)** - Source roadmap document
-- **→ [Contributing](../contributing/)** - How to contribute
-- **→ [Architecture](../architecture/)** - Technical foundation
