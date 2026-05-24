@@ -15,9 +15,9 @@ Represents an LLM's request to call a tool.
 
 ```python
 class ToolCall(BaseModel):
-    tool: str                        # Tool name to invoke
-    arguments: dict[str, Any] = {}   # Tool arguments
-    id: str | None = None            # Unique tool call ID
+    id: str                          # Unique tool call ID
+    name: str                        # Tool name to invoke
+    arguments: dict[str, Any]        # Tool arguments
 ```
 
 ### Example
@@ -25,7 +25,7 @@ class ToolCall(BaseModel):
 ```python
 ToolCall(
     id="call_123",
-    tool="bash",
+    name="bash",
     arguments={"command": "ls -la"}
 )
 ```
@@ -116,7 +116,7 @@ class ModuleInfo(BaseModel):
     id: str                          # Module identifier
     name: str                        # Module display name
     version: str                     # Module version
-    type: str                        # Module type (orchestrator, provider, tool, context, hook, resolver)
+    type: Literal["orchestrator", "provider", "tool", "context", "hook", "resolver"]  # Module type
     mount_point: str                 # Where module should be mounted
     description: str                 # Module description
     config_schema: dict | None = None # JSON schema for module configuration
@@ -148,6 +148,7 @@ class HookResult(BaseModel):
     user_message: str | None = None           # Message to display to user
     user_message_level: str = "info"          # Severity: info, warning, error
     user_message_source: str | None = None    # Source name for display (e.g., "python-check")
+    append_to_last_tool_result: bool = False  # Append context_injection to last tool result instead of new message
 ```
 
 See [Hooks API](hooks.md) for detailed HookResult documentation.
@@ -174,7 +175,7 @@ class SessionStatus(BaseModel):
     total_output_tokens: int = 0
 
     # Cost tracking
-    estimated_cost: float | None = None
+    cost_usd: Decimal | None = None          # Accumulated cost in USD (None = rate data unavailable, not zero)
 
     # Last activity
     last_activity: datetime | None = None
@@ -323,6 +324,7 @@ class Usage(BaseModel):
     reasoning_tokens: int | None = None
     cache_read_tokens: int | None = None
     cache_write_tokens: int | None = None
+    cost_usd: Decimal | None = None          # Message cost in USD (None = rate data unavailable, not zero)
 ```
 
 ## Related Documentation
