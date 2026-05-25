@@ -54,6 +54,37 @@ ToolResult(
 )
 ```
 
+## ConfigField
+
+Provider configuration field definition. Used in `ProviderInfo.config_fields` to describe interactive setup prompts.
+
+```python
+class ConfigField(BaseModel):
+    id: str                                                              # Field identifier (used as key in config dict)
+    display_name: str                                                    # Human-readable label for prompts
+    field_type: Literal["text", "secret", "choice", "boolean"] = "text" # Input type
+    prompt: str                                                          # Question to ask the user
+    env_var: str | None = None                                           # Environment variable to check/set
+    choices: list[str] | None = None                                     # Valid choices (for field_type='choice')
+    required: bool = True                                                # Whether this field is required
+    default: str | None = None                                           # Default value if not provided
+    show_when: dict[str, str] | None = None                              # Conditional: show when another field has a specific value
+    requires_model: bool = False                                         # If True, shown after model selection (enables show_when to reference selected model)
+```
+
+### Example
+
+```python
+ConfigField(
+    id="api_key",
+    display_name="API Key",
+    field_type="secret",
+    prompt="Enter your Anthropic API key",
+    env_var="ANTHROPIC_API_KEY",
+    required=True,
+)
+```
+
 ## ProviderInfo
 
 Metadata about a loaded provider.
@@ -119,7 +150,7 @@ class ModuleInfo(BaseModel):
     type: Literal["orchestrator", "provider", "tool", "context", "hook", "resolver"]  # Module type
     mount_point: str                 # Where module should be mounted
     description: str                 # Module description
-    config_schema: dict | None = None # JSON schema for module configuration
+    config_schema: dict[str, Any] | None = None # JSON schema for module configuration
 ```
 
 ## HookResult

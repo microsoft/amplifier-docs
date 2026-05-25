@@ -779,13 +779,13 @@
           "repo": "amplifier-core",
           "path": "python/amplifier_core/models.py",
           "exists": true,
-          "hash": "55168832a62ecc9a"
+          "hash": "eb626f5d61a24f8d"
         },
         {
           "repo": "amplifier-core",
           "path": "python/amplifier_core/message_models.py",
           "exists": true,
-          "hash": "cd7bc5ad2cd1dda2"
+          "hash": "58db43480dabd2bf"
         }
       ]
     },
