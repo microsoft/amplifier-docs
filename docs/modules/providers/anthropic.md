@@ -45,13 +45,14 @@ providers:
 | `enable_1m_context` | bool | `true` | Enable 1M token context window (Sonnet and Opus only) |
 | `filtered` | bool | `true` | Filter to curated model list |
 | `beta_headers` | string/list | (none) | Anthropic beta header(s) for experimental features |
+| `task_budget_tokens` | int | (none) | Token budget for the entire task (Claude 4.7+ only). Auto-applies `task-budgets-2026-03-13` beta header. Minimum enforced: 20000 |
 
 ### Rate Limit & Retry
 
 | Option | Type | Default | Description |
 |--------|------|---------|-------------|
 | `max_retries` | int | 5 | Total retry attempts before failing |
-| `retry_jitter` | bool/float | `true` | Jitter fraction (0.0–1.0). Also accepts `true` (→ 0.2) or `false` (→ 0.0) for backward compatibility |
+| `retry_jitter` | bool | `true` | Add jitter to retry delays |
 | `max_retry_delay` | float | 60.0 | Maximum wait between retries (seconds) |
 | `min_retry_delay` | float | 1.0 | Minimum delay if no retry-after header |
 | `overloaded_delay_multiplier` | float | 10.0 | Multiplier applied to delays for 529 Overloaded errors |
@@ -133,6 +134,19 @@ providers:
 
 The model can then search the web directly during conversations.
 
+## Task Budget
+
+Set a token budget for the entire task on Claude 4.7+ models. When `task_budget_tokens` is configured, the provider automatically applies the `task-budgets-2026-03-13` beta header:
+
+```yaml
+providers:
+  - module: provider-anthropic
+    config:
+      task_budget_tokens: 50000  # Minimum: 20000
+```
+
+The task budget limits total token usage across the task via `output_config.task_budget`. Only supported on Claude 4.7+ models; the option is ignored on earlier models.
+
 ## Beta Headers
 
 Anthropic provides experimental features through beta headers. Enable these features by adding the `beta_headers` configuration field.
@@ -181,6 +195,7 @@ Notes:
 - Beta headers are optional - existing configurations work unchanged
 - Invalid beta headers will cause API errors (fail fast)
 - Beta header usage is logged at initialization for observability
+- The `task-budgets-2026-03-13` beta header is automatically applied when `task_budget_tokens` is configured (Claude 4.7+ only)
 
 ## Rate Limit Management
 
@@ -220,7 +235,7 @@ providers:
       max_retries: 5
       min_retry_delay: 1.0
       max_retry_delay: 60.0
-      retry_jitter: 0.2
+      retry_jitter: true
 ```
 
 The provider uses exponential backoff with jitter and honors `retry-after` headers from the API.

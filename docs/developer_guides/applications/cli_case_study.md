@@ -136,7 +136,7 @@ result = await spawn_sub_session(
     ]
 )
 
-# Returns: {"response": str, "session_id": str}
+# Returns: {"output": str, "session_id": str}
 ```
 
 **Features:**

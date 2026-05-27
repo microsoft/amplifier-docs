@@ -7,7 +7,7 @@ description: AmplifierSession class reference
 
 The `AmplifierSession` class is the main interface for interacting with Amplifier.
 
-**Source**: [amplifier_core/session.py](https://github.com/microsoft/amplifier-core/blob/main/amplifier_core/session.py)
+**Source**: [amplifier_core/session.py](https://github.com/microsoft/amplifier-core/blob/main/python/amplifier_core/session.py)
 
 ## AmplifierSession
 
