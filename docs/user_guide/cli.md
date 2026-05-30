@@ -663,12 +663,27 @@ amplifier reset [OPTIONS]
 | `--dry-run` | Preview what would be reset |
 | `--no-install` | Skip reinstalling after reset |
 
-## Environment Variables
+## Interactive Mode (Slash Commands)
 
-| Variable | Description |
-|----------|-------------|
-| `AMPLIFIER_HOME` | Override home directory (default: `~/.amplifier`) |
-| `AMPLIFIER_AGENT_<NAME>` | Override agent path for testing (uppercase, dashes become underscores) |
+In interactive REPL mode, the following slash commands are available:
+
+| Command | Description |
+|---------|-------------|
+| `/mode` | Set or toggle a mode (e.g., `/mode plan`) |
+| `/modes` | List available modes |
+| `/save` | Save conversation transcript |
+| `/status` | Show session status |
+| `/clear` | Clear conversation context |
+| `/help` | Show available commands |
+| `/config` | Live session config — `/config [category] [disable\|enable name]` |
+| `/tools` | List available tools |
+| `/agents` | List available agents |
+| `/allowed-dirs` | Manage allowed write directories |
+| `/denied-dirs` | Manage denied write directories |
+| `/rename` | Rename current session |
+| `/fork` | Fork session at turn N: `/fork [turn]` |
+| `/skills` | List available skills |
+| `/skill` | Load a skill (e.g., `/skill simplify`) |
 
 ## Shell Completion
 
