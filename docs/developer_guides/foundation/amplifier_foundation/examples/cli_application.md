@@ -113,7 +113,7 @@ async def execute(self, prompt: str) -> str:
     try:
         self.logger.info(f"Executing prompt: {prompt[:100]}...")
         response = await self.session.execute(prompt)
-        self.logger.info("Execution completed")
+        self.logger.info("Execution completed successfully")
         return response
         
     except Exception as e:
@@ -181,24 +181,39 @@ This ensures resources are **always cleaned up**, even on errors.
 ```python
 async def run_interactive_cli(app: AmplifierApp):
     while True:
-        prompt = input("\n💬 You: ")
-        if prompt.lower() in ("quit", "exit", "q"):
-            break
         try:
+            prompt = input("\n💬 You: ")
+
+            if prompt.lower() in ("quit", "exit", "q"):
+                print("\n👋 Goodbye!")
+                break
+
+            if not prompt.strip():
+                continue
+
+            print("\n🤔 Agent: ", end="", flush=True)
             response = await app.execute(prompt)
-            print(f"\n🤔 Agent: {response}")
+            print(response)
+
         except KeyboardInterrupt:
+            print("\n\n👋 Interrupted. Goodbye!")
             break
         except Exception as e:
             print(f"\n❌ Error: {e}")
-            # Session is still active, can continue
+            print("The session is still active. You can continue.")
 ```
 
 **Single Prompt Mode**:
 ```python
 async def run_single_prompt(app: AmplifierApp, prompt: str):
+    print("\n" + "=" * 60)
+    print("Executing single prompt...")
+    print("=" * 60)
+
     response = await app.execute(prompt)
-    print(f"\nResponse:\n{response}")
+    print("\nResponse:")
+    print("-" * 60)
+    print(response)
 ```
 
 ## Real-World Use Cases

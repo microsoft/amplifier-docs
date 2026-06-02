@@ -325,5 +325,5 @@ providers:
       enable_prompt_caching: true
       enable_web_search: false
       max_retries: 5
-      retry_jitter: 0.2
+      retry_jitter: true
 ```

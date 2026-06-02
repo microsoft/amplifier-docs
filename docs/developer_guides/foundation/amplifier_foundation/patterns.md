@@ -493,4 +493,4 @@ for prompt in prompts:
 
 ## See Also
 
-- [Application Integration Guide](https://github.com/microsoft/amplifier-foundation/blob/main/APPLICATION_INTEGRATION_GUIDE.md) - Application lifecycle patterns, the protocol boundary pattern, and production anti-patterns
+- **[APPLICATION_INTEGRATION_GUIDE.md](APPLICATION_INTEGRATION_GUIDE.md)** - Application lifecycle patterns, the protocol boundary pattern, and production anti-patterns

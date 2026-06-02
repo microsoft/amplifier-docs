@@ -87,7 +87,7 @@ config = {
     "providers": [{
         "module": "provider-anthropic",
         "source": "git+https://github.com/microsoft/amplifier-module-provider-anthropic@main",
-        "config": {"model": "claude-sonnet-4-5"}
+        "config": {"default_model": "claude-sonnet-4-5"}
     }],
     "tools": []
 }

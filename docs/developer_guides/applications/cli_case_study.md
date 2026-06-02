@@ -310,13 +310,13 @@ result = await task_tool.execute({
 
 #### Model Role Override
 
-The `model_role` parameter lets the caller override the agent's default model role for a specific delegation:
+The `model_role` parameter lets the caller override the agent's default model role for a specific delegation. The routing matrix resolves the role to a concrete provider/model based on installed providers.
 
 ```python
-# Via task tool
-result = tool_execute({
+# Delegate with a model role override
+result = await task_tool.execute({
     "agent": "foundation:explorer",
-    "instruction": "Analyze these UI screenshots",
+    "instruction": "Analyze these UI screenshots and suggest improvements",
     "model_role": "vision"
 })
 ```
@@ -330,7 +330,7 @@ result = tool_execute({
 
 If both `model_role` and `provider_preferences` are provided in the same call, `provider_preferences` wins.
 
-**Available roles**:
+**Available roles** are injected into session context by the routing hook at session start. The standard roles are:
 
 | Role | Use for |
 |------|---------| 
@@ -385,7 +385,7 @@ await interactive_chat(
 - Persistent history (project-scoped)
 - Multi-line input (Ctrl-J)
 - Ctrl+C cancellation (graceful/immediate)
-- Command processing (`/help`, `/mode`, `/config`, `/rename`, `/fork`, `/skills`, `/skill`)
+- Command processing (`/help`, `/mode`, `/modes`, `/save`, `/status`, `/clear`, `/config`, `/tools`, `/agents`, `/allowed-dirs`, `/denied-dirs`, `/rename`, `/fork`, `/skills`, `/skill`)
 - Dynamic mode indicators
 - Session state persistence
 
