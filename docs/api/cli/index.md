@@ -27,7 +27,6 @@ CLI commands are implemented in `amplifier_app_cli.commands`:
 | Command | Description |
 |---------|-------------|
 | `run` | Execute prompts (single command or interactive) |
-| `continue` | Resume the most recent session |
 | `resume` | Interactively select and resume a session |
 | `session` | Session management (list, show, resume, fork, delete, cleanup) |
 | `bundle` | Bundle management (list, show, use, clear, current, add, remove, update) |

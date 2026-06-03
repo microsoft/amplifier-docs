@@ -52,7 +52,7 @@ providers:
 | Option | Type | Default | Description |
 |--------|------|---------|-------------|
 | `max_retries` | int | 5 | Total retry attempts before failing |
-| `retry_jitter` | bool | `true` | Add jitter to retry delays |
+| `retry_jitter` | float | `0.2` | Jitter fraction (0.0–1.0). Also accepts `true` (→ 0.2) or `false` (→ 0.0) for backward compatibility |
 | `max_retry_delay` | float | 60.0 | Maximum wait between retries (seconds) |
 | `min_retry_delay` | float | 1.0 | Minimum delay if no retry-after header |
 | `overloaded_delay_multiplier` | float | 10.0 | Multiplier applied to delays for 529 Overloaded errors |
@@ -235,10 +235,50 @@ providers:
       max_retries: 5
       min_retry_delay: 1.0
       max_retry_delay: 60.0
-      retry_jitter: true
+      retry_jitter: 0.2
+      overloaded_delay_multiplier: 10.0
 ```
 
-The provider uses exponential backoff with jitter and honors `retry-after` headers from the API.
+The provider disables SDK built-in retries and manages retries itself, giving full control over backoff timing, retry-after header honoring, and per-error-class delay scaling.
+
+### Backoff Formula
+
+Each retry delay is computed as follows:
+
+```
+base_delay   = min_retry_delay × 2^(attempt - 1)
+capped_delay = min(base_delay, max_retry_delay)
+scaled_delay = capped_delay × delay_multiplier          # 1.0 for most errors, 10.0 for 529
+final_delay  = max(scaled_delay, retry_after)            # server retry-after as floor
+sleep        = final_delay ± (final_delay × jitter)      # randomised ± jitter fraction
+```
+
+**Example: 529 Overloaded (10× multiplier, defaults)**
+
+| Attempt | base_delay | capped | ×10 | Sleep |
+| --- | --- | --- | --- | --- |
+| 1 | 1s | 1s | 10s | 10s |
+| 2 | 2s | 2s | 20s | 20s |
+| 3 | 4s | 4s | 40s | 40s |
+| 4 | 8s | 8s | 80s | 80s |
+| 5 | 16s | 16s | 160s | 160s |
+
+Total wait ≈ 310s (~5 min) before the request is abandoned.
+
+### Retry Events
+
+A `provider:retry` event is emitted before each retry sleep with the following fields:
+
+| Field | Description |
+| --- | --- |
+| `provider` | Provider name (`"anthropic"`) |
+| `model` | Model being called |
+| `attempt` | Current retry attempt number |
+| `max_retries` | Configured maximum retries |
+| `delay` | Computed sleep duration in seconds |
+| `retry_after` | Server retry-after value (or `null`) |
+| `error_type` | Kernel error class name |
+| `error_message` | Error description |
 
 ## Error Handling
 
@@ -248,7 +288,7 @@ The provider translates Anthropic SDK exceptions to kernel errors:
 |--------------|-----------|--------------|-----------| 
 | `RateLimitError` | 429 | `RateLimitError` | Yes |
 | `OverloadedError` | 529 | `ProviderUnavailableError` | Yes (10× backoff) |
-| `APIStatusError` | 5xx (status >= 500) | `ProviderUnavailableError` | Yes |
+| `InternalServerError` | 5xx (status >= 500) | `ProviderUnavailableError` | Yes |
 | `AuthenticationError` | 401 | `AuthenticationError` | No |
 | `BadRequestError` | context length / too many tokens | `ContextLengthError` | No |
 | `BadRequestError` | safety / content filter / blocked | `ContentFilterError` | No |

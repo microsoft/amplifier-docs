@@ -34,7 +34,6 @@ amplifier run [OPTIONS] PROMPT
 | `--bundle, -B` | Bundle to use for this session |
 | `--provider, -p` | LLM provider (anthropic, openai, etc.) |
 | `--model, -m` | Specific model to use |
-| `--max-tokens` | Maximum output tokens |
 | `--mode` | Execution mode: `chat`, `single` (default: single) |
 | `--output-format` | Output format: `text`, `json`, `json-trace` (default: text) |
 | `--resume` | Resume specific session with new prompt |
@@ -54,36 +53,6 @@ amplifier run --output-format json "What is 2+2?"
 
 # Resume a session
 amplifier run --resume abc123 "Continue from where we left off"
-```
-
-### `continue`
-
-Resume the most recent session.
-
-```bash
-amplifier continue [PROMPT]
-```
-
-| Option | Description |
-|--------|-------------|
-| `--force-bundle, -B` | Force a different bundle for this session (experimental) |
-| `--no-history` | Skip displaying conversation history |
-| `--full-history` | Show all messages (default: last 10) |
-| `--replay` | Replay conversation with timing simulation |
-| `--replay-speed, -s` | Replay speed multiplier (default: 2.0) |
-| `--show-thinking` | Show thinking blocks in history |
-
-**Examples:**
-
-```bash
-# Continue with a new prompt
-amplifier continue "Now add tests"
-
-# Interactive continuation
-amplifier continue
-
-# With full history
-amplifier continue --full-history "Continue from here"
 ```
 
 ### `resume`
@@ -467,14 +436,6 @@ Interactive routing management.
 
 ```bash
 amplifier routing manage
-```
-
-### `routing create`
-
-Create a new routing matrix.
-
-```bash
-amplifier routing create
 ```
 
 ## Agent Management

@@ -209,7 +209,7 @@ store.save(sub_session_id, transcript, metadata)
 **Storage Location**: `~/.amplifier/projects/{project-slug}/sessions/{session-id}/`
 - `transcript.jsonl` - Conversation history
 - `metadata.json` - Session configuration and metadata
-- `bundle.md` - Bundle snapshot (if applicable)
+- `config.md` - Config snapshot for the session
 
 ##### Resuming Existing Sessions
 
@@ -427,7 +427,7 @@ if store.exists(session_id):
 ~/.amplifier/projects/{project-slug}/sessions/{session-id}/
 ├── transcript.jsonl     # Conversation history
 ├── metadata.json        # Session metadata
-└── bundle.md            # Bundle snapshot (if applicable)
+└── config.md            # Config snapshot for the session
 ```
 
 **Key Files:**

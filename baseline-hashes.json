@@ -80,7 +80,7 @@
           "repo": "amplifier-app-cli",
           "path": "amplifier_app_cli/main.py",
           "exists": true,
-          "hash": "e71f4cb7fcf8880a"
+          "hash": "197d68f8e30a3018"
         },
         {
           "repo": "amplifier-app-cli",
@@ -460,7 +460,7 @@
           "repo": "amplifier-app-cli",
           "path": "amplifier_app_cli/main.py",
           "exists": true,
-          "hash": "504c9ef12c44b99c"
+          "hash": "197d68f8e30a3018"
         },
         {
           "repo": "amplifier-app-cli",
@@ -806,8 +806,8 @@
         {
           "repo": "amplifier-app-cli",
           "path": "amplifier_app_cli/main.py",
-          "exists": false,
-          "hash": null
+          "exists": true,
+          "hash": "197d68f8e30a3018"
         }
       ]
     },
@@ -858,7 +858,7 @@
           "repo": "amplifier-module-provider-anthropic",
           "path": "amplifier_module_provider_anthropic/__init__.py",
           "exists": true,
-          "hash": "8148439a61f05b0a"
+          "hash": "9b44293a8ab2f3b8"
         },
         {
           "repo": "amplifier-module-provider-anthropic",
