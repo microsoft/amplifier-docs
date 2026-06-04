@@ -98,18 +98,18 @@ export AZURE_USE_DEFAULT_CREDENTIAL=true
 | `api_key` | string | `$AZURE_OPENAI_API_KEY` | API key (if using key auth) |
 | `api_version` | string | `2024-10-01-preview` | Azure API version |
 | `deployment_name` | string | null | Azure deployment name (maps to model) |
-| `default_model` | string | `gpt-5.4` | Default model name |
+| `deployment_type` | string | null | Set to `"PTU"` for PTU deployments (skips cost calculation) |
+| `default_model` | string | `gpt-5.4` | Default model name (also accepted as `default_deployment`) |
 | `max_tokens` | integer | `4096` | Maximum output tokens |
 | `temperature` | float | null | Sampling temperature |
-| `reasoning` | string | null | Reasoning effort: `minimal\|low\|medium\|high` |
+| `reasoning` | string | null | Reasoning effort: `none\|low\|medium\|high\|xhigh`; null = not sent |
 | `reasoning_summary` | string | `detailed` | Reasoning verbosity: `auto\|concise\|detailed` |
-| `truncation` | string | `auto` | Automatic context management |
+| `truncation` | string | null | Automatic context management; null = omit field (use `"auto"` for legacy auto-drop behavior) |
 | `enable_state` | boolean | `false` | Enable stateful conversations |
 | `use_managed_identity` | boolean | `false` | Use Azure Managed Identity |
 | `use_default_credential` | boolean | `false` | Use DefaultAzureCredential |
 | `managed_identity_client_id` | string | null | Client ID for user-assigned identity |
-| `debug` | boolean | `false` | Enable standard debug events |
-| `raw_debug` | boolean | `false` | Enable ultra-verbose raw API I/O logging |
+| `raw` | boolean | `false` | Include raw API payload in provider events |
 | `timeout` | float | 600.0 | API timeout in seconds |
 | `max_retries` | int | 5 | Retry attempts before failing |
 
@@ -124,11 +124,6 @@ providers:
       azure_endpoint: https://your-resource.openai.azure.com
       deployment_name: my-gpt5-deployment
       default_model: gpt-5.4
-```
-
-Or use environment variables:
-```bash
-export AZURE_OPENAI_DEPLOYMENT_NAME="my-gpt5-deployment"
 ```
 
 ## Reasoning Configuration
@@ -162,9 +157,11 @@ Tools are automatically available when declared in your configuration.
 ```bash
 # Required
 export AZURE_OPENAI_ENDPOINT="https://your-resource.openai.azure.com"
+# AZURE_OPENAI_BASE_URL is also accepted as an alias for the endpoint
 
 # Authentication (choose one)
 export AZURE_OPENAI_API_KEY="your-api-key"
+# AZURE_OPENAI_KEY is also accepted as an alias for the API key
 # OR
 export AZURE_USE_MANAGED_IDENTITY=true
 # OR
@@ -172,8 +169,6 @@ export AZURE_USE_DEFAULT_CREDENTIAL=true
 
 # Optional
 export AZURE_OPENAI_API_VERSION="2024-10-01-preview"
-export AZURE_OPENAI_DEPLOYMENT_NAME="my-deployment"
-export AZURE_OPENAI_DEFAULT_MODEL="gpt-5.1-codex"
 ```
 
 ## Example Configuration

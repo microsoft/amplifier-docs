@@ -895,12 +895,16 @@
         {
           "repo": "amplifier-module-provider-azure-openai",
           "path": "amplifier_module_provider_azure_openai/__init__.py",
+          "type": "python",
+          "required": true,
           "exists": true,
-          "hash": "28fa9f1f5006f724"
+          "hash": "f3d4a3aeaa50eb5e"
         },
         {
           "repo": "amplifier-module-provider-azure-openai",
           "path": "README.md",
+          "type": "readme",
+          "required": true,
           "exists": true,
           "hash": "99d6687f6630a47c"
         }
@@ -912,14 +916,18 @@
         {
           "repo": "amplifier-module-provider-ollama",
           "path": "amplifier_module_provider_ollama/__init__.py",
+          "type": "python",
+          "required": true,
           "exists": true,
-          "hash": "7c72e2b50bc9fb8a"
+          "hash": "41aedc40ec9f10b3"
         },
         {
           "repo": "amplifier-module-provider-ollama",
           "path": "README.md",
+          "type": "readme",
+          "required": true,
           "exists": true,
-          "hash": "0344355c9b2b1584"
+          "hash": "8ea363436c7cee71"
         }
       ]
     },
@@ -929,14 +937,18 @@
         {
           "repo": "amplifier-module-provider-vllm",
           "path": "amplifier_module_provider_vllm/__init__.py",
+          "type": "python",
+          "required": true,
           "exists": true,
-          "hash": "a3226dfd96e47149"
+          "hash": "6a16d294afeef796"
         },
         {
           "repo": "amplifier-module-provider-vllm",
           "path": "README.md",
+          "type": "readme",
+          "required": true,
           "exists": true,
-          "hash": "d87b8c5c11ac3420"
+          "hash": "439cd9923ea740ec"
         }
       ]
     },
