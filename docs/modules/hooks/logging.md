@@ -30,6 +30,7 @@ hooks:
 | `auto_discover` | bool | `true` | Auto-discover module events |
 | `strip_raw` | bool | `false` | Strip `raw` field from event data |
 | `additional_events` | list | `[]` | Extra events to log |
+| `exclude_events` | list | `["llm:stream_*delta"]` | Event-name patterns (fnmatch) to drop from events.jsonl; set `[]` to disable |
 
 ## Features
 

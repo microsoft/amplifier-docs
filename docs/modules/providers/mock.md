@@ -28,23 +28,21 @@ providers:
 
 | Option | Type | Default | Description |
 |--------|------|---------|-------------|
-| `responses` | list | `[]` | List of pre-configured responses to return in rotation |
-| `debug` | bool | `false` | Enable standard debug events |
+| `responses` | list | `["I'll help you with that task.", "Task completed successfully.", "Here's the result of your request."]` | List of pre-configured responses to return in rotation |
+| `debug` | bool | `false` | Gate for raw debug events (requires `raw_debug: true` to activate) |
 | `raw_debug` | bool | `false` | Enable ultra-verbose raw API I/O logging |
+| `use_streaming` | bool | `true` | Use streaming token delivery |
+| `stream_delay_ms` | int | `0` | Artificial delay between tokens in milliseconds |
 
 ## Debug Configuration
-
-### Standard Debug (`debug: true`)
-
-- Emits `llm:request:debug` and `llm:response:debug` events
-- Contains request/response summaries
-- Useful for testing event flows
 
 ### Raw Debug (`debug: true, raw_debug: true`)
 
 - Emits `llm:request:raw` and `llm:response:raw` events
 - Contains complete mock request/response objects
 - Useful for testing logging infrastructure
+
+Setting `debug: true` alone (without `raw_debug: true`) does not emit any additional events.
 
 ## Behavior
 

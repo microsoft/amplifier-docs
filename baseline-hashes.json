@@ -959,7 +959,7 @@
           "repo": "amplifier-module-provider-mock",
           "path": "amplifier_module_provider_mock/__init__.py",
           "exists": true,
-          "hash": "9b57a49419f2124a"
+          "hash": "2eb916ce26b205ca"
         },
         {
           "repo": "amplifier-module-provider-mock",
@@ -1249,13 +1249,13 @@
           "repo": "amplifier-module-hooks-logging",
           "path": "amplifier_module_hooks_logging/__init__.py",
           "exists": true,
-          "hash": "898a3098c8e7074b"
+          "hash": "aff589a087eefa27"
         },
         {
           "repo": "amplifier-module-hooks-logging",
           "path": "README.md",
           "exists": true,
-          "hash": "4de9f77054c39ea9"
+          "hash": "d1a98caf48d405a0"
         }
       ]
     },
