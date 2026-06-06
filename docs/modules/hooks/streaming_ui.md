@@ -33,6 +33,8 @@ Configuration is controlled via the `[ui]` section of your profile (not hook con
 show_thinking_stream = true   # Display thinking blocks (default: true)
 show_tool_lines = 5           # Max lines to show for tool I/O (default: 5)
 show_token_usage = true       # Display token usage after each turn (default: true)
+stream_tokens = false         # Enable token streaming overlay (default: false)
+spawn_tools = ["task", "delegate"]  # Tools that spawn agents (default: ["task", "delegate"])
 ```
 
 ## Configuration Options
@@ -42,6 +44,8 @@ show_token_usage = true       # Display token usage after each turn (default: tr
 | `show_thinking_stream` | boolean | `true` | Display thinking blocks as they complete |
 | `show_tool_lines` | integer | `5` | Maximum lines to show for tool input/output |
 | `show_token_usage` | boolean | `true` | Display token usage statistics after each LLM response |
+| `stream_tokens` | boolean | `false` | Enable token streaming overlay for token-by-token rendering |
+| `spawn_tools` | list | `["task", "delegate"]` | Tool names that spawn agents (determines indentation for sub-agent output) |
 
 ## Events Hooked
 
@@ -125,20 +129,8 @@ For sub-agents, the display is indented with a 4-space prefix.
 
 ### Intermediate Text Blocks
 
-Text blocks that accompany tool calls (not the final response) are displayed with special styling:
+Text blocks that accompany tool calls (not the final response) are displayed with special styling, visually distinct from final LLM responses. Interleaved asides are dimmed to recede when scrolling back.
 
-**Whisper mode** (< 3 lines):
-```
-▸ Short text here
-  continuation line
-```
-
-**Rail mode** (3+ lines):
-```
-▍ First line
-▍ Second line
-▍ Third line
-```
 
 ## Visual Hierarchy
 
@@ -153,7 +145,7 @@ The module uses careful visual hierarchy to distinguish context:
 | Parent tool result | ✅/❌ | Cyan status, dim output | None |
 | Sub-agent tool result | ✅/❌ + box drawing | Cyan status, dim output | 4 spaces |
 | Token usage | 📊 | Dim | Based on context |
-| Intermediate text | ▸ or ▍ | Muted blue/lavender | Based on context |
+| Intermediate text | (styled) | Dim | Based on context |
 
 ## Sub-Agent Session Detection
 
@@ -235,9 +227,10 @@ Cache info shows:
 - **Percentage cached** when cache hits occur
 - **"(caching...)"** when cache is being created (first request)
 
-The module computes total input from Anthropic's split buckets:
+The module computes gross total input tokens (provider-agnostic):
 ```python
-total_input = input_tokens + cache_read_input_tokens + cache_creation_input_tokens
+# cache_read is already counted inside input_tokens — adding it again would double-count
+total_input = input_tokens + (cache_write_tokens or cache_creation_input_tokens)
 ```
 
 ## Bash Output Handling
@@ -293,7 +286,7 @@ show_token_usage = true       # Track token usage
 - Sub-agent output uses 4-space indentation consistently
 - Token usage display cleared after each response to avoid stale data
 - ANSI escape codes for colors and dim text
-- Intermediate text rendering uses 256-color ANSI codes for precise color control
+- Intermediate text rendering uses Rich named styles (dim, dim green) for visual distinction
 
 ## Best Practices
 
