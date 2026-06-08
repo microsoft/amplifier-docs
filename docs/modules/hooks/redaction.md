@@ -21,20 +21,25 @@ hooks:
 
 ## Behavior
 
-Scans messages for sensitive patterns and replaces them with `[REDACTED]`:
+Scans messages for sensitive patterns and replaces matched content with a typed redaction marker:
 
+**`secrets` rule** → replaces with `[REDACTED:SECRET]`:
+- AWS Access Keys
+- Slack and Google API keys
+- JWT tokens
+
+**`pii-basic` rule** → replaces with `[REDACTED:PII]`:
 - Email addresses
 - Phone numbers
-- Credit card numbers
-- AWS keys, JWT tokens
-- Custom regex patterns
+
+Events listed in `skip_events` are passed through unmodified to preserve data the LLM needs verbatim (e.g. tool results containing session IDs or timestamps).
 
 ## Configuration
 
 | Option | Type | Default | Description |
 |--------|------|---------|-------------|
 | `rules` | list | `["secrets", "pii-basic"]` | Redaction rule sets to apply |
-| `allowlist` | list | `[]` | Field names to never redact (merged with defaults) |
+| `allowlist` | list | `[]` | Additional field names to never redact (merged with built-in structural defaults) |
 | `priority` | int | `10` | Hook priority (lower runs first) |
 | `skip_events` | list | `["tool:pre", "tool:post"]` | Events to skip redaction (feed into LLM context) |
 
