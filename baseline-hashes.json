@@ -132,7 +132,7 @@
           "repo": "amplifier-app-cli",
           "path": "amplifier_app_cli/session_spawner.py",
           "exists": true,
-          "hash": "f611d7a1c07fd039"
+          "hash": "86c943fb75f2e9f1"
         }
       ]
     },
@@ -178,7 +178,7 @@
           "repo": "amplifier-foundation",
           "path": "docs/API_REFERENCE.md",
           "exists": true,
-          "hash": "d2560018bed6b4f1"
+          "hash": "de143bf08b72cec6"
         }
       ]
     },
@@ -412,8 +412,8 @@
         {
           "repo": "amplifier-foundation",
           "path": "examples/08_cli_application.py",
-          "exists": false,
-          "hash": null
+          "exists": true,
+          "hash": "1494c16e0d692726"
         }
       ]
     },
@@ -739,8 +739,8 @@
         {
           "repo": "amplifier-core",
           "path": "python/amplifier_core/session.py",
-          "exists": false,
-          "hash": null
+          "exists": true,
+          "hash": "432148c62150ee0e"
         }
       ]
     },
@@ -795,8 +795,8 @@
         {
           "repo": "amplifier-core",
           "path": "python/amplifier_core/events.py",
-          "exists": false,
-          "hash": null
+          "exists": true,
+          "hash": "01536bf6671cd671"
         }
       ]
     },
@@ -874,16 +874,12 @@
         {
           "repo": "amplifier-module-provider-openai",
           "path": "amplifier_module_provider_openai/__init__.py",
-          "type": "python",
-          "required": true,
           "exists": true,
-          "hash": "f0b03599b7051715"
+          "hash": "c0e260c479a525a6"
         },
         {
           "repo": "amplifier-module-provider-openai",
           "path": "README.md",
-          "type": "readme",
-          "required": true,
           "exists": true,
           "hash": "6542e6698cd2da2b"
         }
@@ -1141,7 +1137,7 @@
           "repo": "amplifier-module-loop-streaming",
           "path": "amplifier_module_loop_streaming/__init__.py",
           "exists": true,
-          "hash": "f35e935666473cd8"
+          "hash": "eb347d481c3f5c51"
         },
         {
           "repo": "amplifier-module-loop-streaming",
@@ -1402,7 +1398,7 @@
           "repo": "amplifier",
           "path": "docs/MODULES.md",
           "exists": true,
-          "hash": "8611b9d19c48b2be"
+          "hash": "8d2446270dd388cf"
         },
         {
           "repo": "amplifier-core",

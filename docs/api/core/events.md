@@ -1,158 +1,225 @@
 ---
 title: Events API
-description: Canonical event constants
+description: Event constants for the Amplifier kernel hook system
 ---
 
 # Events API
 
-Amplifier uses a canonical event system for observability and hook integration.
+> **Source**: [`python/amplifier_core/events.py`](https://github.com/microsoft/amplifier-core/blob/main/python/amplifier_core/events.py)
 
-**Source**: [amplifier_core/events.py](https://github.com/microsoft/amplifier-core/blob/main/python/amplifier_core/events.py)
+All constants are defined in the Rust kernel and re-exported from Python for use in hooks and orchestrators.
 
 ## Event Taxonomy
 
-Events follow a `namespace:action` naming convention.
+Events follow a `namespace:action` naming convention. Subscribe using `HookRegistry.on()` or emit via `HookRegistry.emit()`.
 
 ### Session Events
 
-| Event | Description |
-|-------|-------------|
-| `session:start` | Session initialized |
-| `session:end` | Session cleanup complete |
-| `session:fork` | Child session created |
-| `session:resume` | Session resumed |
+| Constant | Event Name | Description |
+|----------|------------|-------------|
+| `SESSION_START` | `session:start` | Session initialized and ready |
+| `SESSION_END` | `session:end` | Session completed or terminated |
+| `SESSION_FORK` | `session:fork` | Sub-session spawned from parent |
+| `SESSION_RESUME` | `session:resume` | Existing session resumed |
 
 ### Prompt Events
 
-| Event | Description |
-|-------|-------------|
-| `prompt:submit` | User prompt submitted |
-| `prompt:complete` | Prompt processing complete |
+| Constant | Event Name | Description |
+|----------|------------|-------------|
+| `PROMPT_SUBMIT` | `prompt:submit` | User prompt submitted to orchestrator |
+| `PROMPT_COMPLETE` | `prompt:complete` | Orchestrator finished processing prompt |
 
 ### Planning Events
 
-| Event | Description |
-|-------|-------------|
-| `plan:start` | Planning phase started |
-| `plan:end` | Planning phase completed |
+| Constant | Event Name | Description |
+|----------|------------|-------------|
+| `PLAN_START` | `plan:start` | Planning phase started |
+| `PLAN_END` | `plan:end` | Planning phase completed |
 
 ### Provider Events
 
-| Event | Description |
-|-------|-------------|
-| `provider:request` | LLM request initiated |
-| `provider:response` | LLM response received |
-| `provider:error` | LLM request failed |
-| `provider:retry` | Retry attempt before LLM call |
-| `provider:throttle` | Pre-emptive throttling triggered |
-| `provider:tool_sequence_repaired` | Tool call sequence repaired |
-| `provider:resolve` | Provider resolution |
-| `llm:request` | LLM request |
-| `llm:response` | LLM response |
+| Constant | Event Name | Description |
+|----------|------------|-------------|
+| `PROVIDER_REQUEST` | `provider:request` | About to call LLM provider |
+| `PROVIDER_RESPONSE` | `provider:response` | Provider returned response |
+| `PROVIDER_RETRY` | `provider:retry` | Provider call being retried |
+| `PROVIDER_ERROR` | `provider:error` | Provider returned error |
+| `PROVIDER_THROTTLE` | `provider:throttle` | Provider rate limit hit |
+| `PROVIDER_TOOL_SEQUENCE_REPAIRED` | `provider:tool_sequence_repaired` | Tool call sequence repaired |
+| `PROVIDER_RESOLVE` | `provider:resolve` | Provider selected for request |
+
+### LLM Events
+
+| Constant | Event Name | Description |
+|----------|------------|-------------|
+| `LLM_REQUEST` | `llm:request` | Raw LLM request (post-provider-resolve) |
+| `LLM_RESPONSE` | `llm:response` | Raw LLM response received |
 
 ### Content Block Events
 
-| Event | Description |
-|-------|-------------|
-| `content_block:start` | Content block started |
-| `content_block:delta` | Content block delta received |
-| `content_block:end` | Content block completed |
+| Constant | Event Name | Description |
+|----------|------------|-------------|
+| `CONTENT_BLOCK_START` | `content_block:start` | Content block started streaming |
+| `CONTENT_BLOCK_DELTA` | `content_block:delta` | Streaming token delta received |
+| `CONTENT_BLOCK_END` | `content_block:end` | Content block finished streaming |
 
 ### Thinking Events
 
-| Event | Description |
-|-------|-------------|
-| `thinking:delta` | Thinking content delta |
-| `thinking:final` | Thinking content finalized |
+| Constant | Event Name | Description |
+|----------|------------|-------------|
+| `THINKING_DELTA` | `thinking:delta` | Extended thinking token delta |
+| `THINKING_FINAL` | `thinking:final` | Final consolidated thinking block |
 
 ### Tool Events
 
-| Event | Description |
-|-------|-------------|
-| `tool:pre` | Before tool invocation |
-| `tool:post` | After tool invocation |
-| `tool:error` | Tool invocation error |
+| Constant | Event Name | Description |
+|----------|------------|-------------|
+| `TOOL_PRE` | `tool:pre` | About to execute tool call |
+| `TOOL_POST` | `tool:post` | Tool call completed |
+| `TOOL_ERROR` | `tool:error` | Tool call failed |
 
 ### Context Events
 
-| Event | Description |
-|-------|-------------|
-| `context:pre_compact` | Before context compaction |
-| `context:post_compact` | After context compaction |
-| `context:compaction` | Context compaction occurred |
-| `context:include` | Context include event |
+| Constant | Event Name | Description |
+|----------|------------|-------------|
+| `CONTEXT_PRE_COMPACT` | `context:pre_compact` | About to compact conversation context |
+| `CONTEXT_POST_COMPACT` | `context:post_compact` | Context compaction completed |
+| `CONTEXT_COMPACTION` | `context:compaction` | Context compaction details |
+| `CONTEXT_INCLUDE` | `context:include` | Context file included in conversation |
 
 ### Orchestrator Events
 
-| Event | Description |
-|-------|-------------|
-| `orchestrator:complete` | Orchestrator execution complete |
-| `execution:start` | Execution started |
-| `execution:end` | Execution ended |
+| Constant | Event Name | Description |
+|----------|------------|-------------|
+| `ORCHESTRATOR_COMPLETE` | `orchestrator:complete` | Orchestrator loop completed |
+| `EXECUTION_START` | `execution:start` | Orchestrator execution began |
+| `EXECUTION_END` | `execution:end` | Orchestrator execution finished |
 
 ### User Notification Events
 
-| Event | Description |
-|-------|-------------|
-| `user:notification` | User notification |
+| Constant | Event Name | Description |
+|----------|------------|-------------|
+| `USER_NOTIFICATION` | `user:notification` | Notification intended for end user |
 
 ### Artifact Events
 
-| Event | Description |
-|-------|-------------|
-| `artifact:write` | Artifact written |
-| `artifact:read` | Artifact read |
+| Constant | Event Name | Description |
+|----------|------------|-------------|
+| `ARTIFACT_WRITE` | `artifact:write` | Artifact written (file, output, etc.) |
+| `ARTIFACT_READ` | `artifact:read` | Artifact read |
 
-### Policy Events
+### Policy and Approval Events
 
-| Event | Description |
-|-------|-------------|
-| `policy:violation` | Policy violation detected |
-| `approval:required` | Approval required |
-| `approval:granted` | Approval granted |
-| `approval:denied` | Approval denied |
+| Constant | Event Name | Description |
+|----------|------------|-------------|
+| `POLICY_VIOLATION` | `policy:violation` | Policy constraint violated |
+| `APPROVAL_REQUIRED` | `approval:required` | Human approval needed before proceeding |
+| `APPROVAL_GRANTED` | `approval:granted` | Approval granted, execution continues |
+| `APPROVAL_DENIED` | `approval:denied` | Approval denied, execution halted |
 
 ### Cancellation Events
 
-| Event | Description |
-|-------|-------------|
-| `cancel:requested` | Cancellation requested |
-| `cancel:completed` | Cancellation completed |
+| Constant | Event Name | Description |
+|----------|------------|-------------|
+| `CANCEL_REQUESTED` | `cancel:requested` | Cancellation requested |
+| `CANCEL_COMPLETED` | `cancel:completed` | Cancellation completed |
 
 ### Module Lifecycle Events
 
-| Event | Description |
-|-------|-------------|
-| `module:on_session_ready_failed` | A module's `on_session_ready()` callback raised an exception |
+| Constant | Event Name | Description |
+|----------|------------|-------------|
+| `MODULE_ON_SESSION_READY_FAILED` | `module:on_session_ready_failed` | Module's `on_session_ready` callback failed |
 
-## Using Events
+### Wildcard
 
-### Register a Hook
+| Constant | Event Name | Description |
+|----------|------------|-------------|
+| `ALL_EVENTS` | `*` | Subscribe to all events |
+
+## Usage
+
+### Importing Constants
 
 ```python
-from amplifier_core.events import TOOL_PRE, TOOL_POST
-
-async def log_tool_calls(event: str, data: dict):
-    print(f"{event}: {data}")
-    return HookResult()
-
-# Register for specific events
-coordinator.hooks.register(TOOL_PRE, log_tool_calls)
-coordinator.hooks.register(TOOL_POST, log_tool_calls)
+from amplifier_core.events import (
+    SESSION_START, SESSION_END,
+    TOOL_PRE, TOOL_POST, TOOL_ERROR,
+    PROMPT_SUBMIT, PROMPT_COMPLETE,
+    EXECUTION_START, EXECUTION_END,
+    APPROVAL_REQUIRED, APPROVAL_GRANTED, APPROVAL_DENIED,
+)
 ```
 
-### Listen to All Events
+### Subscribing to Events
+
+```python
+from amplifier_core import HookRegistry
+from amplifier_core.events import TOOL_PRE, TOOL_POST, TOOL_ERROR
+
+async def mount(coordinator, config=None):
+    hooks: HookRegistry = coordinator.hooks
+
+    @hooks.on(TOOL_PRE)
+    async def before_tool(event_name, data):
+        tool_name = data.get("name")
+        print(f"Calling tool: {tool_name}")
+
+    @hooks.on(TOOL_POST)
+    async def after_tool(event_name, data):
+        tool_name = data.get("name")
+        print(f"Tool completed: {tool_name}")
+
+    @hooks.on(TOOL_ERROR)
+    async def on_tool_error(event_name, data):
+        error = data.get("error")
+        print(f"Tool failed: {error}")
+```
+
+### Subscribing to All Events
 
 ```python
 from amplifier_core.events import ALL_EVENTS
 
-async def monitor_all(event: str, data: dict):
-    print(f"Event: {event}")
-    return HookResult()
+@hooks.on(ALL_EVENTS)
+async def log_everything(event_name, data):
+    print(f"Event: {event_name} — {data}")
+```
 
-coordinator.hooks.register(ALL_EVENTS, monitor_all)
+### Emitting Custom Events
+
+```python
+from amplifier_core.events import USER_NOTIFICATION
+
+await coordinator.hooks.emit(
+    USER_NOTIFICATION,
+    {"message": "Task completed", "level": "info"},
+)
+```
+
+### Registering Observable Events
+
+Modules can declare which events they emit so hooks-logging auto-discovers them:
+
+```python
+coordinator.register_contributor(
+    "observability.events",
+    "my-module",
+    lambda: [
+        "execution:start",
+        "execution:end",
+    ],
+)
 ```
 
 ## Event Data
 
-Each event carries a `data` dict with event-specific fields. See the hook contract documentation for details on event data structures.
+Event data is a dict. Common fields by category:
+
+| Category | Common Data Fields |
+|----------|--------------------|
+| Session | `session_id`, `status` |
+| Tool | `name`, `input`, `output`, `error` |
+| Provider | `model`, `request`, `response`, `error` |
+| Context | `tokens_before`, `tokens_after`, `strategy` |
+| Cancellation | `was_immediate`, `error` |
+| Approval | `reason`, `tool_name`, `decision` |

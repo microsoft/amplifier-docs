@@ -1,166 +1,166 @@
 ---
 title: OpenAI Provider
-description: GPT model integration
+description: OpenAI GPT model integration for Amplifier via the Responses API
 ---
 
 # OpenAI Provider
 
-Integrates OpenAI's GPT models into Amplifier.
+> **Repository**: [`amplifier-module-provider-openai`](https://github.com/microsoft/amplifier-module-provider-openai)
 
-## Module ID
+GPT model integration for Amplifier via OpenAI's Responses API.
 
-`provider-openai`
+## Contract
 
-## Installation
-
-```yaml
-providers:
-  - module: provider-openai
-    source: git+https://github.com/microsoft/amplifier-module-provider-openai@main
-```
-
-## Configuration
-
-| Option | Type | Default | Description |
-|--------|------|---------|-------------|
-| `api_key` | string | `$OPENAI_API_KEY` | API key |
-| `base_url` | string | null | Optional custom endpoint (`$OPENAI_BASE_URL`); null = OpenAI default |
-| `default_model` | string | `gpt-5.5` | Default model |
-| `max_tokens` | integer | `4096` | Maximum output tokens |
-| `temperature` | float | null | Sampling temperature; null = not sent (some models don't support it) |
-| `reasoning` | string | null | Reasoning effort: `none\|low\|medium\|high\|xhigh`; null = not sent |
-| `reasoning_summary` | string | `detailed` | Reasoning verbosity: `auto\|concise\|detailed` |
-| `truncation` | string | null | Automatic context management; null = omit field (use `"auto"` for legacy auto-drop behavior) |
-| `enable_state` | boolean | `false` | Enable stateful conversations |
-| `filtered` | boolean | `true` | Filter to curated model list by default |
-| `enable_long_context` | boolean | `false` | Enable full context window (>272K tokens, 2x input / 1.5x output pricing) |
-| `use_streaming` | boolean | `true` | Use streaming HTTP transport (prevents timeouts on large context requests) |
-| `prompt_cache_key` | string | null | Per-conversation cache routing key for prompt caching |
-| `prompt_cache_retention` | string | `"24h"` | Cache retention: `in_memory` (5-10 min) or `24h` (extended GPU-local KV storage) |
-| `enable_response_chaining` | string/bool | `"auto"` | Response chaining for reasoning models: `auto`\|`true`\|`false` |
-| `raw` | boolean | `false` | Include raw API payload in provider events |
-| `priority` | int | 100 | Provider priority for selection |
-| `timeout` | float | 600.0 | API timeout in seconds |
-| `max_retries` | int | 5 | Retry attempts before failing |
-| `retry_jitter` | bool | `true` | Add randomness to retry delays |
-| `min_retry_delay` | float | 1.0 | Minimum delay between retries |
-| `max_retry_delay` | float | 60.0 | Maximum delay between retries |
-| `poll_interval` | float | 5.0 | Status check interval for background tasks in seconds (deep research) |
-| `background_timeout` | float | 1800.0 | Maximum wait time for background tasks in seconds |
+| Field | Value |
+|-------|-------|
+| **Module Type** | `provider` |
+| **Mount Point** | `providers` |
+| **Entry Point** | `amplifier_module_provider_openai:mount` |
 
 ## Supported Models
 
-| Model | Description |
-|-------|-------------|
-| `gpt-5.5` | GPT 5.5 (default) |
-| `gpt-5.5-pro` | GPT 5.5 Pro |
-| `gpt-5.4` | GPT 5.4 |
-| `gpt-5.4-pro` | GPT 5.4 Pro |
-| `gpt-5.3-codex` | GPT-5.3 codex |
-| `gpt-5.2` | GPT 5.2 |
-| `gpt-5.2-pro` | GPT 5.2 Pro |
-| `gpt-5.1` | GPT 5.1 |
-| `gpt-5.1-codex` | GPT-5.1 codex |
-| `gpt-5-mini` | Smaller, faster GPT-5 |
-| `o3-deep-research` | o3 Deep Research |
-| `o4-mini-deep-research` | o4-mini Deep Research |
+- `gpt-5.5` — Default model; latest GPT-5 generation
+- `gpt-5-mini` — Smaller, faster GPT-5
+- `gpt-5-nano` — Smallest GPT-5 variant
 
-## Reasoning Configuration
+## Configuration
 
-Control the model's reasoning effort and output verbosity:
-
-```yaml
-providers:
-  - module: provider-openai
-    config:
-      reasoning: "medium"  # none|low|medium|high|xhigh
-      reasoning_summary: "detailed"  # auto|concise|detailed
+```toml
+[[providers]]
+module = "provider-openai"
+name = "openai"
+config = {
+    base_url = null,                       # Optional custom endpoint (null = OpenAI default)
+    default_model = "gpt-5.5",
+    max_tokens = 4096,
+    temperature = 0.7,
+    reasoning = null,                      # Reasoning effort: minimal|low|medium|high|xhigh; null = not sent
+    reasoning_summary = "detailed",        # Reasoning verbosity: auto|concise|detailed
+    truncation = null,                     # null omits the field; OpenAI errors on context overflow.
+                                           # Opt in to legacy auto-drop with truncation = "auto" (busts cache).
+    prompt_cache_key = "",                 # Stable cache-routing identifier; empty = unset
+    prompt_cache_retention = "24h",        # "24h" | "in_memory" | null (use model default)
+    enable_response_chaining = "auto",     # "auto" | true | false  (reasoning-model chaining)
+    enable_state = false,
+    debug = false,                         # Enable standard debug events
+    raw_debug = false                      # Enable ultra-verbose raw API I/O logging
+}
 ```
 
-**Reasoning levels:**
-- `none` - No reasoning
-- `low` - Light reasoning for simple tasks
-- `medium` - Balanced reasoning for most tasks
-- `high` - Deep reasoning for complex problems
-- `xhigh` - Maximum reasoning effort (gpt-5.5-pro: medium/high/xhigh only)
+> **Note**: `safety_identifier` is intentionally NOT a deployment config field. It is a per-end-user signal (abuse tracking) and must be set per-call via `kwargs`.
 
-**Summary verbosity:**
-- `auto` - Model decides appropriate detail level
-- `concise` - Brief reasoning summaries
-- `detailed` - Verbose reasoning output (similar to Anthropic's thinking blocks)
+## Config Reference
 
-## Stateful Conversations
+| Key | Type | Default | Description |
+|-----|------|---------|-------------|
+| `base_url` | string | null | Custom API endpoint; null uses OpenAI default |
+| `default_model` | string | `"gpt-5.5"` | Default model for requests |
+| `max_tokens` | integer | `4096` | Maximum output tokens |
+| `temperature` | float | `0.7` | Sampling temperature |
+| `reasoning` | string | null | Reasoning effort: `minimal\|low\|medium\|high\|xhigh`; null = not sent |
+| `reasoning_summary` | string | `"detailed"` | Reasoning verbosity: `auto\|concise\|detailed` |
+| `truncation` | string | null | null omits the field (errors on overflow); `"auto"` silently drops oldest messages (busts prompt cache) |
+| `prompt_cache_key` | string | `""` | Stable cache-routing identifier; empty = unset |
+| `prompt_cache_retention` | string | `"24h"` | Cache TTL: `"24h"` \| `"in_memory"` \| null |
+| `enable_response_chaining` | string/bool | `"auto"` | `"auto"` (auto-detect reasoning models) \| `true` \| `false` |
+| `enable_state` | boolean | `false` | Enable OpenAI server-side state storage |
+| `max_concurrent` | integer | `0` | Process-wide concurrency limit; `0` = unlimited |
+| `timeout` | float | `600.0` | Request timeout in seconds |
+| `debug` | boolean | `false` | Enable standard debug events |
+| `raw_debug` | boolean | `false` | Enable ultra-verbose raw API I/O logging |
 
-Enable conversation persistence across requests:
+## Prompt Caching
 
-```yaml
-providers:
-  - module: provider-openai
-    config:
-      enable_state: true
-```
+The provider exposes OpenAI's prompt-caching parameters for maximizing cache hit rates.
 
-With state enabled, the provider tracks conversation history server-side.
+### Default Behavior
 
-## Truncation
+- `prompt_cache_retention = "24h"` — Extended GPU-local KV storage on every supported model, instead of OpenAI's per-model `"in_memory"` default (5–10 min) for gpt-5.4 and below.
+- `enable_response_chaining = "auto"` — For reasoning-capable models, the provider sends `store = true` and `previous_response_id` on subsequent turns. Empirical results show 85% prefix cache hit on turn 2 with chaining on, vs 0% off.
+- `truncation = null` — The field is omitted from requests so the cached prefix is never silently rewritten on context overflow. Opt back into legacy auto-drop with `truncation = "auto"`.
 
-Automatic context management to handle token limits:
+### `prompt_cache_retention` Values
 
-```yaml
-providers:
-  - module: provider-openai
-    config:
-      truncation: "auto"  # auto|none
-```
+| Value | Meaning |
+|-------|---------|
+| `"24h"` | Extended GPU-local KV storage. Provider default for all supported models. |
+| `"in_memory"` | 5–10 min in-process cache. OpenAI's per-model default for gpt-5.4 and below. |
+| `null` | Field omitted; OpenAI picks the per-model default. |
 
-By default (`null`), the truncation field is omitted and OpenAI returns an explicit error when the context fills, allowing you to handle it explicitly. Set to `"auto"` to opt into OpenAI's legacy auto-drop behavior.
+The capability layer auto-drops values a model would reject (e.g., gpt-5.5+ rejects `"in_memory"`).
 
-## Tool Calling
+### `enable_response_chaining` Values
 
-The provider automatically detects and processes tool calls from the Responses API:
+| Value | Behavior |
+|-------|---------|
+| `"auto"` | On iff model supports reasoning. Default. Right answer for most deployments. |
+| `true` | Force on regardless of model. |
+| `false` | Force off. Use for ZDR / regulated-industry deployments that cannot retain server-side state. |
 
-```yaml
-providers:
-  - module: provider-openai
-    config:
-      default_model: gpt-5.5
-```
+When chaining is active for a reasoning model: `store = true` is set automatically, `previous_response_id` is sent on subsequent turns, and encrypted reasoning blocks are not re-inserted inline.
 
-Tools declared in your configuration are available to the model automatically.
+### `prompt_cache_key`
 
-## Debug Events
+OpenAI shards Responses API traffic by hashing the first ~256 input tokens. A stable `prompt_cache_key` keeps a logical conversation pinned to one machine regardless of small prefix drift.
 
-Enable raw payload logging:
+| Deployment Shape | Recommended Key |
+|-----------------|----------------|
+| Single-user agent loop (typical Amplifier) | conversation/session ID, e.g. `"conv_abc123"` |
+| Multi-tenant with shared system prompt | `f"{tenant_id}:{system_prompt_version}"` |
+| Low-volume single-session | leave unset; prefix-hash routing is sufficient |
 
-```yaml
-providers:
-  - module: provider-openai
-    config:
-      raw: true  # Include raw API payload in provider events
-```
+## Deep Research Models
 
-Events:
-- `llm:request` - Request details (includes raw payload when `raw: true`)
-- `llm:response` - Response details (includes raw payload when `raw: true`)
+The provider supports OpenAI's deep research models which run as background tasks:
 
-## Environment Variables
+| Model | ID |
+|-------|-----|
+| `o3-deep-research` | `o3-deep-research-2025-06-26` |
+| `o4-mini-deep-research` | `o4-mini-deep-research-2025-06-26` |
+
+Deep research models poll for completion with:
+- Poll interval: `5.0` seconds
+- Background timeout: `1800.0` seconds (30 minutes)
+
+## Authentication
+
+Set your OpenAI API key:
 
 ```bash
-export OPENAI_API_KEY="your-api-key-here"
-export OPENAI_BASE_URL="https://custom-endpoint.com"  # Optional
+export OPENAI_API_KEY=sk-...
 ```
 
-## Example Configuration
+Or for Azure OpenAI:
+
+```bash
+export AZURE_OPENAI_API_KEY=...
+export AZURE_OPENAI_ENDPOINT=https://your-resource.openai.azure.com/
+```
+
+Use [`provider-azure-openai`](../providers/azure_openai.md) for managed identity support.
+
+## Observability
+
+The provider emits standard provider events:
+
+| Event | When |
+|-------|------|
+| `provider:request` | Before API call |
+| `provider:response` | After successful response |
+| `provider:retry` | On retry attempt |
+| `provider:error` | On unrecoverable error |
+| `provider:response_chain_invalidated` | When `previous_response_id` is rejected by the server |
+
+## Installation
+
+```bash
+amplifier provider install provider-openai
+```
+
+Or in a bundle:
 
 ```yaml
 providers:
   - module: provider-openai
     source: git+https://github.com/microsoft/amplifier-module-provider-openai@main
-    config:
-      api_key: ${OPENAI_API_KEY}
-      default_model: gpt-5.5
-      max_tokens: 4096
-      temperature: 0.7
-      reasoning: medium
-      reasoning_summary: detailed
 ```

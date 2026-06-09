@@ -1,184 +1,202 @@
 ---
 title: Sessions
-description: Session management, persistence, and resumption
+description: How Amplifier sessions work — creation, persistence, and sub-sessions
 ---
 
 # Sessions
 
-Sessions track your conversations with Amplifier, enabling multi-turn interactions and the ability to resume previous work.
+A **session** is the fundamental unit of Amplifier execution. It ties together the orchestrator, context manager, providers, tools, and hooks for a single conversation or agent run.
 
-## What is a Session?
+## Creating a Session
 
-A session represents a single conversation with Amplifier, including:
-
-- Conversation history (your prompts and AI responses)
-- Tool execution results
-- Session metadata (timestamp, profile, provider)
-- Event log for debugging
-
-## Session Metadata
-
-Session metadata includes:
-
-- **session_id**: Unique identifier
-- **created**: Creation timestamp
-- **turn_count**: Number of user turns
-- **working_dir**: Working directory for the session
-
-## Session Lifecycle
-
-### Creation
-
-Sessions are created when you start a new conversation or resume an existing one.
-
-### Persistence
-
-Sessions are automatically saved after each turn, storing:
-- Updated transcript
-- Current metadata
-- Session state
-
-### Resumption
-
-Sessions can be resumed by session ID to continue prior conversations.
-
-### Session Events
-
-The kernel emits lifecycle events during session execution:
-
-| Event | Emitted When |
-|-------|-------------|
-| `session:start` | New session begins executing |
-| `session:resume` | Existing session is resumed |
-| `session:fork` | Child (sub) session is created |
-| `cancel:completed` | Session execution is cancelled |
-| `session:end` | Session cleanup complete |
-
-## Sub-Sessions (Agent Delegation)
-
-When agents delegate to other agents, child sessions (sub-sessions) are created:
-
-### Sub-Session Structure
-
-Sub-session IDs follow the format:
-
-```
-{parent_id}-{child_span}_{agent_name}
-```
-
-### Tool and Hook Inheritance
-
-Control which tools and hooks are inherited by sub-sessions:
+Sessions are created via `PreparedBundle.create_session()`:
 
 ```python
-# Exclude specific tools from inheritance
-tool_inheritance={"exclude_tools": ["tool-task"]}
+from amplifier_foundation import load_bundle
 
-# Inherit ONLY specific tools (allowlist)
-tool_inheritance={"inherit_tools": ["tool-filesystem"]}
+bundle = await load_bundle("/path/to/bundle.md")
+prepared = await bundle.prepare()
 
-# Exclude specific hooks from inheritance
-hook_inheritance={"exclude_hooks": ["hooks-logging"]}
-
-# Inherit ONLY specific hooks (allowlist)
-hook_inheritance={"inherit_hooks": ["hooks-approval"]}
+async with prepared.create_session() as session:
+    response = await session.execute("Hello!")
+    print(response)
 ```
 
-Agent-explicit tools and hooks are always preserved regardless of the filtering policy.
-Formula: `final = (inherited - excluded) + explicit`
+### Session ID
 
-### Subprocess Spawn Mode
+Every session has a unique `session_id` (UUID):
 
-Sub-sessions can run in a subprocess instead of in-process, providing isolation:
+```python
+async with prepared.create_session() as session:
+    print(session.session_id)  # e.g. "a1b2c3d4-..."
+```
+
+You can provide a specific session ID:
+
+```python
+async with prepared.create_session(session_id="my-session-001") as session:
+    response = await session.execute("Hello!")
+```
+
+## Persistence and Resuming
+
+Amplifier sessions can persist conversation history across process restarts using the `context-persistent` module.
+
+### Persistent Context Configuration
 
 ```yaml
-# In agent bundle config
-spawn_mode: subprocess
+session:
+  orchestrator: {module: loop-streaming}
+  context:
+    module: context-persistent
+    config:
+      persist_dir: ~/.amplifier/sessions
 ```
 
-Or pass `use_subprocess: true` in the delegation call. Subprocess mode automatically propagates bundle context (module paths, mention mappings) to the child process.
-
-### Session Metadata
-
-Pass arbitrary metadata into child sessions for observability. Metadata is surfaced on `session:start` and `session:fork` events:
+### Resuming a Session
 
 ```python
-response = await task_tool.execute({
-    "agent": "architect",
-    "instruction": "Design the API",
-    "session_metadata": {"workflow": "planning", "task_id": "t-123"}
-})
+session_id = "existing-session-uuid"
+
+async with prepared.create_session(
+    session_id=session_id,
+    is_resumed=True,
+) as session:
+    # Continues from where the previous session left off
+    response = await session.execute("Continue where we left off")
 ```
 
-### Multi-Turn Sub-Sessions
+Setting `is_resumed=True` causes the kernel to emit `session:resume` instead of `session:start`, preserving session lifecycle semantics.
 
-Sub-sessions support multi-turn conversations:
+## Sub-Sessions and Agent Delegation
+
+Sub-sessions (child sessions) are a core feature for multi-agent architectures. A parent session can spawn child sessions to delegate work to specialized agents.
+
+### Spawning from Foundation
 
 ```python
-# Turn 1: Initial delegation
-response = await task_tool.execute({
-    "agent": "architect",
-    "instruction": "Design the API"
-})
-session_id = response["session_id"]
-
-# Turn 2: Follow-up
-response = await task_tool.execute({
-    "session_id": session_id,  # Resume existing sub-session
-    "instruction": "Add versioning support"
-})
+result = await prepared.spawn(
+    child_bundle=agent_bundle,
+    instruction="Find the bug in auth.py",
+    parent_session=session,
+)
+print(result["output"])
+print(result["session_id"])  # Child session ID for resumption
 ```
 
-### Sub-Session Metadata
+### Parent-Child Tracking
 
-Sub-sessions include:
+Child sessions include `parent_id` in all events for lineage tracking:
 
-- **session_id**: Unique identifier for this sub-session
-- **parent_id**: Parent session ID
-- **trace_id**: Root session ID (W3C Trace Context pattern)
-- **agent_name**: Agent that ran this session
-- **child_span**: 16-char hex span ID for short_id resolution
-- **created**: Creation timestamp (ISO 8601, UTC)
-- **config**: Merged configuration (parent + agent overlay)
-- **agent_overlay**: Original agent configuration
-- **turn_count**: Number of conversation turns
-- **bundle_context**: Bundle module resolution paths and mention mappings
-- **self_delegation_depth**: Recursion depth for self-delegation limit tracking
-- **working_dir**: Working directory at session creation time
+```python
+async with prepared.create_session(
+    parent_id=parent_session.session_id,
+) as child_session:
+    # All events include parent_id
+    response = await child_session.execute("Analyze this code...")
+```
 
-## Session Context
+The kernel emits `session:fork` during child session initialization.
 
-Sessions maintain context through:
+## Tool Inheritance
 
-- **Conversation history**: All user/assistant messages
-- **Tool results**: Outputs from tool executions
-- **System messages**: Agent instructions and guidance
+When a parent session spawns a sub-session, the child inherits the parent's tools by default. The tool inheritance policy is configured in the `tool-task` module config.
 
-## Best Practices
+### Exclude Specific Tools
 
-### Naming Sessions
+Prevent certain tools from being inherited:
 
-- Use descriptive names for important work sessions
-- Names help when searching/resuming later
+```yaml
+tools:
+  - module: tool-task
+    config:
+      exclude_tools: [tool-task]  # Child agents can't delegate further
+```
 
-### Session Cleanup
+### Allowlist Mode
 
-- Regularly clean up old sessions to save disk space
-- Keep important sessions by giving them descriptive names
+Specify exactly which tools the child gets:
 
-### Forking Sessions
+```yaml
+tools:
+  - module: tool-task
+    config:
+      inherit_tools: [tool-filesystem, tool-bash]  # Only these tools
+```
 
-- Fork before experimental changes
-- Fork to explore alternative approaches
-- Keep original session as reference
+### Explicit Agent Tools
 
-### Sub-Session Management
+Tools explicitly declared by an agent in its bundle are **always preserved**, even if they would be excluded by the parent's policy:
 
-- Sub-sessions are automatically persisted
-- Use session_id from responses to continue conversations
-- Sub-sessions inherit parent configuration with agent overlays
+```
+final_tools = (inherited − excluded) ∪ explicit
+```
 
-## Related
+This ensures agents always have the tools they explicitly require.
 
-- [CLI Reference](./cli.md) - Complete command reference
-- [Session Storage Specification](../developer/sessions/storage.md) - Technical details
+## Hook Inheritance
+
+Hook inheritance follows the same pattern as tool inheritance:
+
+```yaml
+tools:
+  - module: tool-task
+    config:
+      exclude_hooks: [hooks-approval]  # Child sessions skip approval
+```
+
+Or allowlist mode:
+
+```yaml
+tools:
+  - module: tool-task
+    config:
+      inherit_hooks: [hooks-logging]  # Only logging inherited
+```
+
+Hooks explicitly declared by an agent are always preserved regardless of inheritance policy.
+
+## Working Directory
+
+Sessions have a `session.working_dir` capability that tracks the current working directory. This is critical for server/daemon deployments where `Path.cwd()` returns the server's directory, not the user's project.
+
+```python
+from amplifier_foundation import get_working_dir, set_working_dir
+
+# In a tool's execute()
+working_dir = get_working_dir(coordinator)  # Returns Path
+set_working_dir(coordinator, Path("/new/dir"))  # Dynamic updates
+```
+
+## Session Lifecycle Events
+
+| Phase | Event |
+|-------|-------|
+| New session | `session:start` |
+| Resumed session | `session:resume` |
+| Child session spawned | `session:fork` |
+| Prompt submitted | `prompt:submit` |
+| Prompt complete | `prompt:complete` |
+| Session ended | `session:end` |
+
+## Direct AmplifierSession Usage
+
+For advanced use cases without Foundation, create sessions directly:
+
+```python
+from amplifier_core import AmplifierSession
+
+config = {
+    "session": {
+        "orchestrator": {"module": "loop-streaming"},
+        "context": {"module": "context-simple"},
+    },
+    "providers": [{"module": "provider-anthropic", "config": {...}}],
+    "tools": [...],
+}
+
+async with AmplifierSession(config) as session:
+    response = await session.execute("Hello!")
+```
+
+See the [AmplifierSession API](../api/core/session.md) for full constructor documentation.

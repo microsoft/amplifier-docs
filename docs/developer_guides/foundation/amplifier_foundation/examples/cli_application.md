@@ -1,317 +1,261 @@
 ---
 title: CLI Application Example
-description: Building production CLI tools with best practices
+description: Building a real CLI tool with Amplifier Foundation — architecture patterns, lifecycle management, and error handling
 ---
 
 # CLI Application Example
 
-Learn how to build production-ready CLI applications with Amplifier - proper architecture, error handling, logging, configuration management, and lifecycle management.
+> **Source**: [`examples/08_cli_application.py`](https://github.com/microsoft/amplifier-foundation/blob/main/examples/08_cli_application.py)
 
-## What This Example Demonstrates
+Demonstrates building a production-quality CLI application with Amplifier. Covers application architecture patterns, session lifecycle, error handling, logging, and configuration management.
 
-- **Application Architecture**: Encapsulating Amplifier in reusable classes
-- **Configuration Management**: Environment variables, settings, validation
-- **Error Handling**: Graceful failures and recovery
-- **Logging**: Structured logging with proper levels
-- **Session Lifecycle**: Initialization, execution, cleanup
-- **CLI Patterns**: Interactive mode and single-prompt mode
+**Time to value**: 15 minutes
 
-**Time to Complete**: 15 minutes
+## What You'll Learn
 
-## Running the Example
+- Application architecture patterns with Amplifier
+- Proper session lifecycle management
+- Error handling and recovery
+- Logging and observability
+- Configuration management
+- Building reusable application classes
 
-```bash
-# Clone the repository
-git clone https://github.com/microsoft/amplifier-foundation
-cd amplifier-foundation
+## Real-World Use Cases
 
-# Set your API key
-export ANTHROPIC_API_KEY='your-key-here'
+- Internal developer tools
+- Data analysis assistants
+- Code review helpers
+- Automation scripts
 
-# Interactive mode
-uv run python examples/08_cli_application.py
+## Architecture Overview
 
-# Single prompt mode
-uv run python examples/08_cli_application.py "Your prompt here"
-```
+The example structures an Amplifier app in four sections:
 
-[:material-github: View Full Source Code](https://github.com/microsoft/amplifier-foundation/blob/main/examples/08_cli_application.py){ .md-button }
+1. **Configuration management** — Load from environment/config files, validate
+2. **Application class** — Encapsulate bundle/session lifecycle
+3. **CLI interface** — Interactive and single-prompt modes
+4. **Entry point** — Argument handling and startup
 
-## How It Works
-
-This example shows **production-ready patterns** for building CLI tools with Amplifier.
-
-### Architecture Overview
+## Section 1: Configuration Management
 
 ```python
-class AmplifierApp:
-    """Application class encapsulating Amplifier."""
-    
-    def __init__(self, config: AppConfig):
-        self.config = config
-        self.session = None
-        self.logger = self._setup_logging()
-    
-    async def initialize(self):
-        """Load bundles, prepare, create session"""
-        
-    async def execute(self, prompt: str) -> str:
-        """Execute a prompt"""
-        
-    async def shutdown(self):
-        """Cleanup resources"""
-```
+from dataclasses import dataclass
+from pathlib import Path
 
-**Why this pattern?**
-- Encapsulates Amplifier complexity
-- Reusable across multiple applications
-- Testable with mocks
-- Clear initialization/cleanup lifecycle
-
-### Configuration Management
-
-```python
 @dataclass
 class AppConfig:
-    """Application configuration"""
+    """Application configuration loaded from environment."""
+
+    # LLM Provider
     provider_bundle: str = "anthropic-sonnet.yaml"
     api_key: str | None = None
+
+    # Application Settings
     log_level: str = "INFO"
     storage_path: Path = Path.home() / ".amplifier" / "app_sessions"
-    
+
     @classmethod
     def from_env(cls) -> "AppConfig":
-        """Load from environment variables"""
         return cls(
             provider_bundle=os.getenv("PROVIDER", "anthropic-sonnet.yaml"),
             api_key=os.getenv("ANTHROPIC_API_KEY"),
-            log_level=os.getenv("LOG_LEVEL", "INFO")
+            log_level=os.getenv("LOG_LEVEL", "INFO"),
         )
-    
+
     def validate(self) -> None:
-        """Validate configuration."""
         if not self.api_key:
             raise ValueError("ANTHROPIC_API_KEY not set")
-
         if not self.storage_path.exists():
             self.storage_path.mkdir(parents=True, exist_ok=True)
 ```
 
-**Configuration sources** (in production, you'd load from):
-- Environment variables
-- Config files (`.amplifier/settings.yaml`)
-- Command-line arguments
-- Secrets management (AWS Secrets Manager, etc.)
+In production, extend `from_env()` to load from `.amplifier/settings.yaml`, AWS Secrets Manager, or CLI arguments.
 
-### Error Handling Pattern
+## Section 2: Application Class
 
 ```python
-async def execute(self, prompt: str) -> str:
-    if not self.session:
-        raise RuntimeError("Session not initialized. Call initialize() first.")
-    
-    try:
-        self.logger.info(f"Executing prompt: {prompt[:100]}...")
-        response = await self.session.execute(prompt)
-        self.logger.info("Execution completed successfully")
-        return response
-        
-    except Exception as e:
-        self.logger.error(f"Execution failed: {e}", exc_info=True)
-        # In production:
-        # - Retry with exponential backoff
-        # - Fallback to simpler model
-        # - Return user-friendly error message
-        raise
+class AmplifierApp:
+    """Encapsulates bundle management, session lifecycle, and error handling."""
+
+    def __init__(self, config: AppConfig):
+        self.config = config
+        self.session = None
+        self.logger = self._setup_logging()
+
+    def _setup_logging(self) -> logging.Logger:
+        logging.basicConfig(
+            level=getattr(logging, self.config.log_level),
+            format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+            handlers=[logging.StreamHandler(sys.stdout)],
+        )
+        return logging.getLogger("amplifier_app")
+
+    async def initialize(self) -> None:
+        """Initialize the application and create session."""
+        # Load foundation bundle
+        foundation_path = Path(__file__).parent.parent
+        foundation = await load_bundle(str(foundation_path))
+
+        # Load provider
+        provider_path = foundation_path / "providers" / self.config.provider_bundle
+        provider = await load_bundle(str(provider_path))
+
+        # Build tools config
+        tools_config = Bundle(
+            name="app-tools",
+            version="1.0.0",
+            tools=[
+                {
+                    "module": "tool-filesystem",
+                    "source": "git+https://github.com/microsoft/amplifier-module-tool-filesystem@main",
+                },
+                {
+                    "module": "tool-bash",
+                    "source": "git+https://github.com/microsoft/amplifier-module-tool-bash@main",
+                },
+            ],
+        )
+
+        # Compose and prepare
+        composed = foundation.compose(provider).compose(tools_config)
+        prepared = await composed.prepare()
+
+        # Create session (note: not using context manager here for lifecycle control)
+        self.session = await prepared.create_session()
+
+    async def execute(self, prompt: str) -> str:
+        """Execute a prompt. Raises RuntimeError if not initialized."""
+        if not self.session:
+            raise RuntimeError("Session not initialized. Call initialize() first.")
+        return await self.session.execute(prompt)
+
+    async def shutdown(self) -> None:
+        """Gracefully release session resources."""
+        if self.session:
+            await self.session.cleanup()
+
+    async def __aenter__(self):
+        await self.initialize()
+        return self
+
+    async def __aexit__(self, exc_type, exc_val, exc_tb):
+        await self.shutdown()
 ```
 
-**Error handling strategies**:
-- Log errors with full context (`exc_info=True`)
-- Distinguish transient vs permanent failures
-- Provide actionable error messages to users
-- Never expose internal details to users
+### Key Patterns
 
-### Logging Setup
+**Lifecycle control without context manager**: `create_session()` is called without `async with` when the session needs to outlive a single block. `shutdown()` must explicitly call `session.cleanup()`.
 
-```python
-def _setup_logging(self) -> logging.Logger:
-    logging.basicConfig(
-        level=getattr(logging, self.config.log_level),
-        format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
-        handlers=[
-            logging.StreamHandler(sys.stdout),
-            # Add file handler for production:
-            # logging.FileHandler("app.log")
-        ]
-    )
-    return logging.getLogger("amplifier_app")
-```
+**Context manager support**: `__aenter__`/`__aexit__` enables `async with AmplifierApp(config) as app:` for clean lifecycle in the entry point.
 
-**Logging levels**:
-- `DEBUG`: Detailed diagnostic information
-- `INFO`: General application flow
-- `WARNING`: Unexpected but recoverable events
-- `ERROR`: Errors that need attention
+## Section 3: CLI Interface
 
-### Lifecycle Management
-
-```python
-async def __aenter__(self):
-    """Context manager entry"""
-    await self.initialize()
-    return self
-
-async def __aexit__(self, exc_type, exc_val, exc_tb):
-    """Context manager exit - always cleanup"""
-    await self.shutdown()
-```
-
-**Using as context manager**:
-```python
-async with AmplifierApp(config) as app:
-    response = await app.execute("prompt")
-# Cleanup happens automatically
-```
-
-This ensures resources are **always cleaned up**, even on errors.
-
-### CLI Interface Patterns
-
-**Interactive Mode**:
 ```python
 async def run_interactive_cli(app: AmplifierApp):
+    """Multi-turn interactive REPL."""
+    print("Amplifier CLI App - Interactive Mode")
+    print("Type your prompts, or 'quit' to exit.\n")
+
     while True:
         try:
-            prompt = input("\n💬 You: ")
-
+            prompt = input("\nYou: ")
             if prompt.lower() in ("quit", "exit", "q"):
-                print("\n👋 Goodbye!")
                 break
-
             if not prompt.strip():
                 continue
-
-            print("\n🤔 Agent: ", end="", flush=True)
             response = await app.execute(prompt)
-            print(response)
-
+            print(f"\nAgent: {response}")
         except KeyboardInterrupt:
-            print("\n\n👋 Interrupted. Goodbye!")
             break
         except Exception as e:
-            print(f"\n❌ Error: {e}")
+            print(f"\nError: {e}")
             print("The session is still active. You can continue.")
-```
 
-**Single Prompt Mode**:
-```python
+
 async def run_single_prompt(app: AmplifierApp, prompt: str):
-    print("\n" + "=" * 60)
-    print("Executing single prompt...")
-    print("=" * 60)
-
+    """Non-interactive single-prompt mode."""
     response = await app.execute(prompt)
-    print("\nResponse:")
-    print("-" * 60)
     print(response)
 ```
 
-## Real-World Use Cases
+**Error resilience**: Errors in `execute()` are caught in the REPL loop so the session survives individual failures. The session is still usable after a tool error or provider timeout.
 
-This pattern is ideal for:
-
-- **Internal Developer Tools**: Code review assistants, refactoring tools
-- **Data Analysis Tools**: Query and analyze datasets
-- **Automation Scripts**: Workflow automation with AI
-- **Command-Line Utilities**: Any CLI tool needing AI capabilities
-
-## Expected Output
-
-```
-🚀 Amplifier CLI Application Example
-============================================================
-✓ Configuration loaded
-  Provider: anthropic-sonnet.yaml
-  Log level: INFO
-
-2025-12-16 05:20:00 [INFO] amplifier_app: Initializing...
-2025-12-16 05:20:01 [INFO] amplifier_app: ✓ Application initialized successfully
-
-============================================================
-🤖 Amplifier CLI App - Interactive Mode
-============================================================
-Type your prompts, or 'quit' to exit.
-
-💬 You: What is 2 + 2?
-
-🤔 Agent: 2 + 2 equals 4.
-
-💬 You: quit
-
-👋 Goodbye!
-```
-
-## Why This Pattern
-
-**Advantages**:
-
-1. **Reusable** - Same class works for interactive, batch, or API modes
-2. **Testable** - Mock the session for testing
-3. **Configurable** - Environment-based configuration
-4. **Observable** - Structured logging throughout
-5. **Robust** - Proper error handling and cleanup
-
-## Key Patterns Demonstrated
-
-### Pattern 1: Encapsulation
+## Section 4: Entry Point
 
 ```python
-# ❌ Inline everything
-foundation = await load_bundle(...)
-provider = await load_bundle(...)
-# ... 50 lines of setup
+async def main():
+    # Load and validate configuration
+    try:
+        config = AppConfig.from_env()
+        config.validate()
+    except Exception as e:
+        print(f"Configuration error: {e}")
+        return 1
 
-# ✅ Encapsulate in a class
-app = AmplifierApp(config)
-await app.initialize()
+    # Initialize and run
+    async with AmplifierApp(config) as app:
+        if len(sys.argv) > 1:
+            prompt = " ".join(sys.argv[1:])
+            await run_single_prompt(app, prompt)
+        else:
+            await run_interactive_cli(app)
+
+    return 0
+
+if __name__ == "__main__":
+    exit_code = asyncio.run(main())
 ```
 
-### Pattern 2: Configuration Separation
+**Dual mode via `sys.argv`**: No argument parsing library needed — `sys.argv[1:]` provides single-prompt mode; no args defaults to interactive.
+
+## Running the Example
+
+```bash
+# Set API key
+export ANTHROPIC_API_KEY=sk-ant-...
+
+# Interactive mode
+python examples/08_cli_application.py
+
+# Single-prompt mode
+python examples/08_cli_application.py "Summarize this directory"
+
+# Custom log level
+LOG_LEVEL=DEBUG python examples/08_cli_application.py
+```
+
+## Adapting for Production
+
+Replace the hard-coded `foundation_path` with your bundle's actual location:
 
 ```python
-# ❌ Hardcoded values
-api_key = "sk-..."
-
-# ✅ Environment-based config
-config = AppConfig.from_env()
-config.validate()
+# Point to your bundle
+foundation = await load_bundle("git+https://github.com/your-org/your-bundle@main")
 ```
 
-### Pattern 3: Context Managers
+Add persistent context for sessions that survive process restarts:
 
 ```python
-# ❌ Manual cleanup
-app = AmplifierApp(config)
-try:
-    await app.initialize()
-    result = await app.execute(prompt)
-finally:
-    await app.shutdown()
+# Use context-persistent instead of context-simple
+from amplifier_foundation import Bundle
 
-# ✅ Automatic cleanup
-async with AmplifierApp(config) as app:
-    result = await app.execute(prompt)
+persistence_overlay = Bundle(
+    name="persistence",
+    version="1.0.0",
+    session={
+        "context": {
+            "module": "context-persistent",
+            "source": "git+https://github.com/microsoft/amplifier-module-context-persistent@main",
+            "config": {"persist_dir": str(config.storage_path)},
+        }
+    },
+)
+
+composed = foundation.compose(provider).compose(tools_config).compose(persistence_overlay)
 ```
 
-## Related Concepts
+## See Also
 
-- **[Getting Started](../getting_started.md)** - Basic bundle workflow
-- **[Config Library](/libraries/config.md)** - Configuration management
-- **[Session API](/api/core/session.md)** - Session lifecycle
-- **[Application Developer Guide](/developer_guides/applications/)** - More patterns
-
-## Next Steps
-
-- **[Multi-Agent System Example](multi_agent_system.md)** - Complex agent workflows
-- **[Application Guide](/developer_guides/applications/)** - Production application patterns
-- **[CLI Case Study](/developer_guides/applications/cli_case_study.md)** - Real-world CLI architecture
+- [Common Patterns](../patterns.md) — Bundle composition patterns
+- [Sessions](../../../../user_guide/sessions.md) — Session lifecycle reference
+- [AmplifierSession API](../../../../api/core/session.md) — Constructor and methods
