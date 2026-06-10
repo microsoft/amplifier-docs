@@ -25,11 +25,21 @@ User-facing applications that compose libraries and modules.
 | **amplifier-app-cli** | Reference CLI application implementing the Amplifier platform | [amplifier-app-cli](https://github.com/microsoft/amplifier-app-cli) |
 | **amplifier-app-log-viewer** | Web-based log viewer for debugging sessions with real-time updates | [amplifier-app-log-viewer](https://github.com/microsoft/amplifier-app-log-viewer) |
 | **amplifier-app-benchmarks** | Benchmarking and evaluating Amplifier | [amplifier-app-benchmarks](https://github.com/DavidKoleczek/amplifier-app-benchmarks) |
+| **amplifier-app-actions** | AI-powered GitHub Actions for automated issue triage and PR review | [amplifier-app-actions](https://github.com/microsoft/amplifier-app-actions) |
+| **amplifier-eval-harness** | Configurable test harness for evaluating Amplifier bundles across scenarios and providers in isolated Digital Twin Universe environments. Captures wall time, LLM time, per-call tokens, cache traffic, request counts, and per-`provider/model` breakdowns across the full session tree (parent + every sub-session) for cross-bundle and cross-provider comparison. | [amplifier-eval-harness](https://github.com/microsoft/amplifier-eval-harness) |
 | **amplifierd** | Localhost HTTP daemon exposing amplifier-core and amplifier-foundation over REST and SSE — drive sessions from any language or framework | [amplifierd](https://github.com/microsoft/amplifierd) |
 | **amplifier-chat** | Chat UI plugin for amplifierd — browser-based conversational interface for creating and managing Amplifier sessions | [amplifier-chat](https://github.com/microsoft/amplifier-chat) |
 | **amplifier-voice** | Voice plugin for amplifierd — WebRTC voice interface using the OpenAI Realtime API, standalone or as a plugin | [amplifier-voice](https://github.com/microsoft/amplifier-voice) |
 
 **Note**: When you install `amplifier`, you get amplifier-app-cli as the executable application. `amplifierd` is a separate daemon that exposes Amplifier capabilities over HTTP, and `amplifier-chat` and `amplifier-voice` are plugins that extend it with web-based chat and voice interfaces.
+
+## Documentation & Learning
+
+These are the canonical documentation and learning sites for the Amplifier ecosystem. They reflect the framework but do not run it.
+
+| Component | Description | Repository |
+|-----------|-------------|------------|
+| **amplifier-app-learn** | Interactive learning curriculum for Amplifier — six narrative levels, hands-on approach guides, validated architecture diagrams, and a chat assistant with live DOT rendering. React 19 + Vite SPA. | [amplifier-app-learn](https://github.com/michaeljabbour/amplifier-app-learn) |
 
 ## Libraries
 
@@ -47,47 +57,54 @@ Composable configuration packages that combine providers, behaviors, agents, and
 
 | Bundle | Description | Repository |
 |--------|-------------|------------|
-| **amplifier-tester** | Validates Amplifier ecosystem changes in isolated Digital Twin Universe environments — dynamically generates profiles, mirrors repos to Gitea, and runs targeted validation checks | [amplifier-bundle-amplifier-tester](https://github.com/microsoft/amplifier-bundle-amplifier-tester) |
+| **amplifier-tester** | Validates Amplifier ecosystem changes (core, modules, bundles, foundation, app-cli) in isolated Digital Twin Universe environments — dynamically generates profiles, mirrors repos to Gitea, and runs targeted validation checks | [amplifier-bundle-amplifier-tester](https://github.com/microsoft/amplifier-bundle-amplifier-tester) |
 | **recipes** | Multi-step AI agent orchestration with behavior overlays and standalone options | [amplifier-bundle-recipes](https://github.com/microsoft/amplifier-bundle-recipes) |
-| **browser-tester** | Browser automation and testing with 3 specialized agents (operator, researcher, visual documenter) | [amplifier-bundle-browser-tester](https://github.com/microsoft/amplifier-bundle-browser-tester) |
-| **context-managed** | LLM-powered rolling context summarization with persistent transcript and on-demand history recovery | [amplifier-bundle-context-managed](https://github.com/microsoft/amplifier-bundle-context-managed) |
+| **browser-tester** | Browser automation and testing with 3 specialized agents (operator, researcher, visual documenter) using agent-browser CLI | [amplifier-bundle-browser-tester](https://github.com/microsoft/amplifier-bundle-browser-tester) |
+| **context-managed** | LLM-powered rolling context summarization with persistent transcript, budget-aware tracking, and on-demand history recovery via bundled read_transcript tool | [amplifier-bundle-context-managed](https://github.com/microsoft/amplifier-bundle-context-managed) |
 | **design-intelligence** | Comprehensive design intelligence with 7 specialized agents, design philosophy framework, and knowledge base | [amplifier-bundle-design-intelligence](https://github.com/microsoft/amplifier-bundle-design-intelligence) |
-| **digital-twin-universe** | On-demand isolated environments from declarative profiles — Incus containers with URL rewriting, PyPI overrides, and LLM API passthrough | [amplifier-bundle-digital-twin-universe](https://github.com/microsoft/amplifier-bundle-digital-twin-universe) |
-| **dot-graph** | DOT/Graphviz infrastructure — knowledge, validation, rendering, and graph intelligence | [amplifier-bundle-dot-graph](https://github.com/microsoft/amplifier-bundle-dot-graph) |
-| **evaluation** | One-stop-shop for evaluating AI agents, bundles, and recipes — evaluation mode and Python harness for pre-defined tasks | [amplifier-bundle-evaluation](https://github.com/microsoft/amplifier-bundle-evaluation) |
-| **execution-environments** | Instance-based execution environments — create, target, and destroy local, Docker, and SSH environments on demand | [amplifier-bundle-execution-environments](https://github.com/microsoft/amplifier-bundle-execution-environments) |
-| **foreman** | Assistant pattern where the conversation assistant manages a fleet of other assistants with their own sessions | [amplifier-bundle-foreman](https://github.com/payneio/amplifier-bundle-foreman) |
-| **gitea** | On-demand ephemeral Gitea instances for isolated git workflows — mirror repos from GitHub, work freely, promote results back | [amplifier-bundle-gitea](https://github.com/microsoft/amplifier-bundle-gitea) |
-| **issues** | Persistent issue tracking with dependency management, priority scheduling, and session linking | [amplifier-bundle-issues](https://github.com/microsoft/amplifier-bundle-issues) |
-| **llm-wiki** | Karpathy LLM Wiki pattern as composable workflow modes — wiki-init, wiki-ingest, wiki-lint, wiki-publish, wiki-query | [amplifier-bundle-llm-wiki](https://github.com/microsoft/amplifier-bundle-llm-wiki) |
+| **digital-twin-universe** | On-demand isolated environments from declarative profiles — Incus containers with URL rewriting, PyPI overrides, and LLM API passthrough for evidence-based verification of deployed software | [amplifier-bundle-digital-twin-universe](https://github.com/microsoft/amplifier-bundle-digital-twin-universe) |
+| **dot-graph** | DOT/Graphviz infrastructure — knowledge, validation, rendering, and graph intelligence for the Amplifier ecosystem | [amplifier-bundle-dot-graph](https://github.com/microsoft/amplifier-bundle-dot-graph) |
+| **evaluation** | One-stop-shop for evaluating AI agents, bundles, and recipes across the Amplifier ecosystem — provides an `evaluation` mode for designing evaluations plus a Python harness for running pre-defined tasks against agents in a Digital Twin Universe | [amplifier-bundle-evaluation](https://github.com/microsoft/amplifier-bundle-evaluation) |
+| **execution-environments** | Instance-based execution environments — create, target, and destroy local, Docker, and SSH environments on demand with 11 tools, composable wrappers, and NLSpec-aligned protocol | [amplifier-bundle-execution-environments](https://github.com/microsoft/amplifier-bundle-execution-environments) |
+| **foreman** | Assistant pattern where the conversation assistant manages a fleet of other assistants, each with their own sessions, leveraging capabilities from amplifier-bundle-orchestration | [amplifier-bundle-foreman](https://github.com/payneio/amplifier-bundle-foreman) |
+| **gitea** | On-demand ephemeral Gitea instances for isolated git workflows — mirror repos from GitHub, work freely, and promote results back when ready | [amplifier-bundle-gitea](https://github.com/microsoft/amplifier-bundle-gitea) |
+| **issues** | Persistent issue tracking with dependency management, priority scheduling, and session linking for autonomous work | [amplifier-bundle-issues](https://github.com/microsoft/amplifier-bundle-issues) |
+| **llm-wiki** | Karpathy LLM Wiki pattern as composable workflow modes — wiki-init, wiki-ingest, wiki-lint, wiki-publish, wiki-query; zero-cost-when-dormant via per-mode shared orientation | [amplifier-bundle-llm-wiki](https://github.com/microsoft/amplifier-bundle-llm-wiki) |
 | **lsp** | Core Language Server Protocol support for code intelligence operations | [amplifier-bundle-lsp](https://github.com/microsoft/amplifier-bundle-lsp) |
+| **lsp-python** | DEPRECATED — forwarding stub, use python-dev instead | [amplifier-bundle-lsp-python](https://github.com/microsoft/amplifier-bundle-lsp-python) |
+| **lsp-rust** | DEPRECATED — forwarding stub, use rust-dev instead | [amplifier-bundle-lsp-rust](https://github.com/microsoft/amplifier-bundle-lsp-rust) |
+| **lsp-typescript** | DEPRECATED — forwarding stub, use typescript-dev instead | [amplifier-bundle-lsp-typescript](https://github.com/microsoft/amplifier-bundle-lsp-typescript) |
 | **notify** | Desktop and push notifications when assistant turns complete — works over SSH, supports ntfy.sh for mobile | [amplifier-bundle-notify](https://github.com/microsoft/amplifier-bundle-notify) |
-| **observers** | Background observer sessions that run in parallel to provide the main session with actionable observations | [amplifier-bundle-observers](https://github.com/microsoft/amplifier-bundle-observers) |
-| **orchestration** | Event-driven orchestration primitives (bundle spawning, events, triggers) for multi-session coordination | [amplifier-bundle-orchestration](https://github.com/microsoft/amplifier-bundle-orchestration) |
-| **python-dev** | Comprehensive Python development tools — code quality (ruff, pyright), LSP integration, and expert agent | [amplifier-bundle-python-dev](https://github.com/microsoft/amplifier-bundle-python-dev) |
-| **reality-check** | Intent-driven verification of built software — derives acceptance tests from user conversations, deploys in Digital Twin Universe | [amplifier-bundle-reality-check](https://github.com/microsoft/amplifier-bundle-reality-check) |
-| **routing-matrix** | Declarative model routing with 13 semantic roles, 7 curated matrices, and CLI tooling | [amplifier-bundle-routing-matrix](https://github.com/microsoft/amplifier-bundle-routing-matrix) |
-| **rust-dev** | Comprehensive Rust development tools — code quality (cargo fmt, clippy), LSP integration, and expert agent | [amplifier-bundle-rust-dev](https://github.com/microsoft/amplifier-bundle-rust-dev) |
+| **observers** | Orchestration pattern where background observer sessions are configured and run in the background, in parallel to provide the main session with actionable observations | [amplifier-bundle-observers](https://github.com/microsoft/amplifier-bundle-observers) |
+| **orchestration** | Adds event-driven orchestration primitives (bundle spawning, events, triggers) for multi-session coordination | [amplifier-bundle-orchestration](https://github.com/microsoft/amplifier-bundle-orchestration) |
+| **python-dev** | Comprehensive Python development tools - code quality (ruff, pyright), LSP integration, and expert agent | [amplifier-bundle-python-dev](https://github.com/microsoft/amplifier-bundle-python-dev) |
+| **reality-check** | Intent-driven verification of built software — derives acceptance tests from user conversations, deploys in a Digital Twin Universe environment, runs app specific validations, and produces gap analysis reports | [amplifier-bundle-reality-check](https://github.com/microsoft/amplifier-bundle-reality-check) |
+| **routing-matrix** | Declarative model routing with 13 semantic roles, 7 curated matrices, and CLI tooling — agents declare what they do, matrices resolve them to the right model | [amplifier-bundle-routing-matrix](https://github.com/microsoft/amplifier-bundle-routing-matrix) |
+| **rust-dev** | Comprehensive Rust development tools — code quality (cargo fmt, clippy, cargo check), LSP integration, and expert agent | [amplifier-bundle-rust-dev](https://github.com/microsoft/amplifier-bundle-rust-dev) |
 | **shadow** | OS-level sandboxed environments for testing local Amplifier ecosystem changes safely | [amplifier-bundle-shadow](https://github.com/microsoft/amplifier-bundle-shadow) |
-| **skills** | Skills tool and Microsoft-curated skills collection | [amplifier-bundle-skills](https://github.com/microsoft/amplifier-bundle-skills) |
-| **stories** | Autonomous storytelling engine with 11 specialist agents and 4 output formats | [amplifier-bundle-stories](https://github.com/microsoft/amplifier-bundle-stories) |
-| **superpowers** | TDD-driven development workflows with brainstorm, plan, execute, verify, and finish modes | [amplifier-bundle-superpowers](https://github.com/microsoft/amplifier-bundle-superpowers) |
-| **terminal-tester** | Terminal application testing with 3 specialist agents using dual-mode capture | [amplifier-bundle-terminal-tester](https://github.com/microsoft/amplifier-bundle-terminal-tester) |
-| **ts-dev** | Comprehensive TypeScript/JavaScript development tools — code quality, LSP, and expert agent | [amplifier-bundle-ts-dev](https://github.com/microsoft/amplifier-bundle-ts-dev) |
+| **skills** | Skills tool and Microsoft-curated skills collection with two composable behaviors (full with curated skills, or tool-only) | [amplifier-bundle-skills](https://github.com/microsoft/amplifier-bundle-skills) |
+| **stories** | Autonomous storytelling engine with 11 specialist agents, 4 output formats (HTML, Excel, Word, PDF), and automated recipes for case studies, release notes, and weekly digests | [amplifier-bundle-stories](https://github.com/microsoft/amplifier-bundle-stories) |
+| **superpowers** | TDD-driven development workflows with brainstorm, plan, execute, verify, and finish modes — includes specialized agents and a full development cycle recipe | [amplifier-bundle-superpowers](https://github.com/microsoft/amplifier-bundle-superpowers) |
+| **terminal-tester** | Terminal application testing and inspection with 3 specialist agents (operator, visual-tester, debugger) using dual-mode capture — screen-dump for Ratatui/crossterm, PTY/pyte for any terminal app | [amplifier-bundle-terminal-tester](https://github.com/microsoft/amplifier-bundle-terminal-tester) |
+| **ts-dev** | Comprehensive TypeScript/JavaScript development tools - code quality, LSP, and expert agent | [amplifier-bundle-ts-dev](https://github.com/microsoft/amplifier-bundle-ts-dev) |
 
-**Usage**:
+**Usage**: Bundles are loaded via the `amplifier bundle` commands:
 
 ```bash
-# Add a bundle to the registry
+# Add a bundle to the registry (name auto-derived from bundle metadata)
 amplifier bundle add git+https://github.com/microsoft/amplifier-bundle-recipes@main
 
 # Use a bundle by name
+amplifier bundle use foundation
 amplifier bundle use recipes
 
-# Check for updates
+# Show current bundle
+amplifier bundle current
+
+# Check for bundle updates
 amplifier bundle update --check
 
-# Update to latest
+# Update bundle to latest
 amplifier bundle update
 ```
 
@@ -112,7 +129,7 @@ Connect to AI model providers.
 | Module | Description | Repository |
 |--------|-------------|------------|
 | **provider-anthropic** | Anthropic Claude integration (Sonnet 4.5, Opus, etc.) | [amplifier-module-provider-anthropic](https://github.com/microsoft/amplifier-module-provider-anthropic) |
-| **provider-openai** | OpenAI GPT integration via the Responses API | [amplifier-module-provider-openai](https://github.com/microsoft/amplifier-module-provider-openai) |
+| **provider-openai** | OpenAI GPT integration | [amplifier-module-provider-openai](https://github.com/microsoft/amplifier-module-provider-openai) |
 | **provider-openai-chatgpt** | ChatGPT subscription backend (Plus/Pro/Team/Enterprise) via Codex CLI OAuth | [amplifier-module-provider-openai-chatgpt](https://github.com/microsoft/amplifier-module-provider-openai-chatgpt) |
 | **provider-azure-openai** | Azure OpenAI with managed identity support | [amplifier-module-provider-azure-openai](https://github.com/microsoft/amplifier-module-provider-azure-openai) |
 | **provider-chat-completions** | OpenAI Chat Completions wire-format integration (llama.cpp, vLLM, LM Studio, LocalAI, etc.) | [amplifier-module-provider-chat-completions](https://github.com/microsoft/amplifier-module-provider-chat-completions) |
@@ -157,7 +174,7 @@ Extend lifecycle events and observability.
 | **hooks-redaction** | Privacy-preserving data redaction for secrets/PII | [amplifier-module-hooks-redaction](https://github.com/microsoft/amplifier-module-hooks-redaction) |
 | **hooks-approval** | Interactive approval gates for sensitive operations | [amplifier-module-hooks-approval](https://github.com/microsoft/amplifier-module-hooks-approval) |
 | **hooks-backup** | Automatic session transcript backup | [amplifier-module-hooks-backup](https://github.com/microsoft/amplifier-module-hooks-backup) |
-| **hooks-explanatory** | Inject explanatory output style with educational Insight blocks | [amplifier-module-hooks-explanatory](https://github.com/michaeljabbour/amplifier-module-hooks-explanatory) |
+| **hooks-explanatory** | Inject explanatory output style with educational ★ Insight blocks | [amplifier-module-hooks-explanatory](https://github.com/michaeljabbour/amplifier-module-hooks-explanatory) |
 | **hooks-streaming-ui** | Real-time console UI for streaming responses | [amplifier-module-hooks-streaming-ui](https://github.com/microsoft/amplifier-module-hooks-streaming-ui) |
 | **hooks-status-context** | Inject git status and datetime into agent context | [amplifier-module-hooks-status-context](https://github.com/microsoft/amplifier-module-hooks-status-context) |
 | **hooks-todo-reminder** | Inject todo list reminders into AI context | [amplifier-module-hooks-todo-reminder](https://github.com/microsoft/amplifier-module-hooks-todo-reminder) |
@@ -219,23 +236,23 @@ async def mount(coordinator, config):
 
 | Module | Description | Author | Repository |
 |--------|-------------|--------|------------|
-| **provider-bedrock** | AWS Bedrock integration with cross-region inference support | [@brycecutt-msft](https://github.com/brycecutt-msft) | [amplifier-module-provider-bedrock](https://github.com/brycecutt-msft/amplifier-module-provider-bedrock) |
-| **provider-perplexity** | Perplexity AI integration for chat completions | [@colombod](https://github.com/colombod) | [amplifier-module-provider-perplexity](https://github.com/colombod/amplifier-module-provider-perplexity) |
-| **provider-openai-realtime** | OpenAI Realtime API for native speech-to-speech | [@robotdad](https://github.com/robotdad) | [amplifier-module-provider-openai-realtime](https://github.com/robotdad/amplifier-module-provider-openai-realtime) |
+| **provider-bedrock** | AWS Bedrock integration with cross-region inference support for Claude models | [@brycecutt-msft](https://github.com/brycecutt-msft) | [amplifier-module-provider-bedrock](https://github.com/brycecutt-msft/amplifier-module-provider-bedrock) |
+| **provider-perplexity** | Perplexity AI integration for chat completions with sonar models | [@colombod](https://github.com/colombod) | [amplifier-module-provider-perplexity](https://github.com/colombod/amplifier-module-provider-perplexity) |
+| **provider-openai-realtime** | OpenAI Realtime API for native speech-to-speech interactions | [@robotdad](https://github.com/robotdad) | [amplifier-module-provider-openai-realtime](https://github.com/robotdad/amplifier-module-provider-openai-realtime) |
 
 ### Tools
 
 | Module | Description | Author | Repository |
 |--------|-------------|--------|------------|
-| **tool-youtube-dl** | Download audio and video from YouTube | [@robotdad](https://github.com/robotdad) | [amplifier-module-tool-youtube-dl](https://github.com/robotdad/amplifier-module-tool-youtube-dl) |
-| **tool-whisper** | Speech-to-text transcription using Whisper | [@robotdad](https://github.com/robotdad) | [amplifier-module-tool-whisper](https://github.com/robotdad/amplifier-module-tool-whisper) |
-| **tool-rlm** | Recursive Language Model for 10M+ token contexts | [@michaeljabbour](https://github.com/michaeljabbour) | [amplifier-module-tool-rlm](https://github.com/michaeljabbour/amplifier-module-tool-rlm) |
+| **youtube** | YouTube download, search, and account feed access — audio/video download, keyword and filtered search (YouTube Data API + yt-dlp fallback), watch history, subscriptions, liked videos, and more | [@robotdad](https://github.com/robotdad) | [amplifier-youtube](https://github.com/robotdad/amplifier-youtube) |
+| **tool-whisper** | Speech-to-text transcription using OpenAI's Whisper API | [@robotdad](https://github.com/robotdad) | [amplifier-module-tool-whisper](https://github.com/robotdad/amplifier-module-tool-whisper) |
+| **tool-rlm** | Recursive Language Model (RLM) for processing 10M+ token contexts via sandboxed Python REPL | [@michaeljabbour](https://github.com/michaeljabbour) | [amplifier-module-tool-rlm](https://github.com/michaeljabbour/amplifier-module-tool-rlm) |
 
 ### Hooks
 
 | Module | Description | Author | Repository |
 |--------|-------------|--------|------------|
-| **hooks-concise-display** | Cleaner, condensed terminal output | [@obra](https://github.com/obra) | [amplifier-module-hooks-concise-display](https://github.com/obra/amplifier-module-hooks-concise-display) |
-| **hooks-compact** | Compress verbose bash stdout via command-aware filters | [@samueljklee](https://github.com/samueljklee) | [amplifier-module-hooks-compact](https://github.com/samueljklee/amplifier-module-hooks-compact) |
+| **hooks-concise-display** | Cleaner, more condensed terminal output for Amplifier sessions | [@obra](https://github.com/obra) | [amplifier-module-hooks-concise-display](https://github.com/obra/amplifier-module-hooks-concise-display) |
+| **hooks-compact** | Compress verbose bash stdout via command-aware filters (git, pytest, cargo, npm, ruff, etc.) before it enters the LLM context | [@samueljklee](https://github.com/samueljklee) | [amplifier-module-hooks-compact](https://github.com/samueljklee/amplifier-module-hooks-compact) |
 
-> **Security Warning**: Community modules execute arbitrary code in your environment. Only use modules from sources you trust.
+> **SECURITY WARNING**: Community modules execute arbitrary code in your environment with full access to your filesystem, network, and credentials. Only use modules from sources you trust. Review code before installation.

@@ -137,8 +137,18 @@ providers:
 providers:
   - module: provider-openai
     config:
-      reasoning: "low"              # Reasoning effort: none|low|medium|high|xhigh
+      reasoning: "low"              # Reasoning effort: minimal|low|medium|high|xhigh
       reasoning_summary: "detailed" # Reasoning verbosity: auto|concise|detailed
+```
+
+**Prompt Caching:**
+```yaml
+providers:
+  - module: provider-openai
+    config:
+      prompt_cache_key: "my-session"       # Cache key for prompt reuse across requests
+      prompt_cache_retention: "24h"        # Retention duration (default: 24h)
+      enable_response_chaining: "auto"     # Chain responses for cache continuity (default: auto)
 ```
 
 **Automatic Context Management:**
@@ -146,9 +156,9 @@ providers:
 providers:
   - module: provider-openai
     config:
-      truncation: "auto"  # Automatic context management (default: "auto")
+      truncation: null    # Disables automatic truncation (default: null)
       # OR
-      truncation: null    # Disables automatic truncation (manual control)
+      truncation: "auto"  # Enable automatic context management
 ```
 
 ## Azure OpenAI
@@ -224,6 +234,10 @@ providers:
       managed_identity_client_id: "client-id-here"
 ```
 
+**Graceful Error Recovery:**
+
+The Azure OpenAI provider inherits graceful error recovery from the OpenAI provider, including automatic response chaining for incomplete outputs and context truncation handling.
+
 ## Ollama (Local Models)
 
 ### Prerequisites
@@ -233,6 +247,8 @@ providers:
 3. Start Ollama server (usually automatic)
 
 ### Configure
+
+The `host` config field (or `OLLAMA_HOST` env var) is the single source of truth — whether you're connecting to a local instance or Ollama Cloud is derived from the URL.
 
 ```bash
 # Set environment variable (optional, defaults to localhost)
@@ -279,7 +295,7 @@ providers:
       host: "http://localhost:11434"
       default_model: "llama3.2:3b"
       auto_pull: true  # Automatically pull missing models
-      timeout: 300     # Request timeout in seconds (default: 5 minutes)
+      timeout: 600     # Request timeout in seconds (default: 10 minutes)
 ```
 
 **Thinking/Reasoning:**
@@ -289,6 +305,26 @@ providers:
     config:
       default_model: "deepseek-r1"  # Or qwen3, qwq, phi4-reasoning
       # Enable thinking in ChatRequest with enable_thinking=True
+```
+
+**Ollama Cloud:**
+```yaml
+providers:
+  - module: provider-ollama
+    config:
+      host: "https://ollama.com"     # Ollama Cloud endpoint
+      api_key: "${OLLAMA_API_KEY}"   # Or set OLLAMA_API_KEY env var
+      default_model: "gpt-oss:120b" # Cloud model
+```
+
+**Multiple Ollama Instances:**
+```yaml
+providers:
+  - module: provider-ollama
+    config:
+      instance_id: "local-gpu"          # Unique ID for this instance
+      host: "http://gpu-server:11434"   # Connect to specific Ollama server
+      default_model: "llama3.2:70b"
 ```
 
 ## Troubleshooting

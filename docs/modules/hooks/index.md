@@ -20,6 +20,8 @@ Hooks observe and control operations. They can log events, block operations, inj
 | **Todo Reminder** | Todo list context injection | [GitHub](https://github.com/microsoft/amplifier-module-hooks-todo-reminder) |
 | **Scheduler Heuristic** | Smart tool scheduling | [GitHub](https://github.com/microsoft/amplifier-module-hooks-scheduler-heuristic) |
 | **Scheduler Cost-Aware** | Cost-optimized scheduling | [GitHub](https://github.com/microsoft/amplifier-module-hooks-scheduler-cost-aware) |
+| **Explanatory** | Inject explanatory output style with educational ★ Insight blocks | [GitHub](https://github.com/michaeljabbour/amplifier-module-hooks-explanatory) |
+| **Shell** | Shell-based hooks with Claude Code format compatibility | [GitHub](https://github.com/microsoft/amplifier-module-hook-shell) |
 
 <!-- MODULE_LIST_HOOKS -->
 
@@ -34,9 +36,10 @@ hooks:
 
   - module: hooks-approval
     config:
-      require_approval_for:
-        - tool-bash
-        - tool-filesystem:write
+      patterns:
+        - rm -rf
+        - sudo
+      auto_approve: false
 ```
 
 ## Hook Actions
@@ -45,9 +48,6 @@ hooks:
 |--------|--------|
 | `continue` | Proceed normally |
 | `deny` | Block operation |
-| `modify` | Transform data |
-| `inject_context` | Add to conversation |
-| `ask_user` | Request approval |
 
 ## Logging Hook
 
@@ -63,11 +63,9 @@ Provides visibility into agent execution through lifecycle event logging.
 **Auto-Discovery:**
 ```python
 # Modules declare observable events (in mount())
-coordinator.register_contributor(
-    "observability.events",
-    "module-name",
-    lambda: ["module:event1", "module:event2"]
-)
+obs_events = coordinator.get_capability("observability.events") or []
+obs_events.extend(["module:event1", "module:event2"])
+coordinator.register_capability("observability.events", obs_events)
 ```
 
 **Configuration:**

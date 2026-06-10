@@ -46,7 +46,7 @@
           "repo": "amplifier-module-provider-openai",
           "path": "README.md",
           "exists": true,
-          "hash": "4c2766b7e9801c9e"
+          "hash": "6542e6698cd2da2b"
         },
         {
           "repo": "amplifier-module-provider-azure-openai",
@@ -58,7 +58,7 @@
           "repo": "amplifier-module-provider-ollama",
           "path": "README.md",
           "exists": true,
-          "hash": "0344355c9b2b1584"
+          "hash": "8ea363436c7cee71"
         }
       ]
     },
@@ -310,13 +310,13 @@
           "repo": "amplifier-foundation",
           "path": "docs/API_REFERENCE.md",
           "exists": true,
-          "hash": "d2560018bed6b4f1"
+          "hash": "de143bf08b72cec6"
         },
         {
           "repo": "amplifier-foundation",
           "path": "amplifier_foundation/__init__.py",
           "exists": true,
-          "hash": "55aebde5ec95cc5d"
+          "hash": "71fa2e651dbf8e15"
         },
         {
           "repo": "amplifier-foundation",
@@ -328,7 +328,7 @@
           "repo": "amplifier-foundation",
           "path": "amplifier_foundation/registry.py",
           "exists": true,
-          "hash": "8ef4d68cc1561a01"
+          "hash": "c56561855e05dd5b"
         }
       ]
     },
@@ -500,7 +500,7 @@
           "repo": "amplifier-core",
           "path": "docs/contracts/PROVIDER_CONTRACT.md",
           "exists": true,
-          "hash": "dbf2a14f597e80f1"
+          "hash": "04b39901eec6a7a5"
         },
         {
           "repo": "amplifier-core",
@@ -1222,7 +1222,7 @@
           "repo": "amplifier-module-hooks-logging",
           "path": "README.md",
           "exists": true,
-          "hash": "4de9f77054c39ea9"
+          "hash": "d1a98caf48d405a0"
         },
         {
           "repo": "amplifier-module-hooks-approval",
@@ -1398,7 +1398,7 @@
           "repo": "amplifier",
           "path": "docs/MODULES.md",
           "exists": true,
-          "hash": "8d2446270dd388cf"
+          "hash": "32adc9034827f384"
         },
         {
           "repo": "amplifier-core",

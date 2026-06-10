@@ -290,6 +290,46 @@ The `list_models()` method returns `list[ModelInfo]`. Beyond the required fields
 
 **Backward Compatibility**: All extension fields are optional with sensible defaults. Existing providers that do not populate these fields continue to work unchanged — they simply won't participate in cost-aware or capability-based routing.
 
+### `llm:response` Event — `usage` Payload Schema
+
+Providers **MUST** emit `llm:response` with the following `usage` payload. Key names are normative — derived from the kernel `Usage` struct (`crates/amplifier-core/src/messages.rs`):
+
+| Key | Type | Required | Description |
+|-----|------|----------|-------------|
+| `input_tokens` | `int` | **MUST** | Total input tokens — gross total (fresh + cache_read combined) |
+| `output_tokens` | `int` | **MUST** | Total output tokens generated |
+| `cache_read_tokens` | `int` | SHOULD (when non-zero) | Tokens served from prompt cache |
+| `cache_write_tokens` | `int` | SHOULD (when non-zero) | Tokens written to prompt cache (billed on top of gross) |
+
+**DO NOT use:** `"input"`, `"output"`, `"input_tokens_used"`, `"completion_tokens"`, or any other variant. These break consumers silently.
+
+`total_tokens` is not included in the event payload. Consumers that need it can derive it as `input_tokens + output_tokens` from the event `usage` dict.
+
+**Reference emit pattern** (build `ChatResponse` before emitting):
+
+```python
+chat_response = self._convert_to_chat_response(response)  # build first
+
+event_usage: dict[str, Any] = {
+    "input_tokens": chat_response.usage.input_tokens,
+    "output_tokens": chat_response.usage.output_tokens,
+}
+if chat_response.usage.cache_read_tokens is not None:
+    event_usage["cache_read_tokens"] = chat_response.usage.cache_read_tokens
+if chat_response.usage.cache_write_tokens is not None:
+    event_usage["cache_write_tokens"] = chat_response.usage.cache_write_tokens
+
+await coordinator.hooks.emit("llm:response", {
+    "provider": self.name,
+    "model": model,
+    "status": "ok",
+    "duration_ms": elapsed_ms,
+    "usage": event_usage,
+})
+
+return chat_response  # return the already-built response
+```
+
 ### Example Provider
 
 ```python
@@ -450,52 +490,9 @@ Orchestrators control the agent loop.
 
 ### Orchestrator Contract
 
-```python
-from typing import Protocol, Any
+**Protocol definition**: `amplifier_core/interfaces.py` → `class Orchestrator(Protocol)`
 
-@runtime_checkable
-class Orchestrator(Protocol):
-    async def execute(
-        self,
-        prompt: str,
-        context: ContextManager,
-        providers: dict[str, Provider],
-        tools: dict[str, Tool],
-        hooks: HookRegistry,
-        **kwargs: Any,
-    ) -> str:
-        """
-        Execute the agent loop with given prompt.
-
-        Args:
-            prompt: User input prompt
-            context: Context manager for conversation state
-            providers: Available LLM providers (keyed by name)
-            tools: Available tools (keyed by name)
-            hooks: Hook registry for lifecycle events
-            **kwargs: Additional kernel-injected arguments (see note below)
-
-        Returns:
-            Final response string
-        """
-        ...
-```
-
-> **`coordinator` injection**: The kernel (`session.py`) passes
-> `coordinator=<ModuleCoordinator>` via kwargs at runtime so orchestrators can
-> process hook results and coordinate module interactions. Implementations may
-> accept `coordinator` as an explicit keyword argument or simply absorb it
-> through `**kwargs`.
-
-**Required events**: All orchestrators **MUST** emit:
-- `execution:start` with `{"prompt": prompt}` at the very beginning of `execute()`
-- `execution:end` with `{"response": ..., "status": ...}` on **all** exit paths (success, error, cancellation)
-- `orchestrator:complete` with `{"orchestrator": name, "turn_count": n, "status": "success"|"incomplete"|"cancelled"}` at the end of `execute()`
-
-**Reference implementations**:
-- [amplifier-module-loop-basic](https://github.com/microsoft/amplifier-module-loop-basic)
-- [amplifier-module-loop-streaming](https://github.com/microsoft/amplifier-module-loop-streaming)
-- [amplifier-module-loop-events](https://github.com/microsoft/amplifier-module-loop-events)
+**Contract reference**: See [ORCHESTRATOR_CONTRACT.md](https://github.com/microsoft/amplifier-core/blob/main/docs/contracts/ORCHESTRATOR_CONTRACT.md) for the complete protocol definition, required events, and reference implementations.
 
 ## Creating a Context Manager
 
@@ -503,50 +500,9 @@ Context managers handle conversation history.
 
 ### Context Contract
 
-```python
-from typing import Protocol, Any
+**Protocol definition**: `amplifier_core/interfaces.py` → `class ContextManager(Protocol)`
 
-@runtime_checkable
-class ContextManager(Protocol):
-    async def add_message(self, message: dict[str, Any]) -> None:
-        """Add a message to the context."""
-        ...
-
-    async def get_messages_for_request(
-        self,
-        token_budget: int | None = None,
-        provider: Any | None = None,
-    ) -> list[dict[str, Any]]:
-        """
-        Get messages ready for an LLM request.
-
-        The context manager handles any compaction needed internally.
-        Returns messages that fit within the token budget.
-
-        Args:
-            token_budget: Optional explicit token limit (deprecated, prefer provider).
-            provider: Optional provider instance for dynamic budget calculation.
-                If provided, budget = context_window - max_output_tokens - safety_margin.
-
-        Returns:
-            Messages ready for LLM request, compacted if necessary.
-        """
-        ...
-
-    async def get_messages(self) -> list[dict[str, Any]]:
-        """Get all messages (raw, uncompacted) for transcripts/debugging."""
-        ...
-
-    async def set_messages(self, messages: list[dict[str, Any]]) -> None:
-        """Set messages directly (for session resume)."""
-        ...
-
-    async def clear(self) -> None:
-        """Clear all messages."""
-        ...
-```
-
-**Reference implementation**: [amplifier-module-context-simple](https://github.com/microsoft/amplifier-module-context-simple)
+**Contract reference**: See [CONTEXT_CONTRACT.md](https://github.com/microsoft/amplifier-core/blob/main/docs/contracts/CONTEXT_CONTRACT.md) for the complete protocol definition and reference implementation.
 
 ## Package Configuration
 
@@ -557,7 +513,6 @@ class ContextManager(Protocol):
 name = "amplifier-module-tool-greet"
 version = "0.1.0"
 description = "Greeting tool for Amplifier"
-requires-python = ">=3.11"
 dependencies = []  # amplifier-core is a peer dependency
 
 [project.entry-points."amplifier.modules"]
@@ -620,7 +575,7 @@ uv pip install git+https://github.com/user/amplifier-module-tool-greet@main
 ## Module Types Reference
 
 | Module Type | Contract | Purpose |
-|-------------|----------|---------|
+|-------------|----------|---------| 
 | **Provider** | [PROVIDER_CONTRACT.md](https://github.com/microsoft/amplifier-core/blob/main/docs/contracts/PROVIDER_CONTRACT.md) | LLM backend integration |
 | **Tool** | [TOOL_CONTRACT.md](https://github.com/microsoft/amplifier-core/blob/main/docs/contracts/TOOL_CONTRACT.md) | Agent capabilities |
 | **Hook** | [HOOK_CONTRACT.md](https://github.com/microsoft/amplifier-core/blob/main/docs/contracts/HOOK_CONTRACT.md) | Lifecycle observation and control |
