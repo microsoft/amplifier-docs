@@ -223,7 +223,7 @@
           "repo": "amplifier-foundation",
           "path": "docs/BUNDLE_GUIDE.md",
           "exists": true,
-          "hash": "7891ac5790683b8f"
+          "hash": "2208850a8656012b"
         },
         {
           "repo": "amplifier-foundation",
@@ -235,19 +235,19 @@
           "repo": "amplifier-foundation",
           "path": "amplifier_foundation/bundle/_dataclass.py",
           "exists": true,
-          "hash": "ddc8126f2df822fe"
+          "hash": "dc75727c7199121e"
         },
         {
           "repo": "amplifier-foundation",
           "path": "amplifier_foundation/bundle/_prepared.py",
           "exists": true,
-          "hash": "ed1534764e55e5ae"
+          "hash": "bac11baca3a62754"
         },
         {
           "repo": "amplifier-foundation",
           "path": "amplifier_foundation/registry.py",
           "exists": true,
-          "hash": "8ef4d68cc1561a01"
+          "hash": "c56561855e05dd5b"
         }
       ]
     },

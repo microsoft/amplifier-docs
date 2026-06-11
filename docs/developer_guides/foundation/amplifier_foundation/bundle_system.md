@@ -61,6 +61,7 @@ bundle:
   name: my-bundle
   version: 1.0.0
   description: What this bundle provides
+  namespace_root: ..              # Optional: relative path to where agents/ and context/ live
 
 includes:
   - bundle: foundation              # Inherit from other bundles
@@ -96,6 +97,29 @@ Your markdown instructions here. This becomes the system prompt.
 Reference documentation with @mentions:
 @my-bundle:docs/GUIDE.md
 ```
+
+**`namespace_root`**: When your bundle YAML file lives in a subdirectory (e.g., `behaviors/my-feature.yaml`) but your `agents/` and `context/` directories live in a parent directory, use `namespace_root` to point to that parent. For example, if your structure is:
+
+```
+my-bundle/
+├── bundle.md
+├── behaviors/
+│   └── my-feature.yaml           # YAML is here
+├── agents/
+│   └── my-agent.md               # But agents live here
+└── context/
+    └── instructions.md           # And context lives here
+```
+
+Your `behaviors/my-feature.yaml` would have:
+
+```yaml
+bundle:
+  name: my-feature
+  namespace_root: ..               # Points to my-bundle/
+```
+
+This ensures `my-feature:agents/my-agent` and `my-feature:context/instructions.md` resolve correctly.
 
 ## Composition
 
@@ -142,6 +166,39 @@ if not result.valid:
 - `session.context` must be a string or dict (with `module`/`source` key)
 - Agent entries must be dicts
 - Context file paths must exist (warning in default mode; error in `strict=True` mode)
+
+### Mode Files
+
+Bundles can include mode files in a `modes/` directory that extend bundle functionality:
+
+```markdown
+---
+mode:
+  name: debug-mode
+  description: Enhanced debugging capabilities
+  advertised: true
+  contributes:
+    agents:
+      debug-inspector:
+        description: Inspector agent for this mode
+        instructions: ./context/debug-instructions.md
+    context:
+      - ./context/debug-guide.md
+    skills:
+      - debug-patterns
+---
+
+# Debug Mode Instructions
+
+Your mode-specific instructions here.
+```
+
+Mode files are validated during `prepare()` via `validate_modes()`. The `contributes` section can include:
+- **`agents`**: Dict of agent name → definition
+- **`context`**: List of context file paths
+- **`skills`**: List of skill names
+
+Validation warns about unknown keys and type errors in the `contributes` block.
 
 ## Preparation
 
