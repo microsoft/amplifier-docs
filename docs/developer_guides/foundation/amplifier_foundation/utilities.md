@@ -98,6 +98,15 @@ Utilities for spawning sub-sessions with provider/model preferences.
 | `resolve_model_pattern` | `spawn_utils.py` | Resolve glob patterns (e.g., `claude-haiku-*`) to concrete model names |
 | `is_glob_pattern` | `spawn_utils.py` | Check if model string contains glob characters |
 
+## Cost Bridge Utilities
+
+Utilities for propagating child-session costs to parent coordinators in
+app-layer spawn wrappers. Import via `from amplifier_foundation import ...`.
+
+| Export | Source | Purpose |
+|--------|--------|---------|
+| `bridge_child_cost` | `bundle/_prepared.py` | Collect child session's `session.cost` contributions and register them as a single contributor on the parent coordinator. Never raises — errors are logged as warnings. |
+| `sum_cost_usd` | `bundle/_prepared.py` | Sum a list of `collect_contributions()` results into a single `Decimal | None`. Returns `None` when no cost data is present. Tolerates both `Decimal` and `str` values. |
 ## Source Utilities
 
 URI resolution and source handling.
@@ -143,13 +152,9 @@ from amplifier_foundation import parse_uri, normalize_path
 
 # Parse git URI
 uri = parse_uri("git+https://github.com/org/repo@main#subdirectory=foo")
-# uri.scheme = "git+https"
-# uri.host = "github.com"
-# uri.ref = "main"
-# uri.subdirectory = "foo"
 
 # Normalize path
-path = normalize_path("./relative/path", base_path="/base")
+path = normalize_path("./relative/path")
 # Returns absolute path
 ```
 
@@ -160,9 +165,6 @@ from amplifier_foundation import load_mentions, BaseMentionResolver
 
 resolver = BaseMentionResolver(bundles={"foundation": foundation_bundle})
 results = await load_mentions("See @foundation:context/guidelines.md", resolver)
-
-for result in results:
-    print(f"Loaded: {result.mention} -> {result.content[:100]}...")
 ```
 
 ### Working Directory Management

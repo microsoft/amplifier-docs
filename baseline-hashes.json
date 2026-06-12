@@ -258,7 +258,7 @@
           "repo": "amplifier-foundation",
           "path": "docs/API_REFERENCE.md",
           "exists": true,
-          "hash": "d2560018bed6b4f1"
+          "hash": "de143bf08b72cec6"
         },
         {
           "repo": "amplifier-foundation",
@@ -288,7 +288,7 @@
           "repo": "amplifier-foundation",
           "path": "amplifier_foundation/mentions/__init__.py",
           "exists": true,
-          "hash": "70950db544eecd52"
+          "hash": "6fd2cd67e7c0fb99"
         }
       ]
     },
@@ -339,7 +339,7 @@
           "repo": "amplifier-foundation",
           "path": "examples/README.md",
           "exists": true,
-          "hash": "5c8fda5e1e9da7a5"
+          "hash": "e418b8668cfe03bf"
         },
         {
           "repo": "amplifier-foundation",

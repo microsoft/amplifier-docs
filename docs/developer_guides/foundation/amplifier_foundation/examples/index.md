@@ -25,6 +25,7 @@ Progressive examples demonstrating how to use amplifier-foundation, from basic c
 
     1. [CLI Application](cli_application.md) - Best practices (15 min)
     2. [Multi-Agent System](multi_agent_system.md) - Complex systems (30 min)
+    3. [Spawn Sub-Sessions](spawn_with_bundle_refs.md) - Agent delegation (20 min)
 
 </div>
 
@@ -37,6 +38,7 @@ Progressive examples demonstrating how to use amplifier-foundation, from basic c
 | [Custom Tool](custom_tool.md) | 10 min | ⭐⭐ Intermediate | Tool protocol, registration |
 | [CLI Application](cli_application.md) | 15 min | ⭐⭐ Intermediate | App architecture, error handling |
 | [Multi-Agent System](multi_agent_system.md) | 30 min | ⭐⭐⭐ Advanced | Agent workflows, orchestration |
+| [Spawn Sub-Sessions](spawn_with_bundle_refs.md) | 20 min | ⭐⭐⭐ Advanced | Bundle-ref agents, hook propagation, spawn safety |
 
 ## Running Examples
 
@@ -56,6 +58,7 @@ uv run python examples/02_custom_configuration.py
 uv run python examples/03_custom_tool.py
 uv run python examples/08_cli_application.py
 uv run python examples/09_multi_agent_system.py
+uv run python examples/23_spawn_with_bundle_refs.py
 ```
 
 ## Example Summaries
@@ -76,7 +79,9 @@ provider = await load_bundle(provider_path)
 composed = foundation.compose(provider)
 prepared = await composed.prepare()
 session = await prepared.create_session()
-response = await session.execute("Your prompt")
+
+async with session:
+    response = await session.execute("Your prompt")
 ```
 
 ### Custom Configuration
@@ -147,6 +152,32 @@ implementer = Bundle(name="implementer", tools=[...], instruction="...")
 # Agent 3: Reviewer - checks quality
 reviewer = Bundle(name="reviewer", tools=[...], instruction="...")
 ```
+
+### Spawn Sub-Sessions (Example 23)
+
+Safely wire `session.spawn` for agent delegation — handles bundle-ref agents.
+
+**What you learn:**
+- Two agent-config shapes: inline config vs lazy bundle-ref (`{"bundle": "<uri>"}`)
+- Safe spawn logic that loads the bundle when given a bundle-ref
+- Hook propagation: parent hooks are inherited by spawned children via `compose=True`
+
+**Key patterns:**
+```python
+# Detect bundle-ref shape and load it first
+if "bundle" in agent_config:
+    child_bundle = await load_bundle(agent_config["bundle"])
+else:
+    child_bundle = Bundle(**agent_config)
+
+result = await prepared.spawn(
+    child_bundle=child_bundle,
+    instruction="...",
+    compose=True,  # inherits parent hooks
+)
+```
+
+**Why it matters:** A bundle-ref agent has no inline fields — building a child bundle from empty `.get()` calls silently creates an unconfigured agent. This example shows the correct detection pattern.
 
 ## Additional Examples
 
