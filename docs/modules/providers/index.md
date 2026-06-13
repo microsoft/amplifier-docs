@@ -31,16 +31,8 @@ providers:
       default_model: claude-sonnet-4-5
       max_tokens: 8192
       temperature: 1.0
-```
-
-## Switching Providers
-
-```bash
-# Via CLI
-amplifier provider use openai
-
-# Via profile
-amplifier run --provider ollama "Hello"
+      debug: false      # Enable standard debug events
+      raw_debug: false  # Enable ultra-verbose raw API I/O logging
 ```
 
 ## Contract

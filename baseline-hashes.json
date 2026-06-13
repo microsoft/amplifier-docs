@@ -835,7 +835,7 @@
           "repo": "amplifier-module-provider-openai",
           "path": "README.md",
           "exists": true,
-          "hash": "4c2766b7e9801c9e"
+          "hash": "6542e6698cd2da2b"
         },
         {
           "repo": "amplifier-module-provider-azure-openai",
@@ -847,7 +847,7 @@
           "repo": "amplifier-module-provider-ollama",
           "path": "README.md",
           "exists": true,
-          "hash": "0344355c9b2b1584"
+          "hash": "8ea363436c7cee71"
         }
       ]
     },
