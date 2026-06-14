@@ -97,19 +97,19 @@
           "repo": "amplifier-foundation",
           "path": "agents/explorer.md",
           "exists": true,
-          "hash": "ac9fdb98d5a615ca"
+          "hash": "1f5a291f04f56efe"
         },
         {
           "repo": "amplifier-foundation",
           "path": "agents/foundation-expert.md",
           "exists": true,
-          "hash": "d3425c3cd79d4ddf"
+          "hash": "6ca8085972a8707a"
         },
         {
           "repo": "amplifier-foundation",
           "path": "agents/zen-architect.md",
           "exists": true,
-          "hash": "4304dfb03814bfda"
+          "hash": "f227bdbfc1f136f4"
         },
         {
           "repo": "amplifier-app-cli",

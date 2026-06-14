@@ -15,16 +15,9 @@ Agents are specialized configurations that can be invoked as sub-sessions for fo
 | `bug-hunter` | Systematic debugging | Finding and fixing bugs |
 | `zen-architect` | System design with simplicity | Architecture decisions |
 | `modular-builder` | Code implementation | Writing new code |
-| `web-research` | Research and synthesis | Gathering information |
-| `file-ops` | Targeted file operations | Reading, writing, searching files |
-| `git-ops` | Git and GitHub operations | Commits, PRs, branch management |
-| `session-analyst` | Session analysis and debugging | Investigating session issues |
 | `security-guardian` | Security review and auditing | Pre-deployment security checks |
 | `test-coverage` | Test coverage analysis | Identifying test gaps |
-| `foundation-expert` | Bundle and agent authoring guidance | Creating bundles and agents |
-| `ecosystem-expert` | Multi-repo coordination | Cross-repo workflows |
-| `integration-specialist` | External service integration | API and MCP server setup |
-| `shell-exec` | Shell command execution | Build, test, package management tasks |
+| `foundation-expert` | Foundation ecosystem navigation and guidance | Finding examples, patterns, and concepts |
 | `post-task-cleanup` | Post-task codebase hygiene | Cleaning up after task completion |
 
 ## Using Agents
@@ -184,19 +177,11 @@ amplifier> Debug the login timeout issue
 # Review the fix
 amplifier> Review the authentication fix for vulnerabilities
 # → delegates to security-guardian agent
-
-# Commit
-amplifier> Commit the authentication timeout fix
-# → delegates to git-ops agent
 ```
 
 ### Research → Design → Build
 
 ```bash
-# Research approaches
-amplifier> Find best practices for rate limiting
-# → delegates to web-research agent
-
 # Design the solution
 amplifier> Design a rate limiting system
 # → delegates to zen-architect agent
