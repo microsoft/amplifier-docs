@@ -647,13 +647,13 @@
           "repo": "amplifier-core",
           "path": "python/amplifier_core/__init__.py",
           "exists": true,
-          "hash": "aecf5bc0009dfab9"
+          "hash": "937473c7d38cb4b9"
         },
         {
           "repo": "amplifier-core",
           "path": "python/amplifier_core/session.py",
           "exists": true,
-          "hash": "4d2902034a64c5dd"
+          "hash": "432148c62150ee0e"
         },
         {
           "repo": "amplifier-core",

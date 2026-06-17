@@ -7,6 +7,8 @@ description: Design principles for the Amplifier kernel
 
 The Amplifier kernel follows the Linux kernel model: a tiny, stable center that provides mechanisms while pushing all policy decisions to the edges.
 
+> **Implementation note**: As of v1.6.0, `AmplifierSession`, `ModuleCoordinator`, `HookRegistry`, and `CancellationToken` are backed by a Rust engine (`_engine` extension module). Top-level imports from `amplifier_core` resolve to these Rust types; submodule paths (e.g. `from amplifier_core.session import AmplifierSession`) still resolve to pure-Python implementations for backward compatibility.
+
 ## Core Principles
 
 ### 1. Mechanism, Not Policy
@@ -49,6 +51,17 @@ The kernel provides **capabilities** and **stable contracts**. Modules decide **
 - If it's not observable → it didn't happen
 - One JSONL stream = single source of truth
 - Hooks observe without blocking
+
+**Kernel session lifecycle events** (emitted exactly once per session, not per `execute()` call):
+
+| Event | When | Payload |
+|-------|------|---------|
+| `session:start` | First `execute()` on a new session | `session_id`, `parent_id` |
+| `session:resume` | First `execute()` on a resumed session (`is_resumed=True`) | `session_id`, `parent_id` |
+| `session:end` | `cleanup()` | `session_id`, `status` |
+| `cancel:completed` | Execution cancelled | `was_immediate` |
+
+`parent_id` is set on child sessions (spawned agents), enabling full lineage tracking across the JSONL stream.
 
 ### 6. Text-First, Inspectable
 
