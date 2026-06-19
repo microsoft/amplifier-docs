@@ -282,7 +282,8 @@ result = await prepared.spawn(
 
 ### Controlling Agent Tool Inheritance
 
-By default, spawned agents inherit all tools from their parent. Configure tool inheritance in the task tool's config section:
+By default, spawned agents inherit all tools from their parent. Configure tool inheritance
+in the task tool's config section:
 
 ```yaml
 # In your bundle.md

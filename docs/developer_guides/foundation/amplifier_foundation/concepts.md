@@ -60,13 +60,6 @@ Contains: `session`, `providers`, `tools`, `hooks`, `agents`
 
 **Not included**: `includes` (resolved), `context` (processed separately), `instruction` (injected into context).
 
-## Mount Plans vs Bundles
-
-- **Mount plans are REQUIRED**: AmplifierSession needs a mount plan to run
-- **Bundles are OPTIONAL**: They're a composition/sharing layer on top
-
-Bundles exist for **sharing and remixing**. You can create mount plans directly in code without ever touching bundles. Bundles make it easy to share and compose configurations, but they're not mandatory.
-
 ## Prepared Bundle
 
 A **PreparedBundle** is a bundle ready for execution with all modules activated.
@@ -156,6 +149,13 @@ A bundle can be:
 
 These aren't contradictions—they describe different aspects.
 
+## Mount Plans vs Bundles
+
+- **Mount plans are REQUIRED**: AmplifierSession needs a mount plan to run
+- **Bundles are OPTIONAL**: They're a composition/sharing layer on top
+
+Bundles exist for **sharing and remixing**. You can create mount plans directly in code without ever touching bundles. Bundles make it easy to share and compose configurations, but they're not mandatory.
+
 ## Agents
 
 **Agents are bundles.** They use the same file format (markdown + YAML frontmatter) and are loaded via the same `load_bundle()` function.
@@ -214,9 +214,9 @@ Foundation provides **mechanism** for bundle composition. It doesn't decide whic
 - Configuration is YAML (diffable)
 - No binary formats
 
-## Related Documentation
+## Next Steps
 
-- [Common Patterns](patterns.md) - Common usage patterns with code examples
-- [API Reference](api_reference.md) - API index pointing to source
-- [URI Formats](https://github.com/microsoft/amplifier-foundation/blob/main/docs/URI_FORMATS.md) - Source URI reference
-- [Application Integration Guide](https://github.com/microsoft/amplifier-foundation/blob/main/APPLICATION_INTEGRATION_GUIDE.md) - Embedding Amplifier in web apps, voice assistants, Slack bots, and more
+- **[API Reference](api_reference.md)** - API index pointing to source
+- **[Common Patterns](patterns.md)** - Common usage patterns with code examples
+- **[URI Formats](https://github.com/microsoft/amplifier-foundation/blob/main/docs/URI_FORMATS.md)** - Source URI reference
+- **[Application Integration Guide](https://github.com/microsoft/amplifier-foundation/blob/main/APPLICATION_INTEGRATION_GUIDE.md)** - Embedding Amplifier in web apps, voice assistants, Slack bots, and more
