@@ -209,7 +209,7 @@ store.save(sub_session_id, transcript, metadata)
 **Storage Location**: `~/.amplifier/projects/{project-slug}/sessions/{session-id}/`
 - `transcript.jsonl` - Conversation history
 - `metadata.json` - Session configuration and metadata
-- `config.md` - Config snapshot for the session
+- `bundle.md` - Bundle snapshot (if applicable)
 
 ##### Resuming Existing Sessions
 
@@ -359,6 +359,8 @@ If both `model_role` and `provider_preferences` are provided in the same call, `
 }
 ```
 
+**Routing Logic**: If `session_id` provided → `resume_sub_session()`, else → `spawn_sub_session()`
+
 ### 4. Interactive REPL
 
 **Challenge:** Provide smooth interactive experience with history, editing, cancellation
@@ -427,7 +429,7 @@ if store.exists(session_id):
 ~/.amplifier/projects/{project-slug}/sessions/{session-id}/
 ├── transcript.jsonl     # Conversation history
 ├── metadata.json        # Session metadata
-└── config.md            # Config snapshot for the session
+└── bundle.md            # Bundle snapshot (if applicable)
 ```
 
 **Key Files:**
