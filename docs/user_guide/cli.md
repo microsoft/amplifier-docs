@@ -34,6 +34,7 @@ amplifier run [OPTIONS] PROMPT
 | `--bundle, -B` | Bundle to use for this session |
 | `--provider, -p` | LLM provider (anthropic, openai, etc.) |
 | `--model, -m` | Specific model to use |
+| `--max-tokens` | Maximum output tokens |
 | `--mode` | Execution mode: `chat`, `single` (default: single) |
 | `--output-format` | Output format: `text`, `json`, `json-trace` (default: text) |
 | `--resume` | Resume specific session with new prompt |
